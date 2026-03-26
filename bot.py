@@ -1076,23 +1076,23 @@ def reply(update, context):
             update.message.reply_text(data["response"])
             return
             
-save_data()
+    save_data()
 
-user_message = update.message.text or ""
+    user_message = update.message.text or ""
 
-item = find_banned_pesticide(user_message)
-if item:
-text, keyboard = format_banned_pesticide(item)
+    item = find_banned_pesticide(user_message)
+    if item:
+        text, keyboard = format_banned_pesticide(item)
 
-# إرسال النص أولاً
-update.message.reply_text(text)
+        # إرسال النص أولاً
+        update.message.reply_text(text)
 
-# إرسال الأزرار في رسالة مستقلة
-update.message.reply_text(
-"اختر من الخيارات:",
-reply_markup=keyboard
-)
-return
+        # إرسال الأزرار في رسالة مستقلة
+        update.message.reply_text(
+            "اختر من الخيارات:",
+            reply_markup=keyboard
+        )
+        return
 
     # أولاً: بحث مباشر في بطاقات المواد/المبيدات
     pesticide_item = find_pesticide(user_message)
