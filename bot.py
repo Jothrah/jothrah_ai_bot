@@ -934,14 +934,19 @@ def help_command(update, context):
         "- أكلونيفين"
     )
 
-def stats_command(update, context):
+def users_command(update, context):
     if update.effective_user.id != ADMIN_CHAT_ID:
         return
 
-    update.message.reply_text(
-        f"👥 عدد المستخدمين: {len(USERS)}\n"
-        f"📊 عدد الطلبات: {TOTAL_REQUESTS}"
-    )
+    if not USERS:
+        update.message.reply_text("لا يوجد مستخدمين بعد")
+        return
+
+    text = "👥 قائمة المستخدمين:\n\n"
+    for user in USERS:
+        text += f"{user}\n"
+
+    update.message.reply_text(text[:4000])
     
 def categories_command(update, context):
     text = "📚 التصنيفات المتاحة داخل البوت:\n\n"
@@ -1083,6 +1088,7 @@ dp = updater.dispatcher
 dp.add_handler(CommandHandler("start", start))
 dp.add_handler(CommandHandler("help", help_command))
 dp.add_handler(CommandHandler("stats", stats_command))
+dp.add_handler(CommandHandler("users", users_command))
 dp.add_handler(CommandHandler("categories", categories_command))
 dp.add_handler(MessageHandler(Filters.photo, handle_photo))
 dp.add_handler(MessageHandler(Filters.text & ~Filters.command, reply))
