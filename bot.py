@@ -1040,8 +1040,8 @@ def reply(update, context):
 
     item_name, item = find_restricted_pesticide(user_message)
 
-    if item:
-        restricted_text = f"""⚠️ مادة مقيدة
+if item:
+    restricted_text = f"""⚠️ مادة مقيدة
 
 🔹 الاسم: {item['arabic']}
 🔹 English: {item_name.title()}
@@ -1052,18 +1052,17 @@ def reply(update, context):
 {item['restriction']}
 """
 
-        keyboard = [
-            ["📄 تحميل بطاقة المادة الفعالة"],
-            ["🛒 عرض المنتجات"],
-            ["📞 تواصل واتساب"]
-        ]
+    search_url = build_search_url(item_name)
 
-        reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+    keyboard = [
+        [InlineKeyboardButton("🛒 عرض المنتجات", url=search_url)],
+        [InlineKeyboardButton("📞 تواصل واتساب", url=WHATSAPP_URL)]
+    ]
 
-        update.message.reply_text(restricted_text)
-        update.message.reply_text("اختر من الخيارات:", reply_markup=reply_markup)
+    reply_markup = InlineKeyboardMarkup(keyboard)
 
-        return
+    update.message.reply_text(restricted_text, reply_markup=reply_markup)
+    return
 
     # إذا كنا ننتظر رقم الجوال
     user_id = update.effective_user.id
