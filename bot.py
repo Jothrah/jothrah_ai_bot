@@ -1687,11 +1687,6 @@ def load_data():
         USERS = set()
         TOTAL_REQUESTS = 0
 
-dp.add_handler(
-    MessageHandler(Filters.text & ~Filters.command, banned_pesticides_handler),
-    group=-1
-)
-
 load_data()
 
 updater.bot.delete_webhook()
