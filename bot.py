@@ -1031,14 +1031,17 @@ def handle_phone(update, context):
     )
 
 def reply(update, context):
-        global orders_count
+    global orders_count
+
     text = update.message.text.strip().lower()
 
-# البحث في المواد المحظورة
-for key, item in BANNED_DATABASE.items():
-    if text == key or text == item["arabic_name"].lower() or text == item["english_name"].lower():
+    # ================================
+    # المواد المحظورة
+    # ================================
+    for key, item in BANNED_DATABASE.items():
+        if text == key or text == item["arabic_name"].lower() or text == item["english_name"].lower():
 
-        response = f"""🚫 معلومة مادة محظورة
+            response = f"""🚫 معلومة مادة محظورة
 🔢 الرقم: {item['number']}
 🔹 الاسم العربي: {item['arabic_name']}
 🔹 English Name: {item['english_name']}
@@ -1054,15 +1057,29 @@ for key, item in BANNED_DATABASE.items():
 تواصل معنا لتحديث المعلومات
 966501211056
 """
+            update.message.reply_text(response)
+            return
 
-        update.message.reply_text(response)
-        return
-        
+    # ================================
+    # عداد الطلبات
+    # ================================
+    orders_count += 1
+
     user_id = update.effective_user.id
-
     users.add(user_id)
 
-    orders_count += 1
+    # ================================
+    # البحث في المبيدات
+    # ================================
+    for key, data in PESTICIDE_DATABASE.items():
+        if text in data["aliases"]:
+            update.message.reply_text(data["response"])
+            return
+
+    # ================================
+    # إذا ما لقى شيء
+    # ================================
+    update.message.reply_text("❌ لم يتم العثور على نتيجة، جرب كلمة أخرى")
 
     save_data()
 
