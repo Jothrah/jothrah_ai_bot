@@ -121,9 +121,46 @@ RESTRICTED_DATABASE = {
     }
 }
 
+
+def normalize_restricted_text(text):
+    if not text:
+        return ""
+
+    text = text.strip().lower()
+
+    replacements = {
+        "أ": "ا",
+        "إ": "ا",
+        "آ": "ا",
+        "ة": "ه",
+        "ى": "ي",
+        "ؤ": "و",
+        "ئ": "ي",
+    }
+
+    for old, new in replacements.items():
+        text = text.replace(old, new)
+
+    text = text.replace("-", " ")
+    return " ".join(text.split())
+
+
 def find_restricted_pesticide(text):
-    text = text.lower()
+    if not text:
+        return None, None
+
+    query = normalize_restricted_text(text)
+
     for name, data in RESTRICTED_DATABASE.items():
-        if name in text:
+        english_name = normalize_restricted_text(name)
+        arabic_name = normalize_restricted_text(data.get("arabic", ""))
+
+        if (
+            query == english_name
+            or query == arabic_name
+            or english_name in query
+            or arabic_name in query
+        ):
             return name, data
+
     return None, None
