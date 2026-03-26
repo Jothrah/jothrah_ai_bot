@@ -1,4 +1,5 @@
 import os
+import json
 from urllib.parse import quote
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
@@ -14,6 +15,8 @@ STORE_URL = "https://jothrah.com/"
 WHATSAPP_URL = "https://wa.me/966501211056"
 CONTACT_PHONE = "966501211056"
 
+USERS = set()
+TOTAL_REQUESTS = 0
 # ============================================
 # تخزين مؤقت لطلبات الصور
 # ============================================
@@ -931,6 +934,19 @@ def help_command(update, context):
         "- أكلونيفين"
     )
 
+def stats_command(update, context):
+  if update.effective_user.id != ADMIN_CHAT_ID:
+        return
+
+    update.message.reply_text(
+        f"👥 عدد المستخدمين: {len(USERS)}\n"
+        f"📊 عدد الطلبات: {TOTAL_REQUESTS}"
+    )
+
+def reply(update, context):
+    user_id = update.effective_user.id
+    ...
+    
 def categories_command(update, context):
     text = "📚 التصنيفات المتاحة داخل البوت:\n\n"
     for group_name, items in CATEGORY_GROUPS.items():
@@ -1003,6 +1019,14 @@ def handle_phone(update, context):
 
 def reply(update, context):
     user_id = update.effective_user.id
+
+    USERS.add(user_id)
+
+    global TOTAL_REQUESTS
+    TOTAL_REQUESTS += 1
+
+    save_data()
+
     user_message = update.message.text or ""
 
     # إذا كنا ننتظر رقم الجوال
@@ -1056,6 +1080,7 @@ dp = updater.dispatcher
 
 dp.add_handler(CommandHandler("start", start))
 dp.add_handler(CommandHandler("help", help_command))
+dp.add_handler(CommandHandler("stats", stats_command))
 dp.add_handler(CommandHandler("categories", categories_command))
 dp.add_handler(MessageHandler(Filters.photo, handle_photo))
 dp.add_handler(MessageHandler(Filters.text & ~Filters.command, reply))
@@ -1634,10 +1659,40 @@ def banned_pesticides_handler(update, context):
         update.message.reply_text(text, reply_markup=keyboard)
         raise DispatcherHandlerStop
 
+STATS_FILE = "stats.json"
+
+def save_data():
+    data = {
+        "users": list(USERS),
+        "requests": TOTAL_REQUESTS
+    }
+    with open(STATS_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+def load_data():
+    global USERS, TOTAL_REQUESTS
+
+    if not os.path.exists(STATS_FILE):
+        USERS = set()
+        TOTAL_REQUESTS = 0
+        return
+
+    try:
+        with open(STATS_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        USERS = set(data.get("users", []))
+        TOTAL_REQUESTS = int(data.get("requests", 0))
+    except:
+        USERS = set()
+        TOTAL_REQUESTS = 0
+
 dp.add_handler(
     MessageHandler(Filters.text & ~Filters.command, banned_pesticides_handler),
     group=-1
 )
+
+load_data()
 
 updater.start_polling()
 updater.idle()
