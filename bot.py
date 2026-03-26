@@ -1067,128 +1067,586 @@ dp.add_handler(MessageHandler(Filters.text & ~Filters.command, reply))
 # updater.idle()
 # ==============================
 
+
 import re
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import DispatcherHandlerStop
 
-BANNED_MATERIALS = [
-    {
-        "name_en": "Paraquat",
-        "name_ar": "باراكوات",
-        "status": "محظور",
-        "cas": "1910-42-5",
-        "use": "مبيد أعشاب",
-        "notes": "مادة محظورة ضمن قائمة المبيدات المحظورة.",
-        "aliases": ["paraquat", "باراكوات", "باراكوت"]
-    },
-    {
-        "name_en": "Parathion",
-        "name_ar": "باراثيون",
-        "status": "محظور",
-        "cas": "56-38-2",
-        "use": "مبيد حشري",
-        "notes": "مادة شديدة السمية ومذكورة ضمن المواد المحظورة.",
-        "aliases": ["parathion", "باراثيون"]
-    },
-    {
-        "name_en": "Parathion-methyl",
-        "name_ar": "باراثيون ميثيل",
-        "status": "محظور",
-        "cas": "298-00-0",
-        "use": "مبيد حشري",
-        "notes": "مادة محظورة ضمن القائمة.",
-        "aliases": ["parathion methyl", "parathion-methyl", "باراثيون ميثيل", "ميثيل باراثيون"]
-    },
-    {
-        "name_en": "Diazinon",
-        "name_ar": "دايزينون",
-        "status": "محظور",
-        "cas": "333-41-5",
-        "use": "مبيد حشري",
-        "notes": "تحقق من التحديثات الرسمية عند الحاجة، هذه المادة مضافة هنا كجزء من قائمة المواد المحظورة.",
-        "aliases": ["diazinon", "دايزينون", "ديازينون"]
-    },
-    {
-        "name_en": "Malathion",
-        "name_ar": "مالاثيون",
-        "status": "محظور",
-        "cas": "121-75-5",
-        "use": "مبيد حشري",
-        "notes": "مادة محظورة ضمن القائمة.",
-        "aliases": ["malathion", "مالاثيون"]
-    },
-    {
-        "name_en": "Carbofuran",
-        "name_ar": "كاربوفيوران",
-        "status": "محظور",
-        "cas": "1563-66-2",
-        "use": "مبيد حشري / نيماتودي",
-        "notes": "مادة محظورة ضمن القائمة.",
-        "aliases": ["carbofuran", "كاربوفيوران", "كاربوفيوران"]
-    },
-    {
-        "name_en": "Mancozeb",
-        "name_ar": "مانكوزيب",
-        "status": "محظور",
-        "cas": "8018-01-7",
-        "use": "مبيد فطري",
-        "notes": "مادة محظورة ضمن القائمة.",
-        "aliases": ["mancozeb", "مانكوزيب"]
-    },
-    {
-        "name_en": "Chlorothalonil",
-        "name_ar": "كلوروثالونيل",
-        "status": "محظور",
-        "cas": "1897-45-6",
-        "use": "مبيد فطري",
-        "notes": "مادة محظورة ضمن القائمة.",
-        "aliases": ["chlorothalonil", "كلوروثالونيل", "كلورثالونيل"]
-    },
-    {
-        "name_en": "Acephate",
-        "name_ar": "أسيفات",
-        "status": "محظور",
-        "cas": "30560-19-1",
-        "use": "مبيد حشري",
-        "notes": "مادة محظورة ضمن القائمة.",
-        "aliases": ["acephate", "اسيفات", "أسيفات"]
-    },
-    {
-        "name_en": "Methamidophos",
-        "name_ar": "ميثاميدوفوس",
-        "status": "محظور",
-        "cas": "10265-92-6",
-        "use": "مبيد حشري",
-        "notes": "مادة محظورة ضمن القائمة.",
-        "aliases": ["methamidophos", "ميثاميدوفوس", "مثاميدوفوس"]
-    }
-]
+CONTACT_URL = "https://jothrah.com/"
 
+USE_MAP = {
+    "I": "مبيد حشري",
+    "A": "مبيد أكاروسي",
+    "N": "مبيد نيماتودي",
+    "F": "مبيد فطري",
+    "H": "مبيد أعشاب",
+    "PGR": "منظم نمو نباتي",
+    "R": "مبيد قوارض",
+    "IR": "طارد حشرات",
+    "FM": "مادة تدخين / مبيد تدخيني",
+    "B": "مبيد بكتيري",
+    "Ov": "مبيد بيض",
+    "Av": "مبيد طيور",
+    "RP": "طارد / مبيد للطيور",
+    "Mt": "مادة متنوعة / استخدام خاص",
+    "Mi": "مطهر / معقم",
+    "T": "مبيد للنمل الأبيض",
+    "AL": "مبيد طحالب",
+    "Mo": "مبيد رخويات",
+    "IX": "منظم حشرات / استخدام حشري خاص",
+    "O": "استخدامات أخرى",
+    "Synergist": "مادة مساعدة / منشط",
+    "WPr": "حافظ للأخشاب",
+    "-": "استخدامات مختلفة / غير محدد",
+    "Pesticide": "مبيد",
+    "FR": "مادة تغاير / استخدام خاص",
+}
+
+MANUAL_ARABIC = {
+    "1,3-Dichloropropene": "1,3-ثنائي كلورو بروبين",
+    "2,3,4,5-Bistetrahydro-2-furaldehyde": "2,3,4,5-بيس تتراهيدرو-2-فورالدهيد",
+    "2,4,5-T": "2,4,5-تي",
+    "2,4,5-TCP": "2,4,5-تي سي بي",
+    "2,4-D": "2,4-دي",
+    "Acephate": "أسيفات",
+    "Acetochlor": "أسيتوكلور",
+    "Acrolein": "أكرولين",
+    "Acrylonitrile": "أكريلونيتريل",
+    "Alachlor": "ألاكلور",
+    "Aldicarb": "ألديكارب",
+    "Aldoxycarb": "ألدوكسيكارب",
+    "Aldrin": "ألدرين",
+    "Amitraz": "أميتراز",
+    "Atrazine": "أترازين",
+    "Azamethiphos": "أزاميثيفوس",
+    "Azinphos-ethyl": "أزينفوس إيثيل",
+    "Azinphos-methyl": "أزينفوس ميثيل",
+    "Bendiocarb": "بنديوكارب",
+    "Benomyl": "بينوميل",
+    "Bensulide": "بنسوليد",
+    "Benthiavalicarb-isopropyl": "بنتيافاليكارب أيزوبروبيل",
+    "Lindane": "ليندين",
+    "Butachlor": "بيوتاكلور",
+    "Cadusafos": "كادوسافوس",
+    "Calcium cyanamide": "سياناميد الكالسيوم",
+    "Camphechlor": "كامفيكلور",
+    "Captafol": "كابتافول",
+    "Carbaryl": "كاربريل",
+    "Carbendazim": "كاربيندازيم",
+    "Carbon disulphide": "ثاني كبريتيد الكربون",
+    "Carbofuran": "كاربوفيوران",
+    "Carbosulfan": "كاربوسلفان",
+    "Cartap": "كارتاب",
+    "Chinomethionat": "كينوميثيونات",
+    "Chlordane": "كلوردان",
+    "Chlordecone": "كلورديكون",
+    "Chlordimeform": "كلوردايميفورم",
+    "Chlorfenapyr": "كلورفينابير",
+    "Chlorfenvinphos": "كلورفينفينفوس",
+    "Chloroform": "كلوروفورم",
+    "Chloropicrin": "كلوروبيكرين",
+    "Chlorothalonil": "كلوروثالونيل",
+    "Climbazole": "كليمبازول",
+    "Coumaphos": "كومافوس",
+    "Cyanamide": "سياناميد",
+    "Cyanazine": "سيانازين",
+    "Cyflufenamid": "سيفلوفيناميد",
+    "Cyhalothrin": "سيهالوثرين",
+    "Cyhexatin": "سيهكساتين",
+    "Daminozide": "دامينوزايد",
+    "Dimethoate": "دايمثوات",
+    "DDT": "دي دي تي",
+    "Diazinon": "دايزينون",
+    "Dicofol": "دايكوفول",
+    "Dieldrin": "دايلدرين",
+    "Dinoseb": "داينوسيب",
+    "Disulfoton": "دايسلفوتون",
+    "Diuron": "دايورون",
+    "DNOC": "دي نوك",
+    "Endosulfan": "إندوسلفان",
+    "Endrin": "إندرين",
+    "Epoxiconazole": "إيبوكسيكونازول",
+    "Ethion": "إيثيون",
+    "Ethoprophos": "إيثوبروفوس",
+    "Ethylene dibromide": "إيثيلين ثنائي البروميد",
+    "Fenarimol": "فيناريمول",
+    "Fenobucarb": "فينوبوكارب",
+    "Fenoxycarb": "فينوكسيكارب",
+    "Fensulfothion": "فينسلفوثيون",
+    "Fenthion": "فينثيون",
+    "Fenvalerate": "فينفاليرات",
+    "Ferbam": "فيربام",
+    "Fluazifop-butyl": "فلوازيفوب بيوتيل",
+    "Flufenoxuron": "فلوفينوكسورون",
+    "Flusilazole": "فلوسيلازول",
+    "Fluvalinate": "فلوفالينات",
+    "Folpet": "فولبيت",
+    "Fonofos": "فونوفوس",
+    "Formetanate": "فورميتانات",
+    "Furathiocarb": "فوراثيوكارب",
+    "Heptachlor": "هيبتاكلور",
+    "Hexaconazole": "هيكساكونازول",
+    "Imazalil": "إيمازاليل",
+    "Iprodione": "إيبروديون",
+    "Iprovalicarb": "إيبروفاليكارب",
+    "Isofenphos": "إيزوفينفوس",
+    "Isopyrazam": "إيزوبيرازام",
+    "Isoxaflutole": "إيزوكسافلوتول",
+    "Kresoxim-methyl": "كريسوكسيم ميثيل",
+    "Linuron": "لينورون",
+    "Malathion": "مالاثيون",
+    "Maleic hydrazide": "ماليك هيدرازيد",
+    "Mancozeb": "مانكوزيب",
+    "Maneb": "مانيب",
+    "Mecoprop": "ميكوبروب",
+    "Mercury": "الزئبق",
+    "Mepanipyrim": "ميبانيبيريم",
+    "Methamidophos": "ميثاميدوفوس",
+    "Methidathion": "ميثيداثيون",
+    "Methomyl": "ميثوميل",
+    "Methyl bromide": "بروميد الميثيل",
+    "Metiram": "ميتيرام",
+    "Mirex": "ميركس",
+    "Monocrotophos": "مونوكروتوفوس",
+    "Naphthalene": "نفتالين",
+    "Nicotine": "نيكوتين",
+    "Nitrobenzene": "نيتروبنزين",
+    "Oryzalin": "أوريزالين",
+    "Oxadiazon": "أوكساديازون",
+    "Oxadixyl": "أوكساديكسيل",
+    "Oxyfluorfen": "أوكسي فلورفين",
+    "Paraquat dichloride": "باراكوات ثنائي الكلوريد",
+    "Parathion": "باراثيون",
+    "Parathion-methyl": "باراثيون ميثيل",
+    "Pentachlorophenol": "بنتاكلوروفينول",
+    "Phorate": "فورات",
+    "Phosphamidon": "فوسفاميدون",
+    "Picloram": "بيكلورام",
+    "Pirimicarb": "بيريميكارب",
+    "Pirimiphos-ethyl": "بيريميفوس إيثيل",
+    "Procymidone": "بروسيميدون",
+    "Profenofos": "بروفينوفوس",
+    "Propargite": "بروبارجيت",
+    "Propoxur": "بروبوكسور",
+    "Pymetrozine": "بيميتروزين",
+    "Pyrazophos": "بيرازوفوس",
+    "Quintozene": "كوينتوزين",
+    "Resmethrin": "ريسميثرين",
+    "Rotenone": "روتينون",
+    "Safrole": "سافرول",
+    "Sedaxane": "سيداكسان",
+    "Simazine": "سيمازين",
+    "Spirodiclofen": "سبيروديكلوفين",
+    "Sulfotep": "سلفوتيب",
+    "Sulprofos": "سلبروفوس",
+    "TCMTB": "تي سي إم تي بي",
+    "Tebupirimfos": "تيبوبيريمفوس",
+    "TEPP": "تي إي بي بي",
+    "Terbufos": "تيربوفوس",
+    "Tetrachlorvinphos": "تيتراكلورفينفوس",
+    "Tetradifon": "تيتراديفون",
+    "Thiodicarb": "ثيوديكارب",
+    "Thiofanox": "ثيوفانوكس",
+    "Thiometon": "ثيوميتون",
+    "Thiacloprid": "ثياكلوبريد",
+    "Thiophanate-methyl": "ثيوفانات ميثيل",
+    "Thiram": "ثيرام",
+    "Tolylfluanid": "تولي فلوانيد",
+    "Triazophos": "تريازوفوس",
+    "Trichlorfon": "ترايكلورفون",
+    "Trifluralin": "ترايفلورالين",
+    "Vamidothion": "فاميدوثيون",
+    "Vinclozolin": "فينكلوزولين",
+    "Zineb": "زينب",
+}
+
+RAW_BANNED = [
+    {"name_en":"1,3-Dichloropropene","extra_names":["E isomer","Z isomer"],"cas":"542-75-6 / 10061-02-6 / 10061-01-5","use_code":"FM/I/N/B"},
+    {"name_en":"2,3,4,5-Bistetrahydro-2-furaldehyde","extra_names":["ENT 17596","Bisbutenylenetetrahydro furfural"],"cas":"126-15-8","use_code":"IR"},
+    {"name_en":"2,4,5-T","extra_names":["2,4,5-T-trolamine","2,4,5-T-triethylammonium","2,4,5-T-isoctyl"],"cas":"93-76-5 / 3813-14-7 / 2008-46-0 / 25168-15-4","use_code":"H/PGR"},
+    {"name_en":"2,4,5-TCP","extra_names":["2,4,5-Trichlorophenol"],"cas":"95-95-4","use_code":"I/F/H"},
+    {"name_en":"2,4-D","extra_names":["(2,4-dichlorophenoxy) acetic acid"],"cas":"94-75-7","use_code":"H"},
+    {"name_en":"Acephate","extra_names":[],"cas":"30560-19-1","use_code":"I"},
+    {"name_en":"Acifluorfen","extra_names":["Acifluorfen sodium","sodium salt"],"cas":"62476-59-9 / 50594-66-6","use_code":"H/H/Mt"},
+    {"name_en":"Acetochlor","extra_names":[],"cas":"34256-82-1","use_code":"H"},
+    {"name_en":"Acrolein","extra_names":[],"cas":"107-02-8","use_code":"H"},
+    {"name_en":"Acrylonitrile","extra_names":[],"cas":"107-13-1","use_code":"I/FM"},
+    {"name_en":"Alachlor","extra_names":[],"cas":"15972-60-8","use_code":"H"},
+    {"name_en":"Aldicarb","extra_names":[],"cas":"116-06-3","use_code":"N/I/A"},
+    {"name_en":"Aldoxycarb","extra_names":[],"cas":"1646-88-4","use_code":"N/I/A"},
+    {"name_en":"Aldrin","extra_names":[],"cas":"309-00-2","use_code":"I"},
+    {"name_en":"Allethrin","extra_names":["bioallethrin"],"cas":"584-79-2","use_code":"I"},
+    {"name_en":"Alpha-chlorohydrin","extra_names":[],"cas":"96-24-2","use_code":"R"},
+    {"name_en":"Alpha-HCH","extra_names":["Alpha Hexachlorocyclohexane","Alpha-BHC"],"cas":"319-84-6","use_code":"I"},
+    {"name_en":"Amitraz","extra_names":[],"cas":"33089-61-1","use_code":"A/I"},
+    {"name_en":"Anthraquinone","extra_names":[],"cas":"84-65-1","use_code":"RP"},
+    {"name_en":"Aramite","extra_names":[],"cas":"140-57-8","use_code":"I/A"},
+    {"name_en":"Arsenic acid","extra_names":["and its compounds","Arsenic pentoxide","Cacodylic acid","dimethylarsinic acid","MSMA","Sodium arsenate","Cacolydate","sodium dimethylarsinate","Chromated copper arsenate","CCA","Arsenic trioxide","Calcium arsenate","Copper arsenate","Lead arsenate","Sodium arsenite"],"cas":"7778-39-4 / 1303-28-2 / 75-60-5 / 2163-80-6 / 13464-38-5 / 124-65-2 / 1327-53-3 / 7778-44-1 / 10103-61-4 / 7784-40-9 / 7784-46-5","use_code":"H/I/R"},
+    {"name_en":"Atrazine","extra_names":[],"cas":"1912-24-9","use_code":"H"},
+    {"name_en":"Azamethiphos","extra_names":[],"cas":"35575-96-3","use_code":"I"},
+    {"name_en":"Azinphos-ethyl","extra_names":[],"cas":"2642-71-9","use_code":"I/A"},
+    {"name_en":"Azinphos-methyl","extra_names":[],"cas":"86-50-0","use_code":"I/A"},
+    {"name_en":"Bendiocarb","extra_names":[],"cas":"22781-23-3","use_code":"I"},
+    {"name_en":"Benomyl","extra_names":["Dustable powder formulation at or above 7 per cent"],"cas":"17804-35-2","use_code":"F/Mi"},
+    {"name_en":"Bensulide","extra_names":[],"cas":"741-58-2","use_code":"H"},
+    {"name_en":"Benthiavalicarb-isopropyl","extra_names":[],"cas":"177406-68-7","use_code":"F"},
+    {"name_en":"HCH","extra_names":["Benzenehexachloride","Gamma-HCH","Lindane"],"cas":"608-73-1 / 58-89-9","use_code":"I"},
+    {"name_en":"beta-HCH","extra_names":["beta-BCH"],"cas":"319-85-7","use_code":"I"},
+    {"name_en":"Binapacryl","extra_names":[],"cas":"485-31-4","use_code":"I/A/F"},
+    {"name_en":"Bioallethrin","extra_names":["S-cyclopenteny isomers","S-Bioallethrin"],"cas":"584-79-2","use_code":"I"},
+    {"name_en":"Blasticidin-S","extra_names":[],"cas":"2079-00-7","use_code":"F"},
+    {"name_en":"Bromophos","extra_names":["Bromophos-ethyl"],"cas":"2104-96-3 / 4824-78-6","use_code":"I/I/A"},
+    {"name_en":"Butachlor","extra_names":[],"cas":"23184-66-9","use_code":"H"},
+    {"name_en":"Butocarboxim","extra_names":[],"cas":"34681-10-2","use_code":"I"},
+    {"name_en":"Butoxycarboxim","extra_names":[],"cas":"34681-23-7","use_code":"I/A"},
+    {"name_en":"Cadmium","extra_names":[],"cas":"7440-43-9","use_code":"-"},
+    {"name_en":"Cadmium Calcium Copper Zinc Chromate Sulphate","extra_names":["Cadmium Compounds"],"cas":"12001-20-6","use_code":"F"},
+    {"name_en":"Cadusafos","extra_names":[],"cas":"95465-99-9","use_code":"N/I"},
+    {"name_en":"Calcium arsenate","extra_names":[],"cas":"7778-44-1","use_code":"H/I"},
+    {"name_en":"Calcium cyanamide","extra_names":[],"cas":"156-62-7","use_code":"DF/F/FR/H/I/PGR"},
+    {"name_en":"Camphechlor","extra_names":["Toxaphene"],"cas":"8001-35-2","use_code":"I/A"},
+    {"name_en":"Captafol","extra_names":[],"cas":"2425-06-1","use_code":"F"},
+    {"name_en":"Carbaryl","extra_names":[],"cas":"63-25-2","use_code":"I/PGR"},
+    {"name_en":"Carbendazim","extra_names":[],"cas":"10605-21-7","use_code":"F"},
+    {"name_en":"Carbon disulphide","extra_names":["Carbon disulfide"],"cas":"75-15-0","use_code":"I/N/FM"},
+    {"name_en":"Carbofuran","extra_names":[],"cas":"1563-66-2","use_code":"I/A/N"},
+    {"name_en":"Carbon tetrachloride","extra_names":[],"cas":"56-23-5","use_code":"I/FM"},
+    {"name_en":"Carbophenothion","extra_names":[],"cas":"786-19-6","use_code":"A/I"},
+    {"name_en":"Carbosulfan","extra_names":[],"cas":"55285-14-8","use_code":"I/N"},
+    {"name_en":"Cartap","extra_names":["Cartap hydrochloride"],"cas":"15263-53-3 / 15263-52-2","use_code":"I"},
+    {"name_en":"Chinomethionat","extra_names":["Oxythioquinox"],"cas":"2439-01-2","use_code":"I/A/F"},
+    {"name_en":"Chloranil","extra_names":[],"cas":"118-75-2","use_code":"F/RP"},
+    {"name_en":"Chlordane","extra_names":[],"cas":"57-74-9","use_code":"I/T"},
+    {"name_en":"Chlordecone","extra_names":["Kepone"],"cas":"143-50-0","use_code":"I/F"},
+    {"name_en":"Chlordimeform","extra_names":["Chlordimform hydrochloride"],"cas":"6164-98-3 / 19750-95-9","use_code":"A/I/Ov"},
+    {"name_en":"Chlorethoxyfos","extra_names":[],"cas":"54593-83-8","use_code":"I"},
+    {"name_en":"Chlorfenapyr","extra_names":[],"cas":"122453-73-0","use_code":"A/I"},
+    {"name_en":"Chlorfenvinphos","extra_names":["CVP"],"cas":"470-90-6","use_code":"A/I"},
+    {"name_en":"Chlormephos","extra_names":[],"cas":"24934-91-6","use_code":"I"},
+    {"name_en":"Chlorobenzilate","extra_names":[],"cas":"510-15-6","use_code":"I/A"},
+    {"name_en":"Chloroform","extra_names":[],"cas":"67-66-3","use_code":"FM"},
+    {"name_en":"Chloropicrin","extra_names":[],"cas":"76-06-2","use_code":"I/N/R/FM"},
+    {"name_en":"Chloropropylate","extra_names":[],"cas":"1437871-00-0","use_code":"A"},
+    {"name_en":"Chlorothalonil","extra_names":[],"cas":"1897-45-6","use_code":"F"},
+    {"name_en":"Chlorthiophos","extra_names":[],"cas":"21923-23-9","use_code":"I/A"},
+    {"name_en":"Chlozolinate","extra_names":[],"cas":"84332-86-5","use_code":"F"},
+    {"name_en":"Climbazole","extra_names":[],"cas":"38083-17-9","use_code":"F"},
+    {"name_en":"Coumaphos","extra_names":[],"cas":"56-72-4","use_code":"I/A"},
+    {"name_en":"Creosote","extra_names":[],"cas":"8001-58-9","use_code":"I/F/R"},
+    {"name_en":"Crimidine","extra_names":[],"cas":"535-89-7","use_code":"R"},
+    {"name_en":"Cyanamide","extra_names":["Hydrogen cyanamide"],"cas":"420-04-2","use_code":"H/PGR"},
+    {"name_en":"Cyanazine","extra_names":[],"cas":"21725-46-2","use_code":"H"},
+    {"name_en":"Cyanide Compounds","extra_names":["Hydrogen cyanide","Calcium cyanide","Sodium cyanide"],"cas":"74-90-8 / 592-01-8 / 143-33-9","use_code":"I/R/FM"},
+    {"name_en":"Cycloheximide","extra_names":[],"cas":"66-81-9","use_code":"F/PGR"},
+    {"name_en":"Cyflufenamid","extra_names":[],"cas":"180409-60-3","use_code":"F"},
+    {"name_en":"Cyhalothrin","extra_names":[],"cas":"68085-85-8","use_code":"I"},
+    {"name_en":"Cyhexatin","extra_names":[],"cas":"13121-70-5","use_code":"I/A"},
+    {"name_en":"Daminozide","extra_names":[],"cas":"1596-84-5","use_code":"PGR"},
+    {"name_en":"Dimethoate","extra_names":[],"cas":"60-51-5","use_code":"I/A"},
+    {"name_en":"DBCP","extra_names":["1,2-dibromo-3-chloropropane","dibromochloropropane"],"cas":"96-12-8","use_code":"I/N/F/FM"},
+    {"name_en":"DDT","extra_names":[],"cas":"50-29-3","use_code":"I"},
+    {"name_en":"Demeton","extra_names":["Demeton-O","Demeton-S"],"cas":"8065-48-3 / 298-03-3 / 126-75-0","use_code":"I/A"},
+    {"name_en":"Demeton-S-methyl","extra_names":[],"cas":"919-86-8","use_code":"I/A"},
+    {"name_en":"Di-allate","extra_names":["Diallate"],"cas":"2303-16-4","use_code":"H"},
+    {"name_en":"Diazinon","extra_names":[],"cas":"333-41-5","use_code":"I/A"},
+    {"name_en":"Dichlobenil","extra_names":[],"cas":"1194-65-6","use_code":"H"},
+    {"name_en":"Diclofop-methyl","extra_names":[],"cas":"51338-27-3","use_code":"H"},
+    {"name_en":"Dicofol","extra_names":[],"cas":"115-32-2","use_code":"A"},
+    {"name_en":"Dicrotophos","extra_names":[],"cas":"141-66-2","use_code":"I/A"},
+    {"name_en":"Dieldrin","extra_names":[],"cas":"60-57-1","use_code":"I"},
+    {"name_en":"Dimefox","extra_names":[],"cas":"115-26-4","use_code":"I/A"},
+    {"name_en":"Dimethenamid","extra_names":[],"cas":"87674-68-8","use_code":"H"},
+    {"name_en":"Diniconazole-M","extra_names":[],"cas":"83657-18-5","use_code":"F"},
+    {"name_en":"Dinitramine","extra_names":[],"cas":"29091-05-2","use_code":"H"},
+    {"name_en":"Dinobuton","extra_names":[],"cas":"973-21-7","use_code":"A/F"},
+    {"name_en":"Dinoseb acetate","extra_names":["Dinoseb and its salts"],"cas":"2813-95-8","use_code":"H"},
+    {"name_en":"Dinoseb","extra_names":["Dinoseb salts"],"cas":"88-85-7","use_code":"H/I"},
+    {"name_en":"Dinoterb","extra_names":[],"cas":"1420-07-1","use_code":"H"},
+    {"name_en":"Dioxathion","extra_names":[],"cas":"78-34-2","use_code":"I/A"},
+    {"name_en":"Dipropyl isocinchomeronate","extra_names":["MGK 326"],"cas":"136-45-8","use_code":"IR"},
+    {"name_en":"Disulfoton","extra_names":[],"cas":"298-04-4","use_code":"I/A"},
+    {"name_en":"Ditalimfos","extra_names":[],"cas":"5131-24-8","use_code":"F"},
+    {"name_en":"Diuron","extra_names":[],"cas":"330-54-1","use_code":"H"},
+    {"name_en":"DNOC","extra_names":["Dinitroorthocresol","Ammonium salt","Potassium salt","Sodium salt"],"cas":"534-52-1 / 2980-64-5 / 5787-96-2 / 2312-76-7","use_code":"I/A/H"},
+    {"name_en":"Edifenphos","extra_names":[],"cas":"17109-49-8","use_code":"F"},
+    {"name_en":"Endosulfan","extra_names":[],"cas":"115-29-7","use_code":"I/A"},
+    {"name_en":"Endrin","extra_names":[],"cas":"72-20-8","use_code":"I"},
+    {"name_en":"Epichlorohydrin","extra_names":[],"cas":"106-89-8","use_code":"-"},
+    {"name_en":"EPN","extra_names":[],"cas":"2104-64-5","use_code":"I/A"},
+    {"name_en":"Epoxiconazole","extra_names":[],"cas":"133855-98-8","use_code":"F"},
+    {"name_en":"Erbon","extra_names":[],"cas":"136-25-4","use_code":"H"},
+    {"name_en":"Ergocalciferol","extra_names":["Vitamin D2"],"cas":"50-14-6","use_code":"R"},
+    {"name_en":"Ethiofencarb","extra_names":[],"cas":"29973-13-5","use_code":"I"},
+    {"name_en":"Ethion","extra_names":[],"cas":"563-12-2","use_code":"A/I"},
+    {"name_en":"Ethirimol","extra_names":[],"cas":"23947-60-6","use_code":"F"},
+    {"name_en":"Ethoprop","extra_names":["Ethoprophos"],"cas":"13194-48-4","use_code":"I/N"},
+    {"name_en":"Ethyl hexanediol","extra_names":["Ethyl hexyleneglycol","6-12"],"cas":"94-96-2","use_code":"IR"},
+    {"name_en":"Ethylene dibromide","extra_names":["1,2-Dibromoethane","EDB"],"cas":"106-93-4","use_code":"I/N/FM"},
+    {"name_en":"Ethylene dichloride","extra_names":["EDC"],"cas":"107-06-2","use_code":"I/FM"},
+    {"name_en":"Ethylene oxide","extra_names":[],"cas":"75-21-8","use_code":"FM"},
+    {"name_en":"Ethylene thiourea","extra_names":["ethylenethiourea"],"cas":"96-45-7","use_code":"F"},
+    {"name_en":"Etridiazole","extra_names":[],"cas":"2593-15-9","use_code":"F"},
+    {"name_en":"Etrimfos","extra_names":[],"cas":"38260-54-7","use_code":"I/A"},
+    {"name_en":"Fenarimol","extra_names":[],"cas":"60168-88-9","use_code":"F"},
+    {"name_en":"Fenchlorazole-ethyl","extra_names":[],"cas":"103112-35-2","use_code":"H"},
+    {"name_en":"Fenoprop","extra_names":["Fenoprop-butotyl","Silvex"],"cas":"93-72-1","use_code":"H/PGR"},
+    {"name_en":"Fenobucarb","extra_names":[],"cas":"3766-81-2","use_code":"I"},
+    {"name_en":"Fenothiocarb","extra_names":[],"cas":"62850-32-2","use_code":"A"},
+    {"name_en":"Fenoxycarb","extra_names":[],"cas":"79127-80-3","use_code":"I"},
+    {"name_en":"Fensulfothion","extra_names":[],"cas":"115-90-2","use_code":"I/N"},
+    {"name_en":"Fenthiaprop","extra_names":["Fenthiaprop-ethyl"],"cas":"95721-12-3 / 93921-16-5","use_code":"H"},
+    {"name_en":"Fenthion","extra_names":[],"cas":"55-38-9","use_code":"I/Av"},
+    {"name_en":"Fentin","extra_names":["Fentin acetate","Triphenyltin acetate","Fentin hydroxide","Triphenyltin hydroxide"],"cas":"668-34-8 / 900-95-8 / 76-87-9","use_code":"F/AL/Mo"},
+    {"name_en":"Fenuron-TCA","extra_names":["Fenurontrichloroacetate"],"cas":"4482-55-7","use_code":"H"},
+    {"name_en":"Fenvalerate","extra_names":[],"cas":"51630-58-1","use_code":"I/A/IX"},
+    {"name_en":"Ferbam","extra_names":[],"cas":"14484-64-1","use_code":"F"},
+    {"name_en":"Fluazifop-butyl","extra_names":[],"cas":"69806-50-4","use_code":"H"},
+    {"name_en":"Fluazolate","extra_names":[],"cas":"174514-07-9","use_code":"H"},
+    {"name_en":"Flucythrinate","extra_names":[],"cas":"70124-77-5","use_code":"I"},
+    {"name_en":"Flufenoxuron","extra_names":[],"cas":"101463-69-8","use_code":"I/A"},
+    {"name_en":"Fluorine compounds","extra_names":["Methanesulfonyl fluoride","Sodium fluoride","Sodium hexafluorosilicate","Sodium fluorosilicate"],"cas":"558-25-8 / 7681-49-4 / 16893-85-9","use_code":"I"},
+    {"name_en":"Fluoroacetamide","extra_names":[],"cas":"640-19-7","use_code":"R"},
+    {"name_en":"Flurenol","extra_names":[],"cas":"467-69-6","use_code":"H/PGR"},
+    {"name_en":"Flurprimidol","extra_names":[],"cas":"56425-91-3","use_code":"PGR"},
+    {"name_en":"Flusilazole","extra_names":[],"cas":"85509-19-9","use_code":"F"},
+    {"name_en":"Fluthiacet-methyl","extra_names":[],"cas":"117337-19-6","use_code":"H"},
+    {"name_en":"Fluvalinate","extra_names":[],"cas":"69409-94-5","use_code":"A/I"},
+    {"name_en":"Folpet","extra_names":[],"cas":"133-07-3","use_code":"F"},
+    {"name_en":"Fonofos","extra_names":[],"cas":"944-22-9","use_code":"I"},
+    {"name_en":"Formetanate","extra_names":[],"cas":"22259-30-9","use_code":"I/A"},
+    {"name_en":"Fosthietan","extra_names":[],"cas":"21548-32-3","use_code":"I/N/FM"},
+    {"name_en":"Furathiocarb","extra_names":[],"cas":"65907-30-4","use_code":"I"},
+    {"name_en":"Furilazole","extra_names":[],"cas":"121776-33-8","use_code":"H"},
+    {"name_en":"Haloxyfop","extra_names":["Haloxyfop-etotyl","Haloxyfop-P-methyl","Haloxyfop-methyl"],"cas":"69806-34-4 / 87237-48-7 / 72619-32-0 / 69806-40-2","use_code":"H"},
+    {"name_en":"Heptachlor","extra_names":[],"cas":"76-44-8","use_code":"I"},
+    {"name_en":"Heptenophos","extra_names":[],"cas":"23560-59-0","use_code":"I"},
+    {"name_en":"Hexachlorobenzene","extra_names":[],"cas":"118-74-1","use_code":"F"},
+    {"name_en":"Hexaconazole","extra_names":[],"cas":"79983-71-4","use_code":"F"},
+    {"name_en":"Hexaethyltetraphosphate","extra_names":["HETP"],"cas":"757-58-4","use_code":"I"},
+    {"name_en":"Hexazinone","extra_names":[],"cas":"51235-04-2","use_code":"H"},
+    {"name_en":"Imazalil","extra_names":[],"cas":"35554-44-0","use_code":"F"},
+    {"name_en":"Iminoctadine","extra_names":["Iminoctadine triacetate","Iminoctadinetris (albesilate)"],"cas":"13516-27-3 / 39202-40-9 / 99257-43-9","use_code":"F"},
+    {"name_en":"Iprodione","extra_names":[],"cas":"36734-19-7","use_code":"F"},
+    {"name_en":"Iprovalicarb","extra_names":[],"cas":"140923-17-7","use_code":"F"},
+    {"name_en":"Isazophos","extra_names":["Isazofos"],"cas":"42509-80-8","use_code":"I/N"},
+    {"name_en":"Isobenzan","extra_names":[],"cas":"297-78-9","use_code":"I"},
+    {"name_en":"Isodrin","extra_names":["Isomers of eldrin"],"cas":"465-73-6","use_code":"I"},
+    {"name_en":"Isofenphos","extra_names":[],"cas":"25311-71-1","use_code":"I"},
+    {"name_en":"Isopyrazam","extra_names":[],"cas":"881685-58-1","use_code":"F"},
+    {"name_en":"Isoxaflutole","extra_names":[],"cas":"141112-29-0","use_code":"H"},
+    {"name_en":"Isoxathion","extra_names":[],"cas":"18854-01-8","use_code":"I"},
+    {"name_en":"Kelevan","extra_names":[],"cas":"4234-79-1","use_code":"I"},
+    {"name_en":"Kresoxim-methyl","extra_names":[],"cas":"143390-89-0","use_code":"F/B"},
+    {"name_en":"Lead compounds","extra_names":["Lead arsenate","Lead arsenite"],"cas":"7784-40-9 / 10031-13-7","use_code":"I/A/N/PGR"},
+    {"name_en":"Leptophos","extra_names":[],"cas":"21609-90-5","use_code":"I"},
+    {"name_en":"Linuron","extra_names":[],"cas":"330-55-2","use_code":"H"},
+    {"name_en":"Malathion","extra_names":[],"cas":"121-75-5","use_code":"I/A"},
+    {"name_en":"Maleic hydrazide","extra_names":[],"cas":"123-33-1","use_code":"H/PGR"},
+    {"name_en":"Mancozeb","extra_names":[],"cas":"8018-01-7","use_code":"F"},
+    {"name_en":"Maneb","extra_names":[],"cas":"12427-38-2","use_code":"F"},
+    {"name_en":"MCPA-thioethyl","extra_names":[],"cas":"25319-90-8","use_code":"H"},
+    {"name_en":"Mecarbam","extra_names":[],"cas":"2595-54-2","use_code":"I/A"},
+    {"name_en":"Mecoprop","extra_names":["MCPP"],"cas":"7085-19-0 / 93-65-2","use_code":"H"},
+    {"name_en":"Mercury and its compounds","extra_names":["Chloromethoxypropylmercuric acetate","CPMA","Diphenylmercurydodecenylsuccinate","PMDS","Mercuric chloride","Mercuric oxide","Mercurous chloride","Methoxyethylmercury acetate","Methylmercury acetate","Methoxyethylmercury silicate","Methylmercury dicyandiamide","Phenylmercuricoleate","PMO","Phenylmercuric salicylate","Phenylmercury acetate","PMA","Phenylmercurydimethyldithiocarbamate","Phenylmercury nitrate"],"cas":"7439-97-6 / 1319-86-4 / 27236-65-3 / 7487-94-7 / 21908-53-2 / 7546-30-7 / 151-38-2 / 108-07-6 / 64491-92-5 / 502-39-6 / 104-68-9 / 28086-13-7 / 62-38-4 / 32407-99-1 / 8003-05-2","use_code":"F/I/H"},
+    {"name_en":"Mecoprop-P","extra_names":[],"cas":"16484-77-8","use_code":"H"},
+    {"name_en":"Mepanipyrim","extra_names":[],"cas":"110235-47-7","use_code":"F"},
+    {"name_en":"Mephospholan","extra_names":["Mephosfolan"],"cas":"950-10-7","use_code":"I/A"},
+    {"name_en":"Metam-sodium","extra_names":["Sodium methyldithiocarbamate"],"cas":"137-42-8","use_code":"F/N/H/I"},
+    {"name_en":"Methamidophos","extra_names":["soluble liquid formulations exceeding 600 g a.i./l"],"cas":"10265-92-6","use_code":"I/A"},
+    {"name_en":"Methidathion","extra_names":[],"cas":"950-37-8","use_code":"I/A"},
+    {"name_en":"Methomyl","extra_names":[],"cas":"16752-77-5","use_code":"I/A"},
+    {"name_en":"Methyl bromide","extra_names":[],"cas":"74-83-9","use_code":"I/N/F/A/R/FM"},
+    {"name_en":"Methyl isothiocyanate","extra_names":[],"cas":"556-61-6","use_code":"N/F/I/H"},
+    {"name_en":"Metiram","extra_names":[],"cas":"9006-42-2","use_code":"F"},
+    {"name_en":"Metoxuron","extra_names":[],"cas":"19937-59-8","use_code":"H"},
+    {"name_en":"Mevinphos","extra_names":[],"cas":"26718-65-0","use_code":"I/A"},
+    {"name_en":"Mirex","extra_names":[],"cas":"2385-85-5","use_code":"I"},
+    {"name_en":"Monocrotophos","extra_names":[],"cas":"6923-22-4","use_code":"I/A"},
+    {"name_en":"Monolinuron","extra_names":[],"cas":"1746-81-2","use_code":"H"},
+    {"name_en":"Monuron","extra_names":["monuron-TCA"],"cas":"150-68-5","use_code":"H"},
+    {"name_en":"Morfamquat","extra_names":["Morfamquat dichloride"],"cas":"4636-83-3","use_code":"H"},
+    {"name_en":"Naphthalene","extra_names":[],"cas":"91-20-3","use_code":"F/I"},
+    {"name_en":"Nicotine","extra_names":[],"cas":"54-11-5","use_code":"I"},
+    {"name_en":"Nitrobenzene","extra_names":[],"cas":"98-95-3","use_code":"Pesticide"},
+    {"name_en":"Nitrofen","extra_names":["TOK"],"cas":"1836-75-5","use_code":"H"},
+    {"name_en":"Octamethylpyrophosphoramide","extra_names":["OMPA","Schradan"],"cas":"152-16-9","use_code":"I/A"},
+    {"name_en":"Omethoate","extra_names":[],"cas":"1113-02-6","use_code":"I/A"},
+    {"name_en":"Oryzalin","extra_names":[],"cas":"19044-88-3","use_code":"H"},
+    {"name_en":"Oxadiazon","extra_names":[],"cas":"19666-30-9","use_code":"H"},
+    {"name_en":"Oxadixyl","extra_names":[],"cas":"77732-09-3","use_code":"F"},
+    {"name_en":"Oxydemeton-methyl","extra_names":[],"cas":"301-12-2","use_code":"I"},
+    {"name_en":"Oxydeprofos","extra_names":[],"cas":"2674-91-1","use_code":"I"},
+    {"name_en":"Oxyfluorfen","extra_names":[],"cas":"42874-03-3","use_code":"H"},
+    {"name_en":"Paraquat dichloride","extra_names":["Paraquat"],"cas":"1910-42-5 / 4685-14-7","use_code":"H"},
+    {"name_en":"Parathion","extra_names":["Parathion-ethyl"],"cas":"56-38-2","use_code":"I/A"},
+    {"name_en":"Parathion-methyl","extra_names":["EC at or above 19.5% a.i. and dusts at or above 1.5% a.i."],"cas":"298-00-0","use_code":"I"},
+    {"name_en":"Pebulate","extra_names":[],"cas":"1114-71-2","use_code":"H"},
+    {"name_en":"Pentachlorobenzene","extra_names":["PCB","except mono- and dichlorinated"],"cas":"608-93-5","use_code":"F/H/I/Mt"},
+    {"name_en":"Pentachlorophenol","extra_names":["PCP","Pentachlorphenol","Pentachlorophenyllaurate","Sodium pentachlorophenoxide"],"cas":"87-86-5 / 3772-94-9 / 131-52-2","use_code":"F/I/H"},
+    {"name_en":"Phenthoate","extra_names":[],"cas":"2597-03-7","use_code":"I/A"},
+    {"name_en":"Phorate","extra_names":[],"cas":"298-02-2","use_code":"I/A/N"},
+    {"name_en":"Phosacetim","extra_names":[],"cas":"4104-14-7","use_code":"R"},
+    {"name_en":"Phosalone","extra_names":[],"cas":"2310-17-0","use_code":"I/A"},
+    {"name_en":"Phosphamidon","extra_names":["mixture of E & Z isomers","E-Phosphamidon","Z-Phosphamidon","soluble liquid formulations exceeding 1000 g a.i./l"],"cas":"13171-21-6 / 297-99-4 / 23783-98-4","use_code":"I/A"},
+    {"name_en":"Picloram","extra_names":[],"cas":"1918-02-1","use_code":"H"},
+    {"name_en":"Pirimicarb","extra_names":[],"cas":"23103-98-2","use_code":"I"},
+    {"name_en":"Pirimiphos-ethyl","extra_names":[],"cas":"23505-41-1","use_code":"I"},
+    {"name_en":"Polychloroterpenes","extra_names":["Strobane","Terpene polychlorinates"],"cas":"8001-50-1","use_code":"I/A/Mt"},
+    {"name_en":"Procymidone","extra_names":["Procymidon"],"cas":"32809-16-8","use_code":"F"},
+    {"name_en":"Profenofos","extra_names":[],"cas":"41198-08-7","use_code":"I/A"},
+    {"name_en":"Propachlor","extra_names":[],"cas":"1918-16-7","use_code":"H"},
+    {"name_en":"Propargite","extra_names":[],"cas":"2312-35-8","use_code":"A"},
+    {"name_en":"Propetamphos","extra_names":[],"cas":"31218-83-4","use_code":"I/A"},
+    {"name_en":"Propham","extra_names":[],"cas":"122-42-9","use_code":"H/PGR"},
+    {"name_en":"Propoxur","extra_names":[],"cas":"114-26-1","use_code":"I"},
+    {"name_en":"Prothoate","extra_names":[],"cas":"2275-18-5","use_code":"I/A"},
+    {"name_en":"Pymetrozine","extra_names":[],"cas":"123312-89-0","use_code":"I"},
+    {"name_en":"Pyraflufen-ethyl","extra_names":[],"cas":"129630-19-9","use_code":"H"},
+    {"name_en":"Pyrazachlor","extra_names":[],"cas":"6814-58-0","use_code":"PGR"},
+    {"name_en":"Pyrazophos","extra_names":[],"cas":"13457-18-6","use_code":"F"},
+    {"name_en":"Pyriminil","extra_names":["Pyrinuron"],"cas":"53558-25-1","use_code":"R"},
+    {"name_en":"Quintozene","extra_names":["PCNB"],"cas":"82-68-8","use_code":"F"},
+    {"name_en":"Resmethrin","extra_names":[],"cas":"10453-86-8","use_code":"I"},
+    {"name_en":"Rotenone","extra_names":[],"cas":"83-79-4","use_code":"I/A"},
+    {"name_en":"Safrole","extra_names":[],"cas":"94-59-7","use_code":"-"},
+    {"name_en":"Scilliroside","extra_names":[],"cas":"507-60-8","use_code":"R"},
+    {"name_en":"Sec-butylamine","extra_names":[],"cas":"13952-84-6","use_code":"F"},
+    {"name_en":"Sedaxane","extra_names":[],"cas":"874967-67-6","use_code":"F"},
+    {"name_en":"Siduron","extra_names":[],"cas":"1982-49-6","use_code":"H"},
+    {"name_en":"Simazine","extra_names":[],"cas":"122-34-9","use_code":"H"},
+    {"name_en":"Sodium dimethyl dithio carbamate","extra_names":[],"cas":"128-04-1","use_code":"F"},
+    {"name_en":"Sodium fluoride","extra_names":[],"cas":"7681-49-4","use_code":"I"},
+    {"name_en":"Sodium fluoroacetate","extra_names":["1080"],"cas":"62-74-8","use_code":"I/R"},
+    {"name_en":"Sodium hexafluorosilicate","extra_names":[],"cas":"16893-85-9","use_code":"I"},
+    {"name_en":"Spirodiclofen","extra_names":[],"cas":"148477-71-8","use_code":"I/A"},
+    {"name_en":"Sulfaquinoxaline","extra_names":["Sulphaquinoxaline"],"cas":"59-40-5","use_code":"R/Synergist"},
+    {"name_en":"Sulfotep","extra_names":[],"cas":"3689-24-5","use_code":"I/A"},
+    {"name_en":"Sulprofos","extra_names":[],"cas":"35400-43-2","use_code":"I"},
+    {"name_en":"TCMTB","extra_names":[],"cas":"21564-17-0","use_code":"F"},
+    {"name_en":"TDE","extra_names":["DDD"],"cas":"72-54-8","use_code":"I"},
+    {"name_en":"Tebupirimfos","extra_names":["Tebupirimifos"],"cas":"96182-53-5","use_code":"I"},
+    {"name_en":"Tecnazene","extra_names":["Technazene"],"cas":"117-18-0","use_code":"F/PGR"},
+    {"name_en":"TEPP","extra_names":["Tetraethyl pyrophosphate"],"cas":"107-49-3","use_code":"I/A"},
+    {"name_en":"Terbufos","extra_names":[],"cas":"13071-79-9","use_code":"I/N"},
+    {"name_en":"Tetrachlorvinphos","extra_names":[],"cas":"22248-79-9","use_code":"I/A"},
+    {"name_en":"Tetradifon","extra_names":[],"cas":"116-29-0","use_code":"I/A"},
+    {"name_en":"Thiodicarb","extra_names":[],"cas":"59669-26-0","use_code":"I/Mo"},
+    {"name_en":"Thiofanox","extra_names":[],"cas":"39196-18-4","use_code":"I/A"},
+    {"name_en":"Thiometon","extra_names":[],"cas":"640-15-3","use_code":"I/A"},
+    {"name_en":"Thionazin","extra_names":[],"cas":"297-97-2","use_code":"I/N"},
+    {"name_en":"Thiacloprid","extra_names":[],"cas":"111988-49-9","use_code":"I"},
+    {"name_en":"Thiophanate-methyl","extra_names":[],"cas":"32564-05-8","use_code":"F/WPr"},
+    {"name_en":"Thiram","extra_names":["Tetramethylthiuram disulfide","in formulations with benomyl and carbofuran"],"cas":"137-26-8","use_code":"F/I/N"},
+    {"name_en":"Tolylfluanid","extra_names":[],"cas":"731-27-1","use_code":"F"},
+    {"name_en":"Triazophos","extra_names":[],"cas":"24017-47-8","use_code":"I/A/N"},
+    {"name_en":"Trichlorfon","extra_names":[],"cas":"52-68-6","use_code":"I"},
+    {"name_en":"Tridemorph","extra_names":[],"cas":"81412-43-3","use_code":"F"},
+    {"name_en":"Trifluralin","extra_names":[],"cas":"1582-09-8","use_code":"H"},
+    {"name_en":"Triorganostannic compounds","extra_names":["including all Tributyltin compounds","Tributyltin benzoate","Tributyltin chloride","Tributyltin fluoride","Tributyltin linoleate","Tributyltin methacrylate","Tributyltin naphthenate","Tributyltin oxide"],"cas":"56-35-9 / 688-73-3 / 4342-36-3 / 1461-22-9 / 1983-10-4 / 24124-25-2 / 2155-70-6 / 85409-17-2","use_code":"F"},
+    {"name_en":"Vamidothion","extra_names":[],"cas":"2275-23-2","use_code":"I/A"},
+    {"name_en":"Vinclozolin","extra_names":[],"cas":"50471-44-8","use_code":"F"},
+    {"name_en":"Zineb","extra_names":[],"cas":"12122-67-7","use_code":"F"},
+]
 
 def normalize_material_text(text):
     if not text:
         return ""
 
     text = text.strip().lower()
-    text = text.replace("أ", "ا").replace("إ", "ا").replace("آ", "ا")
-    text = text.replace("ة", "ه")
-    text = text.replace("ى", "ي")
-    text = text.replace("ؤ", "و")
-    text = text.replace("ئ", "ي")
-    text = text.replace("-", " ")
-    text = re.sub(r"[^\w\s/]", " ", text)
+    replacements = {
+        "أ": "ا", "إ": "ا", "آ": "ا", "ة": "ه", "ى": "ي",
+        "ؤ": "و", "ئ": "ي", "-": " ", "_": " ", "/": " "
+    }
+    for old, new in replacements.items():
+        text = text.replace(old, new)
+
+    text = re.sub(r"[^\w\s\.]", " ", text)
     text = re.sub(r"\s+", " ", text).strip()
     return text
 
+def use_code_to_arabic(code):
+    if not code:
+        return "غير محدد"
+    parts = []
+    for chunk in re.split(r"[/\\,]+", code):
+        c = chunk.strip()
+        if not c:
+            continue
+        parts.append(USE_MAP.get(c, c))
+    seen = []
+    for p in parts:
+        if p not in seen:
+            seen.append(p)
+    return " / ".join(seen) if seen else "غير محدد"
 
-# بناء فهرس بحث سريع
+def generate_aliases(name_en, name_ar, extra_names=None):
+    extra_names = extra_names or []
+    variants = set()
+
+    def add(value):
+        if not value:
+            return
+        v = value.strip()
+        if not v:
+            return
+        variants.add(v)
+        variants.add(v.lower())
+        variants.add(v.replace("-", " "))
+        variants.add(v.replace("/", " "))
+        variants.add(v.replace("(", " ").replace(")", " "))
+        variants.add(v.replace(",", " "))
+        variants.add(re.sub(r"\s+", " ", v.replace("-", " ").replace("/", " ").replace(",", " ").replace("(", " ").replace(")", " ")).strip())
+
+    add(name_en)
+    add(name_ar)
+    for x in extra_names:
+        add(x)
+
+    clean = []
+    seen = set()
+    for item in variants:
+        n = normalize_material_text(item)
+        if n and n not in seen:
+            seen.add(n)
+            clean.append(item.strip())
+    return clean
+
+def build_banned_materials():
+    items = []
+    seen = set()
+
+    for row in RAW_BANNED:
+        name_en = row["name_en"].strip()
+        key = normalize_material_text(name_en)
+        if key in seen:
+            continue
+        seen.add(key)
+
+        name_ar = MANUAL_ARABIC.get(name_en, name_en)
+        aliases = generate_aliases(name_en, name_ar, row.get("extra_names", []))
+        use_text = use_code_to_arabic(row.get("use_code", ""))
+
+        item = {
+            "name_en": name_en,
+            "name_ar": name_ar,
+            "status": "محظور",
+            "cas": row.get("cas", "غير متوفر"),
+            "use": use_text,
+            "notes": (
+                "مادة محظورة بحسب القائمة المعتمدة في الملف الذي زودتني به. "
+                f"التصنيف الأصلي في القائمة: {row.get('use_code', '-')}"
+            ),
+            "aliases": aliases,
+        }
+        items.append(item)
+
+    return items
+
+BANNED_MATERIALS = build_banned_materials()
+
 BANNED_INDEX = {}
-
 for item in BANNED_MATERIALS:
-    keys = set()
-
-    keys.add(item["name_en"])
-    keys.add(item["name_ar"])
-
+    keys = set([item["name_en"], item["name_ar"]])
     for alias in item.get("aliases", []):
         keys.add(alias)
 
@@ -1197,28 +1655,23 @@ for item in BANNED_MATERIALS:
         if nk:
             BANNED_INDEX[nk] = item
 
-
 def search_banned_material(user_text):
     q = normalize_material_text(user_text)
     if not q:
         return None
 
-    # 1) تطابق مباشر كامل
     if q in BANNED_INDEX:
         return BANNED_INDEX[q]
 
-    # 2) بحث احتواء: لو المستخدم كتب جملة فيها اسم المادة
     for key, item in BANNED_INDEX.items():
         if key and key in q:
             return item
 
-    # 3) بحث بالعكس: لو المستخدم كتب جزء من الاسم
     for key, item in BANNED_INDEX.items():
         if q and q in key:
             return item
 
     return None
-
 
 def format_banned_material_message(item):
     return (
@@ -1228,9 +1681,11 @@ def format_banned_material_message(item):
         f"🔹 *الحالة:* {item['status']}\n"
         f"🔹 *CAS:* {item['cas']}\n"
         f"🔹 *الاستخدام:* {item['use']}\n"
-        f"🔹 *ملاحظات إضافية:* {item['notes']}"
+        f"🔹 *ملاحظات إضافية:* {item['notes']}\n\n"
+        "ℹ️ *تنبيه مهم:*\n"
+        "قد يتم تحديث حالة بعض المواد لاحقًا سواءً بالحظر أو رفع الحظر أو تعديل البيانات.\n"
+        "إذا كانت المعلومات قديمة أو احتجت للتأكد من آخر تحديث، يرجى التواصل معنا ليتم تحديث البيانات."
     )
-
 
 def banned_materials_handler(update, context):
     if not update.message or not update.message.text:
@@ -1240,18 +1695,26 @@ def banned_materials_handler(update, context):
     item = search_banned_material(user_text)
 
     if item:
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("📩 تواصل معنا لتحديث المعلومات", url=CONTACT_URL)]
+        ])
+
         update.message.reply_text(
             format_banned_material_message(item),
-            parse_mode="Markdown"
+            parse_mode="Markdown",
+            reply_markup=keyboard
         )
         raise DispatcherHandlerStop()
 
-
-# هذا الهاندلر يشتغل قبل reply الحالي حقك
+# شغّل هذا الهاندلر قبل أي هاندلر عام للردود النصية
 dp.add_handler(
     MessageHandler(Filters.text & ~Filters.command, banned_materials_handler),
     group=-1
 )
+
+# اختياري: إذا أردت تعرف كم مادة أضيفت
+print(f"Banned materials loaded: {len(BANNED_MATERIALS)}")
+
 
 updater.start_polling()
 updater.idle()
