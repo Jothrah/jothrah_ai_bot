@@ -1037,10 +1037,11 @@ def reply(update, context):
 
     user_message = update.message.text or ""
     text = user_message.strip().lower()
+
     item_name, item = find_restricted_pesticide(user_message)
 
-if item:
-    text = f"""⚠️ مادة مقيدة
+    if item:
+        restricted_text = f"""⚠️ مادة مقيدة
 
 🔹 الاسم: {item['arabic']}
 🔹 English: {item_name.title()}
@@ -1051,18 +1052,18 @@ if item:
 {item['restriction']}
 """
 
-    keyboard = [
-        ["📄 تحميل بطاقة المادة الفعالة"],
-        ["🛒 عرض المنتجات"],
-        ["📞 تواصل واتساب"]
-    ]
+        keyboard = [
+            ["📄 تحميل بطاقة المادة الفعالة"],
+            ["🛒 عرض المنتجات"],
+            ["📞 تواصل واتساب"]
+        ]
 
-    reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+        reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
-    update.message.reply_text(restricted_text)
-    update.message.reply_text("اختر من الخيارات:", reply_markup=reply_markup)
+        update.message.reply_text(restricted_text)
+        update.message.reply_text("اختر من الخيارات:", reply_markup=reply_markup)
 
-    return
+        return
 
     # إذا كنا ننتظر رقم الجوال
     user_id = update.effective_user.id
