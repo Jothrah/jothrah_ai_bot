@@ -1694,5 +1694,7 @@ dp.add_handler(
 
 load_data()
 
+updater.bot.delete_webhook()
+
 updater.start_polling()
 updater.idle()
