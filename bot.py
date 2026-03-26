@@ -1078,25 +1078,21 @@ def reply(update, context):
             
     save_data()
 
-    user_message = update.message.text or ""
+  user_message = update.message.text or ""
 
-    item = find_banned_pesticide(user_message)
-    if item:
-        text, keyboard = format_banned_pesticide(item)
-        update.message.reply_text(text, reply_markup=keyboard)
-        return
+item = find_banned_pesticide(user_message)
+if item:
+    text, keyboard = format_banned_pesticide(item)
 
-    # إذا كنا ننتظر رقم الجوال
-    if waiting_for_phone.get(user_id):
-        if is_phone_number(user_message):
-            handle_phone(update, context)
-        else:
-            update.message.reply_text(
-                "📱 فضلًا اكتب رقم جوال صحيح حتى يتم التواصل معك عبر واتساب.\n\n"
-                "مثال:\n0501211056",
-                reply_markup=build_whatsapp_only_button()
-            )
-        return
+    # إرسال النص أولاً
+    update.message.reply_text(text)
+
+    # إرسال الأزرار في رسالة مستقلة
+    update.message.reply_text(
+        "اختر من الخيارات:",
+        reply_markup=keyboard
+    )
+    return
 
     # أولاً: بحث مباشر في بطاقات المواد/المبيدات
     pesticide_item = find_pesticide(user_message)
