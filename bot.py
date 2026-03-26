@@ -1048,7 +1048,7 @@ def reply(update, context):
     user_message = update.message.text or ""
     text = user_message.strip().lower()
 
-    item_name, item = find_restricted_pesticide(user_message)
+        item_name, item = find_restricted_pesticide(user_message)
     if item:
         handle_restricted_pesticide(update, item_name, item)
         return
@@ -1967,17 +1967,15 @@ def handle_restricted_pesticide(update, item_name, item):
 
 📌 القيد:
 {item['restriction']}
+
+ℹ️ تنبيه مهم:
+قد يتم تحديث حالة بعض المواد سواء بالتقييد او فك القيد او تعديل البيانات ، إذا كانت المعلومات قديمة أو احتجت للتأكد من آخر تحديث يرجى التواصل معنا ليتم تحديث البيانات
+
+📞 تواصل معنا لتحديث المعلومات
+{CONTACT_PHONE}
 """
 
-    search_url = build_search_url(item_name)
-
-    keyboard = [
-        [InlineKeyboardButton("🛒 عرض المنتجات", url=search_url)],
-        [InlineKeyboardButton("📞 تواصل واتساب", url=WHATSAPP_URL)]
-    ]
-
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    update.message.reply_text(restricted_text, reply_markup=reply_markup)
+    update.message.reply_text(restricted_text)
 
 updater.start_polling()
 updater.idle()
