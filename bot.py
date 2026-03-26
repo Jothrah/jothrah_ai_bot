@@ -1075,12 +1075,7 @@ def reply(update, context):
         if text in data["aliases"]:
             update.message.reply_text(data["response"])
             return
-
-    # ================================
-    # إذا ما لقى شيء
-    # ================================
-    update.message.reply_text("❌ لم يتم العثور على نتيجة، جرب كلمة أخرى")
-
+            
     save_data()
 
     user_message = update.message.text or ""
