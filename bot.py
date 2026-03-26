@@ -1698,14 +1698,16 @@ def format_banned_pesticide(item):
         f"🔹 CAS: {item['cas_rn']}\n"
         f"📊 التصنيف: {classification_ar}\n"
         f"📌 Main Uses: {item['main_uses']}\n\n"
-        
-ℹ️ تنبيه مهم:
-قد يتم تحديث حالة بعض المواد لاحقًا سواءً بالحظر أو رفع الحظر أو تعديل البيانات. إذا كانت المعلومات قديمة أو احتجت للتأكد من آخر تحديث، يرجى التواصل معنا ليتم تحديث البيانات."""
-            keyboard = InlineKeyboardMarkup([
-                [InlineKeyboardButton("📞 تواصل معنا لتحديث المعلومات", url=WHATSAPP_URL)]
-            ])
-            update.message.reply_text(response, reply_markup=keyboard)
-            return
+        f"ℹ️ تنبيه مهم:\n"
+        f"قد يتم تحديث حالة بعض المواد لاحقًا سواءً بالحظر أو رفع الحظر أو تعديل البيانات.\n"
+        f"إذا كانت المعلومات قديمة أو احتجت للتأكد من آخر تحديث، يرجى التواصل معنا ليتم تحديث البيانات."
+    )
+
+    keyboard = [
+        [InlineKeyboardButton("📞 تواصل معنا لتحديث المعلومات", url="https://wa.me/966501211056")]
+    ]
+
+    return text, InlineKeyboardMarkup(keyboard)
 
 STATS_FILE = "stats.json"
 
