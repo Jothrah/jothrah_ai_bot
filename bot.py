@@ -1484,7 +1484,7 @@ ARABIC_NAME_OVERRIDES = {
     "Trifluralin": "ترايفلورالين",
     "Vamidothion": "فاميدوثيون",
     "Vinclozolin": "فينكلوزولين",
-    "Zineb": "زينيب",
+    "Zineb": "زينب",
     "DDT": "دي دي تي",
 }
 
@@ -1598,21 +1598,30 @@ def find_banned_pesticide(query):
     return None
 
 def format_banned_pesticide(item):
+
     arabic_name = get_arabic_name(item["common_name"])
     classification_ar = get_classification_ar(item["main_uses"])
 
-    return (
-        f"🚫 المادة الفعالة المحظورة\n\n"
+    text = (
+        f"🚫 معلومة مادة محظورة\n\n"
         f"🔢 الرقم: {item['no']}\n"
-        f"🧪 الاسم العربي: {arabic_name}\n"
-        f"🧪 English Name: {item['common_name']}\n"
-        f"🧾 CAS RN: {item['cas_rn']}\n"
+        f"🔹 الاسم العربي: {arabic_name}\n"
+        f"🔹English Name: {item['common_name']}\n"
+        f"🔹 الحالة: محظور\n"
+        f"🔹 CAS: {item['cas_rn']}\n"
         f"📊 التصنيف: {classification_ar}\n"
         f"📌 Main Uses: {item['main_uses']}\n\n"
-        f"تواصل معنا لتحديث المعلومات\n"
-        f"966501211056"
+        f"ℹ️ تنبيه مهم:\n"
+        f"قد يتم تحديث حالة بعض المواد لاحقًا سواءً بالحظر أو رفع الحظر أو تعديل البيانات.\n"
+        f"إذا كانت المعلومات قديمة أو احتجت للتأكد من آخر تحديث، يرجى التواصل معنا ليتم تحديث البيانات."
     )
 
+    keyboard = [
+        [InlineKeyboardButton("📞 تواصل معنا لتحديث المعلومات", url="https://wa.me/966501211056")]
+    ]
+
+    return text, InlineKeyboardMarkup(keyboard)
+    
 def banned_pesticides_handler(update, context):
     if not update.message or not update.message.text:
         return
@@ -1621,7 +1630,8 @@ def banned_pesticides_handler(update, context):
     item = find_banned_pesticide(text)
 
     if item:
-        update.message.reply_text(format_banned_pesticide(item))
+        text, keyboard = format_banned_pesticide(item)
+        update.message.reply_text(text, reply_markup=keyboard)
         raise DispatcherHandlerStop
 
 dp.add_handler(
