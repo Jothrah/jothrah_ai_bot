@@ -1955,7 +1955,8 @@ def find_restricted_pesticide(text):
     return None, None
 
 
-restricted_text = f"""⚠️ مادة مقيدة
+def handle_restricted_pesticide(update, item_name, item):
+    restricted_text = f"""⚠️ مادة مقيدة
 
 🔹 الاسم: {item['arabic']}
 🔹 English: {item_name.title()}
@@ -1969,11 +1970,10 @@ restricted_text = f"""⚠️ مادة مقيدة
 قد يتم تحديث حالة بعض المواد سواء بالتقييد او فك القيد او تعديل البيانات ، إذا كانت المعلومات قديمة أو احتجت للتأكد من آخر تحديث يرجى التواصل معنا ليتم تحديث البيانات
 """
 
-keyboard = InlineKeyboardMarkup([
-    [InlineKeyboardButton("📞 تواصل معنا لتحديث المعلومات", url=WHATSAPP_URL)]
-])
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("📞 تواصل معنا لتحديث المعلومات", url=WHATSAPP_URL)]
+    ])
 
-update.message.reply_text(restricted_text, reply_markup=keyboard)
-
+    update.message.reply_text(restricted_text, reply_markup=keyboard)
 updater.start_polling()
 updater.idle()
