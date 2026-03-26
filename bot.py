@@ -1031,6 +1031,7 @@ def handle_phone(update, context):
     )
 
 def reply(update, context):
+        global orders_count
     text = update.message.text.strip().lower()
 
 # البحث في المواد المحظورة
@@ -1061,7 +1062,6 @@ for key, item in BANNED_DATABASE.items():
 
     users.add(user_id)
 
-    global orders_count
     orders_count += 1
 
     save_data()
