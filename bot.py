@@ -950,41 +950,139 @@ def reply(update, context):
 
 
 
-# ============================================
-# دمج بطاقة أكلونيفين 60% إس سي من الملف المرفق
-# ============================================
-PEST_INFO["اكلونيفين 60% اس سي"] = {
-    "keywords": [
-        "اكلونيفين",
-        "أكلونيفين",
-        "aclonifen",
-        "aclonifen 60% sc",
-        "اكلونيفين 60 اس سي",
-        "أكلونيفين 60% إس سي",
-        "مادة اكلونيفين",
-        "المادة الفعالة اكلونيفين",
-        "دايفينيل ايثر",
-        "دايفينيل إيثر",
-    ],
-    "title": "أكلونيفين 60% إس سي",
-    "desc": "مبيد أعشاب جهازي اختياري يستخدم لمكافحة الأعشاب عريضة ورفيعة الأوراق قبل الإنبات.",
-    "damage": "الحشائش عريضة ورفيعة الأوراق تنافس المحصول على الماء والغذاء والضوء، وقد تؤثر على النمو والإنتاج عند عدم مكافحتها مبكرًا.",
-    "control": "المادة الفعالة: أكلونيفين 60%. المجموعة الكيميائية: دايفينيل إيثر. هيئة المبيد: مركز معلق (SC). فترة عودة الدخول للحقل: 12 ساعة.",
-    "usage": "البصل: بعد الزراعة وقبل الإنبات (معاملة واحدة فقط خلال الموسم) — 1 لتر/هكتار\nالجزر: معاملة واحدة بعد الزراعة حتى ما قبل ظهور النباتات على سطح التربة، أو تقسيم المعاملة على مرحلتين حسب التوصية — 2.5 لتر/هكتار\nالبطاطس: بعد الزراعة وقبل إنبات المحصول وبعد الانتهاء من التحضين — 3 لتر/هكتار\nعباد الشمس: بعد الزراعة وقبل الإنبات (معاملة واحدة فقط خلال الموسم) — 3 لتر/هكتار\nالفاصوليا واللوبيا: بعد الزراعة وقبل الإنبات (معاملة واحدة فقط خلال الموسم) — 3 لتر/هكتار\nالثوم: بعد الزراعة وقبل الإنبات (معاملة واحدة فقط خلال الموسم) — 1 لتر/هكتار",
-    "tips": "للبحث عن المنتجات أو البدائل داخل المتجر استخدم زر عرض المنتجات، وإذا احتجت ترشيحًا أدق تواصل عبر واتساب.",
-    "search_term": "أكلونيفين",
+import telebot
+from telebot import types
+import os
+
+bot = telebot.TeleBot(os.getenv("BOT_TOKEN"))
+
+PESTICIDE_DATABASE = {
+    "اكلونيفين": {
+        "name": "أكلونيفين 60% إس سي",
+        "aliases": [
+            "اكلونيفين",
+            "أكلونيفين",
+            "Aclonifen",
+            "Aclonifen 60% SC",
+            "أكلونيفين 60% إس سي"
+        ],
+        "type": "مبيد أعشاب",
+        "response": """🌿 أكلونيفين 60% إس سي (Aclonifen 60% SC)
+
+📌 الوصف
+مبيد أعشاب جهازي اختياري يُستخدم قبل الإنبات لمكافحة الأعشاب عريضة ورفيعة الأوراق في عدد من المحاصيل الزراعية.
+
+⚠️ أضرار الحشائش
+تسبب الحشائش عريضة ورفيعة الأوراق منافسة شديدة للمحصول على:
+💧 الماء
+🌱 العناصر الغذائية
+☀️ الضوء
+مما يؤدي إلى ضعف النمو وانخفاض الإنتاجية عند عدم مكافحتها مبكرًا.
+
+🧪 المواصفات الفنية
+• المادة الفعالة: أكلونيفين 60%
+• المجموعة الكيميائية: دايفينيل إيثر
+• هيئة المبيد: مركز معلق (SC)
+• فترة عودة الدخول للحقل: 12 ساعة
+
+💧 طرق ومعدلات الاستخدام
+
+🌾 البصل
+🪴 قبل الإنبات (بعد الزراعة) — معاملة واحدة فقط
+💧 1 لتر/هكتار
+
+🌾 الجزر
+🪴 بعد الزراعة حتى قبل ظهور النباتات
+💧 2.5 لتر/هكتار
+📌 يمكن تقسيم المعاملة على مرحلتين حسب التوصية
+
+🌾 البطاطس
+🪴 بعد الزراعة وقبل الإنبات وبعد الانتهاء من التحضين
+💧 3 لتر/هكتار
+
+🌾 عباد الشمس
+🪴 قبل الإنبات (بعد الزراعة) — معاملة واحدة فقط
+💧 3 لتر/هكتار
+
+🌾 الفاصوليا واللوبيا
+🪴 قبل الإنبات (بعد الزراعة) — معاملة واحدة فقط
+💧 3 لتر/هكتار
+
+🌾 الثوم
+🪴 قبل الإنبات (بعد الزراعة) — معاملة واحدة فقط
+💧 1 لتر/هكتار
+""",
+        "url": "https://pub-cd0f58e55c564e2eb5b6faa013d69fd6.r2.dev/cataloge/aclonifen.html"
+    }
 }
 
-print("Bot started...")
 
-updater = Updater(TOKEN, use_context=True)
-dp = updater.dispatcher
+def normalize_text(text):
+    text = text.strip().lower()
+    replacements = {
+        "أ": "ا",
+        "إ": "ا",
+        "آ": "ا",
+        "ة": "ه",
+        "ى": "ي",
+        "ؤ": "و",
+        "ئ": "ي"
+    }
+    for old, new in replacements.items():
+        text = text.replace(old, new)
+    return text
 
-dp.add_handler(CommandHandler("start", start))
-dp.add_handler(CommandHandler("help", help_command))
-dp.add_handler(CommandHandler("categories", categories_command))
-dp.add_handler(MessageHandler(Filters.photo, handle_photo))
-dp.add_handler(MessageHandler(Filters.text & ~Filters.command, reply))
 
-updater.start_polling()
-updater.idle()
+def find_pesticide(user_text):
+    normalized_input = normalize_text(user_text)
+
+    for key, item in PESTICIDE_DATABASE.items():
+        all_names = [key, item.get("name", "")] + item.get("aliases", [])
+        for name in all_names:
+            if normalized_input == normalize_text(name):
+                return item
+
+    return None
+
+
+def send_pesticide_response(message, item):
+    markup = None
+    if item.get("url"):
+        markup = types.InlineKeyboardMarkup()
+        button = types.InlineKeyboardButton(
+            text="📄 تحميل بطاقة المادة الفعالة",
+            url=item["url"]
+        )
+        markup.add(button)
+
+    bot.reply_to(
+        message,
+        item["response"],
+        reply_markup=markup
+    )
+
+
+@bot.message_handler(commands=["start"])
+def start_message(message):
+    bot.reply_to(
+        message,
+        "مرحبًا بك في بوت جذرة 🌱\n\nأرسل اسم المادة الفعالة أو المبيد للبحث عنها."
+    )
+
+
+@bot.message_handler(func=lambda message: True)
+def handle_message(message):
+    user_text = message.text.strip()
+    item = find_pesticide(user_text)
+
+    if item:
+        send_pesticide_response(message, item)
+    else:
+        bot.reply_to(
+            message,
+            "عذرًا، لم أجد هذه المادة في قاعدة البيانات حاليًا."
+        )
+
+
+print("Bot is running...")
+bot.infinity_polling()
