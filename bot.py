@@ -1060,5 +1060,574 @@ dp.add_handler(CommandHandler("categories", categories_command))
 dp.add_handler(MessageHandler(Filters.photo, handle_photo))
 dp.add_handler(MessageHandler(Filters.text & ~Filters.command, reply))
 
+# =========================
+# قائمة المواد الفعالة المحظورة
+# انسخها كاملة قبل:
+# updater.start_polling()
+# updater.idle()
+# =========================
+
+import re
+from telegram.ext import MessageHandler, Filters, DispatcherHandlerStop
+
+BANNED_PESTICIDES = [
+    {"no": "1", "common_name": "1,3-Dichloropropene", "cas_rn": "542-75-6; 10061-02-6 (E isomer); 10061-01-5 (Z isomer)", "main_uses": "FM=I/N/B"},
+    {"no": "2", "common_name": "2,3,4,5-Bistetrahydro-2-furaldehyde (ENT 17596) (Bisbutenylenetetrahydro furfural)", "cas_rn": "126-15-8", "main_uses": "IR"},
+    {"no": "3", "common_name": "2,4,5-T [2,4,5-T-trolamine] [2,4,5-T triethylammonium] [2,4,5-T-isoctyl]", "cas_rn": "93-76-5; 3813-14-7; 2008-46-0; 25168-15-4", "main_uses": "H/PGR"},
+    {"no": "4", "common_name": "2,4,5-TCP (2,4,5-Trichlorophenol)", "cas_rn": "95-95-4", "main_uses": "I/F/H"},
+    {"no": "5", "common_name": "2,4-D ((2,4-dichlorophenoxy) acetic acid)", "cas_rn": "94-75-7", "main_uses": "H"},
+    {"no": "6", "common_name": "Acephate", "cas_rn": "30560-19-1", "main_uses": "I"},
+    {"no": "7", "common_name": "Acifluorfen (sodium salt) [Acifluorfen-sodium]", "cas_rn": "62476-59-9; 50594-66-6", "main_uses": "H [H/Mt]"},
+    {"no": "8", "common_name": "Acetochlor", "cas_rn": "34256-82-1", "main_uses": "H"},
+    {"no": "9", "common_name": "Acrolein", "cas_rn": "107-02-8", "main_uses": "H"},
+    {"no": "10", "common_name": "Acrylonitrile", "cas_rn": "107-13-1", "main_uses": "I/FM"},
+    {"no": "11", "common_name": "Alachlor", "cas_rn": "15972-60-8", "main_uses": "H"},
+    {"no": "12", "common_name": "Aldicarb", "cas_rn": "116-06-3", "main_uses": "N/I/A"},
+    {"no": "13", "common_name": "Aldoxycarb", "cas_rn": "1646-88-4", "main_uses": "N/I/A"},
+    {"no": "14", "common_name": "Aldrin", "cas_rn": "309-00-2", "main_uses": "I"},
+    {"no": "15", "common_name": "Allethrin (bioallethrin)", "cas_rn": "584-79-2", "main_uses": "I"},
+    {"no": "16", "common_name": "Alpha-chlorohydrin", "cas_rn": "96-24-2", "main_uses": "R"},
+    {"no": "17", "common_name": "Alpha-HCH / Alpha Hexachlorocyclohexane / Alpha-BHC / Alpha-HCH", "cas_rn": "319-84-6", "main_uses": "I"},
+    {"no": "18", "common_name": "Amitraz", "cas_rn": "33089-61-1", "main_uses": "A/I"},
+    {"no": "19", "common_name": "Anthraquinone", "cas_rn": "84-65-1", "main_uses": "RP (Bird)"},
+    {"no": "20", "common_name": "Aramite", "cas_rn": "140-57-8", "main_uses": "I/A"},
+    {"no": "21", "common_name": "Arsenic acid (and its compounds) [Arsenic pentoxide] [Cacodylic acid; dimethylarsinic acid] [MSMA] [Sodium arsenate] [Cacodylate; sodium dimethylarsinate] [Chromated copper arsenate; CCA] [Arsenic trioxide] [Calcium arsenate] [Copper arsenate] [Lead arsenate] [Sodium arsenite]", "cas_rn": "7778-39-4; 1303-28-2; 75-60-5; 2163-80-6; 13464-38-5; 124-65-2; 75-60-5; 1327-53-3; 7778-44-1; 10103-61-4; 7784-40-9; 7784-46-5", "main_uses": "H/I/R"},
+    {"no": "22", "common_name": "Atrazine", "cas_rn": "1912-24-9", "main_uses": "H"},
+    {"no": "23", "common_name": "Azamethiphos", "cas_rn": "35575-96-3", "main_uses": "I"},
+    {"no": "24", "common_name": "Azinphos-ethyl", "cas_rn": "2642-71-9", "main_uses": "I/A"},
+    {"no": "25", "common_name": "Azinphos-methyl", "cas_rn": "86-50-0", "main_uses": "I/A"},
+    {"no": "26", "common_name": "Bendiocarb", "cas_rn": "22781-23-3", "main_uses": "I"},
+    {"no": "27", "common_name": "Benomyl (Dustable powder formulation at or above 7 per cent)", "cas_rn": "17804-35-2", "main_uses": "F/Mi"},
+    {"no": "28", "common_name": "Bensulide", "cas_rn": "741-58-2", "main_uses": "H"},
+    {"no": "29", "common_name": "Benthiavalicarb-isopropyl", "cas_rn": "177406-68-7", "main_uses": "F"},
+    {"no": "30", "common_name": "HCH, Benzenehexachloride (Gamma-HCH) [Lindane (gamma-HCH)]", "cas_rn": "608-73-1; 58-89-9", "main_uses": "I"},
+    {"no": "31", "common_name": "beta-HCH; beta-BCH", "cas_rn": "319-85-7", "main_uses": "I"},
+    {"no": "32", "common_name": "Binapacryl", "cas_rn": "485-31-4", "main_uses": "I/A/F"},
+    {"no": "33", "common_name": "Bioallethrin, S-cyclopentenyl isomers (S-Bioallethrin)", "cas_rn": "584-79-2", "main_uses": "I"},
+    {"no": "34", "common_name": "Blasticidin-S", "cas_rn": "2079-00-7", "main_uses": "F"},
+    {"no": "35", "common_name": "Bromophos [Bromophos-ethyl]", "cas_rn": "2104-96-3; 4824-78-6", "main_uses": "I [I/A]"},
+    {"no": "36", "common_name": "Butachlor", "cas_rn": "23184-66-9", "main_uses": "H"},
+    {"no": "37", "common_name": "Butocarboxim", "cas_rn": "34681-10-2", "main_uses": "I"},
+    {"no": "38", "common_name": "Butoxycarboxim", "cas_rn": "34681-23-7", "main_uses": "I/A"},
+    {"no": "39", "common_name": "Cadmium", "cas_rn": "7440-43-9", "main_uses": "-"},
+    {"no": "40", "common_name": "Cadmium Calcium Copper Zinc Chromate Sulphate (Cadmium Compounds)", "cas_rn": "12001-20-6", "main_uses": "F"},
+    {"no": "41", "common_name": "Cadusafos", "cas_rn": "95465-99-9", "main_uses": "N/I"},
+    {"no": "42", "common_name": "Calcium arsenate", "cas_rn": "7778-44-1", "main_uses": "H/I"},
+    {"no": "43", "common_name": "Calcium cyanamide", "cas_rn": "156-62-7", "main_uses": "DF/F/FR/H/I/PGR"},
+    {"no": "44", "common_name": "Camphechlor (Toxaphene)", "cas_rn": "8001-35-2", "main_uses": "I/A"},
+    {"no": "45", "common_name": "Captafol", "cas_rn": "2425-06-1", "main_uses": "F"},
+    {"no": "46", "common_name": "Carbaryl", "cas_rn": "63-25-2", "main_uses": "I/PGR"},
+    {"no": "47", "common_name": "Carbendazim", "cas_rn": "10605-21-7", "main_uses": "F"},
+    {"no": "48", "common_name": "Carbon disulphide (Carbon disulfide)", "cas_rn": "75-15-0", "main_uses": "I/N/FM"},
+    {"no": "49", "common_name": "Carbofuran", "cas_rn": "1563-66-2", "main_uses": "I/A/N"},
+    {"no": "50", "common_name": "Carbon tetrachloride", "cas_rn": "56-23-5", "main_uses": "I/FM"},
+    {"no": "51", "common_name": "Carbophenothion", "cas_rn": "786-19-6", "main_uses": "A/I"},
+    {"no": "52", "common_name": "Carbosulfan", "cas_rn": "55285-14-8", "main_uses": "I/N"},
+    {"no": "53", "common_name": "Cartap [Cartap hydrochloride]", "cas_rn": "15263-53-3; 15263-52-2", "main_uses": "I"},
+    {"no": "54", "common_name": "Chinomethionat (Oxythioquinox)", "cas_rn": "2439-01-2", "main_uses": "I/A/F"},
+    {"no": "55", "common_name": "Chloranil", "cas_rn": "118-75-2", "main_uses": "F/RP"},
+    {"no": "56", "common_name": "Chlordane", "cas_rn": "57-74-9", "main_uses": "I/T"},
+    {"no": "57", "common_name": "Chlordecone (Kepone)", "cas_rn": "143-50-0", "main_uses": "I/F"},
+    {"no": "58", "common_name": "Chlordimeform [Chlordimform hydrochloride]", "cas_rn": "6164-98-3; 19750-95-9", "main_uses": "A/I/Ov"},
+    {"no": "59", "common_name": "Chlorethoxyfos (Chlorethoxyfos)", "cas_rn": "54593-83-8", "main_uses": "I"},
+    {"no": "60", "common_name": "Chlorfenapyr", "cas_rn": "122453-73-0", "main_uses": "A/I"},
+    {"no": "61", "common_name": "Chlorfenvinphos, CVP", "cas_rn": "470-90-6", "main_uses": "A/I"},
+    {"no": "62", "common_name": "Chlormephos", "cas_rn": "24934-91-6", "main_uses": "I"},
+    {"no": "63", "common_name": "Chlorobenzilate", "cas_rn": "510-15-6", "main_uses": "I/A"},
+    {"no": "64", "common_name": "Chloroform", "cas_rn": "67-66-3", "main_uses": "FM"},
+    {"no": "65", "common_name": "Chloropicrin", "cas_rn": "76-06-2", "main_uses": "I/N/R/FM"},
+    {"no": "66", "common_name": "Chloropropylate", "cas_rn": "1437871.00", "main_uses": "A"},
+    {"no": "67", "common_name": "Chlorothalonil", "cas_rn": "1897-45-6", "main_uses": "F"},
+    {"no": "68", "common_name": "Chlorthiophos", "cas_rn": "21923-23-9", "main_uses": "I/A"},
+    {"no": "69", "common_name": "Chlozolinate", "cas_rn": "84332-86-5", "main_uses": "F"},
+    {"no": "70", "common_name": "Climbazole", "cas_rn": "38083-17-9", "main_uses": "F"},
+    {"no": "71", "common_name": "Coumaphos", "cas_rn": "56-72-4", "main_uses": "I/A"},
+    {"no": "72", "common_name": "Creosote", "cas_rn": "8001-58-9", "main_uses": "I/F/R"},
+    {"no": "73", "common_name": "Crimidine", "cas_rn": "535-89-7", "main_uses": "R"},
+    {"no": "74", "common_name": "Cyanamide (Hydrogen cyanamide)", "cas_rn": "420-04-2", "main_uses": "H/PGR"},
+    {"no": "75", "common_name": "Cyanazine", "cas_rn": "21725-46-2", "main_uses": "H"},
+    {"no": "76", "common_name": "Cyanide Compounds / Hydrogen cyanide [Calcium cyanide] [Sodium cyanide]", "cas_rn": "74-90-8; 592-01-8; 143-33-9", "main_uses": "I/R/FM [I/R/FM] [I/R]"},
+    {"no": "77", "common_name": "Cycloheximide", "cas_rn": "66-81-9", "main_uses": "F/PGR"},
+    {"no": "78", "common_name": "Cyflufenamid", "cas_rn": "180409-60-3", "main_uses": "F"},
+    {"no": "79", "common_name": "Cyhalothrin", "cas_rn": "68085-85-8", "main_uses": "I"},
+    {"no": "80", "common_name": "Cyhexatin", "cas_rn": "13121-70-5", "main_uses": "I/A"},
+    {"no": "81", "common_name": "Daminozide", "cas_rn": "1596-84-5", "main_uses": "PGR"},
+    {"no": "82", "common_name": "Dimethoate", "cas_rn": "60-51-5", "main_uses": "I/A"},
+    {"no": "83", "common_name": "DBCP (1,2-dibromo-3-chloropropane) (dibromochloropropane)", "cas_rn": "96-12-8", "main_uses": "I/N/F/FM"},
+    {"no": "84", "common_name": "DDT", "cas_rn": "50-29-3", "main_uses": "I"},
+    {"no": "85", "common_name": "Demeton [Demeton-O] [Demeton-S]", "cas_rn": "8065-48-3; 298-03-3; 126-75-0", "main_uses": "I/A"},
+    {"no": "86", "common_name": "Demeton-S-methyl", "cas_rn": "919-86-8", "main_uses": "I/A"},
+    {"no": "87", "common_name": "Di-allate (Diallate)", "cas_rn": "2303-16-4", "main_uses": "H"},
+    {"no": "88", "common_name": "Diazinon", "cas_rn": "333-41-5", "main_uses": "I/A"},
+    {"no": "89", "common_name": "Dichlobenil", "cas_rn": "1194-65-6", "main_uses": "H"},
+    {"no": "90", "common_name": "Diclofop-methyl", "cas_rn": "51338-27-3", "main_uses": "H"},
+    {"no": "91", "common_name": "Dicofol", "cas_rn": "115-32-2", "main_uses": "A"},
+    {"no": "92", "common_name": "Dicrotophos", "cas_rn": "141-66-2", "main_uses": "I/A"},
+    {"no": "93", "common_name": "Dieldrin", "cas_rn": "60-57-1", "main_uses": "I"},
+    {"no": "94", "common_name": "Dimefox", "cas_rn": "115-26-4", "main_uses": "I/A"},
+    {"no": "95", "common_name": "Dimethenamid", "cas_rn": "87674-68-8", "main_uses": "H"},
+    {"no": "96", "common_name": "Diniconazole-M", "cas_rn": "83657-18-5", "main_uses": "F"},
+    {"no": "97", "common_name": "Dinitramine", "cas_rn": "29091-05-2", "main_uses": "H"},
+    {"no": "98", "common_name": "Dinobuton", "cas_rn": "973-21-7", "main_uses": "A/F"},
+    {"no": "99", "common_name": "Dinoseb acetate (Dinoseb and its salts)", "cas_rn": "2813-95-8", "main_uses": "H"},
+    {"no": "100", "common_name": "Dinoseb and Dinoseb salts", "cas_rn": "88-85-7", "main_uses": "H/I"},
+    {"no": "101", "common_name": "Dinoterb", "cas_rn": "1420-07-1", "main_uses": "H"},
+    {"no": "102", "common_name": "Dioxathion", "cas_rn": "78-34-2", "main_uses": "I/A"},
+    {"no": "103", "common_name": "Dipropyl isocinchomeronate (MGK 326)", "cas_rn": "136-45-8", "main_uses": "IR"},
+    {"no": "104", "common_name": "Disulfoton", "cas_rn": "298-04-4", "main_uses": "I/A"},
+    {"no": "105", "common_name": "Ditalimfos", "cas_rn": "5131-24-8", "main_uses": "F"},
+    {"no": "106", "common_name": "Diuron", "cas_rn": "330-54-1", "main_uses": "H"},
+    {"no": "107", "common_name": "DNOC (Dinitroorthocresol) and its salts [Ammonium salt] [Potassium salt] [Sodium salt]", "cas_rn": "534-52-1; 2980-64-5; 5787-96-2; 2312-76-7", "main_uses": "I/A/H"},
+    {"no": "108", "common_name": "Edifenphos", "cas_rn": "17109-49-8", "main_uses": "F"},
+    {"no": "109", "common_name": "Endosulfan", "cas_rn": "115-29-7", "main_uses": "I/A"},
+    {"no": "110", "common_name": "Endrin", "cas_rn": "72-20-8", "main_uses": "I"},
+    {"no": "111", "common_name": "Epichlorohydrin", "cas_rn": "106-89-8", "main_uses": "-"},
+    {"no": "112", "common_name": "EPN", "cas_rn": "2104-64-5", "main_uses": "I/A"},
+    {"no": "113", "common_name": "Epoxiconazole", "cas_rn": "133855-98-8", "main_uses": "F"},
+    {"no": "114", "common_name": "Erbon", "cas_rn": "136-25-4", "main_uses": "H"},
+    {"no": "115", "common_name": "Ergocalciferol (Vitamin D2)", "cas_rn": "50-14-6", "main_uses": "R"},
+    {"no": "116", "common_name": "Ethiofencarb", "cas_rn": "29973-13-5", "main_uses": "I"},
+    {"no": "117", "common_name": "Ethion", "cas_rn": "563-12-2", "main_uses": "A/I"},
+    {"no": "118", "common_name": "Ethirimol", "cas_rn": "23947-60-6", "main_uses": "F"},
+    {"no": "119", "common_name": "Ethoprop / Ethoprophos", "cas_rn": "13194-48-4", "main_uses": "I/N"},
+    {"no": "120", "common_name": "Ethyl hexanediol (Ethyl hexyleneglycol (6-12))", "cas_rn": "94-96-2", "main_uses": "IR"},
+    {"no": "121", "common_name": "Ethylene dibromide (1,2-Dibromoethane) (EDB)", "cas_rn": "106-93-4", "main_uses": "I/N/FM"},
+    {"no": "122", "common_name": "Ethylene dichloride (EDC)", "cas_rn": "107-06-2", "main_uses": "I/FM"},
+    {"no": "123", "common_name": "Ethylene oxide", "cas_rn": "75-21-8", "main_uses": "FM"},
+    {"no": "124", "common_name": "Ethylene thiourea (ethylenethiourea)", "cas_rn": "96-45-7", "main_uses": "F"},
+    {"no": "125", "common_name": "Etridiazole", "cas_rn": "2593-15-9", "main_uses": "F"},
+    {"no": "126", "common_name": "Etrimfos", "cas_rn": "38260-54-7", "main_uses": "I/A"},
+    {"no": "127", "common_name": "Fenarimol", "cas_rn": "60168-88-9", "main_uses": "F"},
+    {"no": "128", "common_name": "Fenchlorazole-ethyl", "cas_rn": "103112-35-2", "main_uses": "H"},
+    {"no": "129", "common_name": "Fenoprop, Fenoprop-butotyl (Silvex)", "cas_rn": "93-72-1", "main_uses": "H/PGR"},
+    {"no": "130", "common_name": "Fenobucarb", "cas_rn": "3766-81-2", "main_uses": "I"},
+    {"no": "131", "common_name": "Fenothiocarb", "cas_rn": "62850-32-2", "main_uses": "A"},
+    {"no": "132", "common_name": "Fenoxycarb", "cas_rn": "79127-80-3", "main_uses": "I"},
+    {"no": "133", "common_name": "Fensulfothion", "cas_rn": "115-90-2", "main_uses": "I/N"},
+    {"no": "134", "common_name": "Fenthiaprop [Fenthiaprop-ethyl]", "cas_rn": "95721-12-3; 93921-16-5", "main_uses": "H"},
+    {"no": "135", "common_name": "Fenthion", "cas_rn": "55-38-9", "main_uses": "I/Av"},
+    {"no": "136", "common_name": "Fentin [Fentin acetate (Triphenyltin acetate)] [Fentin hydroxide (Triphenyltin hydroxide)]", "cas_rn": "668-34-8; 900-95-8; 76-87-9", "main_uses": "F/AL/Mo"},
+    {"no": "137", "common_name": "Fenuron-TCA (Fenurontrichloroacetate)", "cas_rn": "4482-55-7", "main_uses": "H"},
+    {"no": "138", "common_name": "Fenvalerate", "cas_rn": "51630-58-1", "main_uses": "I/A/TX"},
+    {"no": "139", "common_name": "Ferbam", "cas_rn": "14484-64-1", "main_uses": "F"},
+    {"no": "140", "common_name": "Fluazifop-butyl", "cas_rn": "69806-50-4", "main_uses": "H"},
+    {"no": "141", "common_name": "Fluazolate", "cas_rn": "174514-07-9", "main_uses": "H"},
+    {"no": "142", "common_name": "Flucythrinate", "cas_rn": "70124-77-5", "main_uses": "I"},
+    {"no": "143", "common_name": "Flufenoxuron", "cas_rn": "101463-69-8", "main_uses": "I/A"},
+    {"no": "144", "common_name": "Fluorine compounds [Methanesulfonyl fluoride] [Sodium fluoride] [Sodium hexafluorosilicate / Sodium fluorosilicate]", "cas_rn": "558-25-8; 7681-49-4; 16893-85-9", "main_uses": "I"},
+    {"no": "145", "common_name": "Fluoroacetamide", "cas_rn": "640-19-7", "main_uses": "R"},
+    {"no": "146", "common_name": "Flurenol", "cas_rn": "467-69-6", "main_uses": "H/PGR"},
+    {"no": "147", "common_name": "Flurprimidol", "cas_rn": "56425-91-3", "main_uses": "PGR"},
+    {"no": "148", "common_name": "Flusilazole", "cas_rn": "85509-19-9", "main_uses": "F"},
+    {"no": "149", "common_name": "Fluthiacet-methyl", "cas_rn": "117337-19-6", "main_uses": "H"},
+    {"no": "150", "common_name": "Fluvalinate", "cas_rn": "69409-94-5", "main_uses": "A/I"},
+    {"no": "151", "common_name": "Folpet", "cas_rn": "133-07-3", "main_uses": "F"},
+    {"no": "152", "common_name": "Fonofos", "cas_rn": "944-22-9", "main_uses": "I"},
+    {"no": "153", "common_name": "Formetanate", "cas_rn": "22259-30-9", "main_uses": "I/A"},
+    {"no": "154", "common_name": "Fosthietan", "cas_rn": "21548-32-3", "main_uses": "I/N/FM"},
+    {"no": "155", "common_name": "Furathiocarb", "cas_rn": "65907-30-4", "main_uses": "I"},
+    {"no": "156", "common_name": "Furilazole", "cas_rn": "121776-33-8", "main_uses": "Herbicide safener"},
+    {"no": "157", "common_name": "Haloxyfop [Haloxyfop-etotyl] [Haloxyfop-P-methyl] [Haloxyfop-methyl] (unstated stereochemistry)", "cas_rn": "69806-34-4; 87237-48-7; 72619-32-0; 69806-40-2", "main_uses": "H"},
+    {"no": "158", "common_name": "Heptachlor", "cas_rn": "76-44-8", "main_uses": "I"},
+    {"no": "159", "common_name": "Heptenophos", "cas_rn": "23560-59-0", "main_uses": "I"},
+    {"no": "160", "common_name": "Hexachlorobenzene", "cas_rn": "118-74-1", "main_uses": "F"},
+    {"no": "161", "common_name": "Hexaconazole", "cas_rn": "79983-71-4", "main_uses": "F"},
+    {"no": "162", "common_name": "Hexaethyltetraphosphate (HETP)", "cas_rn": "757-58-4", "main_uses": "I"},
+    {"no": "163", "common_name": "Hexazinone", "cas_rn": "51235-04-2", "main_uses": "H"},
+    {"no": "164", "common_name": "Imazalil", "cas_rn": "35554-44-0", "main_uses": "F"},
+    {"no": "165", "common_name": "Iminoctadine [Iminoctadine triacetate] [Iminoctadinetris (albesilate)]", "cas_rn": "13516-27-3; 39202-40-9; 99257-43-9", "main_uses": "F"},
+    {"no": "166", "common_name": "Iprodione", "cas_rn": "36734-19-7", "main_uses": "F"},
+    {"no": "167", "common_name": "Iprovalicarb", "cas_rn": "140923-17-7", "main_uses": "F"},
+    {"no": "168", "common_name": "Isazophos (Isazofos)", "cas_rn": "42509-80-8", "main_uses": "I/N"},
+    {"no": "169", "common_name": "Isobenzan", "cas_rn": "297-78-9", "main_uses": "I"},
+    {"no": "170", "common_name": "Isodrin (Isomers of eldrin)", "cas_rn": "465-73-6", "main_uses": "I"},
+    {"no": "171", "common_name": "Isofenphos", "cas_rn": "25311-71-1", "main_uses": "I"},
+    {"no": "172", "common_name": "Isopyrazam", "cas_rn": "881685-58-1", "main_uses": "F"},
+    {"no": "173", "common_name": "Isoxaflutole", "cas_rn": "141112-29-0", "main_uses": "H"},
+    {"no": "174", "common_name": "Isoxathion", "cas_rn": "18854-01-8", "main_uses": "I"},
+    {"no": "175", "common_name": "Kelevan", "cas_rn": "4234-79-1", "main_uses": "I"},
+    {"no": "176", "common_name": "Kresoxim-methyl", "cas_rn": "143390-89-0", "main_uses": "F/B"},
+    {"no": "177", "common_name": "Lead compounds [Lead arsenate] [Lead arsenite]", "cas_rn": "7784-40-9; 10031-13-7", "main_uses": "I/A/N/PGR"},
+    {"no": "178", "common_name": "Leptophos", "cas_rn": "21609-90-5", "main_uses": "I"},
+    {"no": "179", "common_name": "Linuron", "cas_rn": "330-55-2", "main_uses": "H"},
+    {"no": "180", "common_name": "Malathion", "cas_rn": "121-75-5", "main_uses": "I/A"},
+    {"no": "181", "common_name": "Maleic hydrazide", "cas_rn": "123-33-1", "main_uses": "H/PGR"},
+    {"no": "182", "common_name": "Mancozeb", "cas_rn": "8018-01-7", "main_uses": "F"},
+    {"no": "183", "common_name": "Maneb", "cas_rn": "12427-38-2", "main_uses": "F"},
+    {"no": "184", "common_name": "MCPA-thioethyl", "cas_rn": "25319-90-8", "main_uses": "H"},
+    {"no": "185", "common_name": "Mecarbam", "cas_rn": "2595-54-2", "main_uses": "I/A"},
+    {"no": "186", "common_name": "Mecoprop (MCPP)", "cas_rn": "7085-19-0; 93-65-2", "main_uses": "H"},
+    {"no": "187", "common_name": "Mercury and its compounds [Chloromethoxypropylmercuric acetate (CPMA)] [Diphenylmercurydodecenylsuccinate (PMDS)] [Mercuric chloride] [Mercuric oxide] [Mercurous chloride] [Methoxyethyl mercury acetate] [Methylmercury acetate] [Methoxyethylmercury silicate] [Methylmercury dicyandiamide] [Phenylmercuric oleate (PMO)] [Phenylmercuric salicylate] [Phenylmercuric acetate (PMA)] [Phenylmercurydimethyldithiocarbamate] [Phenylmercuric nitrate]", "cas_rn": "7439-97-6; 1319-86-4; 27236-65-3; 7487-94-7; 21908-53-2; 7546-30-7; 151-38-2; 108-07-6; 64491-92-5; 502-39-6; 104-68-9; 28086-13-7; 62-38-4; 32407-99-1; 8003-05-2", "main_uses": "F/I/H"},
+    {"no": "188", "common_name": "Mecoprop-P", "cas_rn": "16484-77-8", "main_uses": "H"},
+    {"no": "189", "common_name": "Mepanipyrim", "cas_rn": "110235-47-7", "main_uses": "F"},
+    {"no": "190", "common_name": "Mephospholan (Mephosfolan)", "cas_rn": "950-10-7", "main_uses": "I/A"},
+    {"no": "191", "common_name": "Metam-sodium (Sodium methyldithiocarbamate)", "cas_rn": "137-42-8", "main_uses": "F/N/H/I"},
+    {"no": "192", "common_name": "Methamidophos (soluble liquid formulations of the substance that exceed 600 g active ingredient/l)", "cas_rn": "10265-92-6", "main_uses": "I/A"},
+    {"no": "193", "common_name": "Methidathion", "cas_rn": "950-37-8", "main_uses": "I/A"},
+    {"no": "194", "common_name": "Methomyl", "cas_rn": "16752-77-5", "main_uses": "I/A"},
+    {"no": "195", "common_name": "Methyl bromide", "cas_rn": "74-83-9", "main_uses": "I/N/F/A/R/FM"},
+    {"no": "196", "common_name": "Methyl isothiocyanate", "cas_rn": "556-61-6", "main_uses": "N/F/I/H"},
+    {"no": "197", "common_name": "Metiram", "cas_rn": "9006-42-2", "main_uses": "F"},
+    {"no": "198", "common_name": "Metoxuron", "cas_rn": "19937-59-8", "main_uses": "H"},
+    {"no": "199", "common_name": "Mevinphos", "cas_rn": "26718-65-0", "main_uses": "I/A"},
+    {"no": "200", "common_name": "Mirex", "cas_rn": "2385-85-5", "main_uses": "I"},
+    {"no": "201", "common_name": "Monocrotophos", "cas_rn": "6923-22-4", "main_uses": "I/A"},
+    {"no": "202", "common_name": "Monolinuron", "cas_rn": "1746-81-2", "main_uses": "H"},
+    {"no": "203", "common_name": "Monuron (monuron-TCA)", "cas_rn": "150-68-5", "main_uses": "H"},
+    {"no": "204", "common_name": "Morfamquat (Morfamquat dichloride)", "cas_rn": "4636-83-3", "main_uses": "H"},
+    {"no": "205", "common_name": "Naphthalene", "cas_rn": "91-20-3", "main_uses": "F/I"},
+    {"no": "206", "common_name": "Nicotine", "cas_rn": "54-11-5", "main_uses": "I"},
+    {"no": "207", "common_name": "Nitrobenzene", "cas_rn": "98-95-3", "main_uses": "Pesticide"},
+    {"no": "208", "common_name": "Nitrofen (TOK)", "cas_rn": "1836-75-5", "main_uses": "H"},
+    {"no": "209", "common_name": "Octamethylpyrophosphoramide (OMPA)", "cas_rn": "152-16-9", "main_uses": "I/A"},
+    {"no": "210", "common_name": "Omethoate", "cas_rn": "1113-02-6", "main_uses": "I/A"},
+    {"no": "211", "common_name": "Oryzalin", "cas_rn": "19044-88-3", "main_uses": "H"},
+    {"no": "212", "common_name": "Oxadiazon", "cas_rn": "19666-30-9", "main_uses": "H"},
+    {"no": "213", "common_name": "Oxadixyl", "cas_rn": "77732-09-3", "main_uses": "F"},
+    {"no": "214", "common_name": "Oxydemeton-methyl", "cas_rn": "301-12-2", "main_uses": "I"},
+    {"no": "215", "common_name": "Oxydeprofos", "cas_rn": "2674-91-1", "main_uses": "I"},
+    {"no": "216", "common_name": "Oxyfluorfen", "cas_rn": "42874-03-3", "main_uses": "H"},
+    {"no": "217", "common_name": "Paraquat dichloride [Paraquat]", "cas_rn": "1910-42-5; 4685-14-7", "main_uses": "H"},
+    {"no": "218", "common_name": "Parathion (Parathion-ethyl)", "cas_rn": "56-38-2", "main_uses": "I/A"},
+    {"no": "219", "common_name": "Parathion-methyl (emulsifiable concentrates (EC) at or above 19.5% active ingredient and dusts at or above 1.5% active ingredient)", "cas_rn": "298-00-0", "main_uses": "I"},
+    {"no": "220", "common_name": "Pebulate", "cas_rn": "1114-71-2", "main_uses": "H"},
+    {"no": "221", "common_name": "Pentachlorobenzene (PCB) (except mono- and dichlorinated)", "cas_rn": "608-93-5", "main_uses": "F/H/I/Mt"},
+    {"no": "222", "common_name": "Pentachlorophenol / PCP (Pentachlorophenol) [Pentachlorophenyllaurate] [Sodium pentachlorophenoxide]", "cas_rn": "87-86-5; 3772-94-9; 131-52-2", "main_uses": "F/I/H"},
+    {"no": "223", "common_name": "Phenthoate", "cas_rn": "2597-03-7", "main_uses": "I/A"},
+    {"no": "224", "common_name": "Phorate", "cas_rn": "298-02-2", "main_uses": "I/A/N"},
+    {"no": "225", "common_name": "Phosacetim", "cas_rn": "4104-14-7", "main_uses": "R"},
+    {"no": "226", "common_name": "Phosalone", "cas_rn": "2310-17-0", "main_uses": "I/A"},
+    {"no": "227", "common_name": "Phosphamidon (mixture, (E) & (Z) isomers), (soluble liquid formulations of the substance that exceed 1,000 g active ingredient/l) [E-Phosphamidon] [Z-Phosphamidon]", "cas_rn": "13171-21-6; 297-99-4; 23783-98-4", "main_uses": "I/A"},
+    {"no": "228", "common_name": "Picloram", "cas_rn": "1918-02-1", "main_uses": "H"},
+    {"no": "229", "common_name": "Pirimicarb", "cas_rn": "23103-98-2", "main_uses": "I"},
+    {"no": "230", "common_name": "Pirimiphos-ethyl", "cas_rn": "23505-41-1", "main_uses": "I"},
+    {"no": "231", "common_name": "Polychloroterpenes [Strobane (Terpene polychlorinates)]", "cas_rn": "8001-50-1", "main_uses": "I/A/Mt"},
+    {"no": "232", "common_name": "Procymidon (Procymidone)", "cas_rn": "32809-16-8", "main_uses": "F"},
+    {"no": "233", "common_name": "Profenofos", "cas_rn": "41198-08-7", "main_uses": "I/A"},
+    {"no": "234", "common_name": "Propachlor", "cas_rn": "1918-16-7", "main_uses": "H"},
+    {"no": "235", "common_name": "Propargite", "cas_rn": "2312-35-8", "main_uses": "A"},
+    {"no": "236", "common_name": "Propetamphos", "cas_rn": "31218-83-4", "main_uses": "I/A"},
+    {"no": "237", "common_name": "Propham", "cas_rn": "122-42-9", "main_uses": "H/PGR"},
+    {"no": "238", "common_name": "Propoxur", "cas_rn": "114-26-1", "main_uses": "I"},
+    {"no": "239", "common_name": "Prothoate", "cas_rn": "2275-18-5", "main_uses": "I/A"},
+    {"no": "240", "common_name": "Pymetrozine", "cas_rn": "123312-89-0", "main_uses": "I"},
+    {"no": "241", "common_name": "Pyraflufen-ethyl", "cas_rn": "129630-19-9", "main_uses": "H"},
+    {"no": "242", "common_name": "Pyrazachlor", "cas_rn": "6814-58-0", "main_uses": "PGR"},
+    {"no": "243", "common_name": "Pyrazophos", "cas_rn": "13457-18-6", "main_uses": "F"},
+    {"no": "244", "common_name": "Pyriminil (Pyrinuron)", "cas_rn": "53558-25-1", "main_uses": "R"},
+    {"no": "245", "common_name": "Quintozene (PCNB)", "cas_rn": "82-68-8", "main_uses": "F"},
+    {"no": "246", "common_name": "Resmethrin", "cas_rn": "10453-86-8", "main_uses": "I"},
+    {"no": "247", "common_name": "Rotenone", "cas_rn": "83-79-4", "main_uses": "I/A"},
+    {"no": "248", "common_name": "Safrole", "cas_rn": "94-59-7", "main_uses": "-"},
+    {"no": "249", "common_name": "Schradan", "cas_rn": "152-16-9", "main_uses": "I/A"},
+    {"no": "250", "common_name": "Scilliroside", "cas_rn": "507-60-8", "main_uses": "R"},
+    {"no": "251", "common_name": "Sec-butylamine", "cas_rn": "13952-84-6", "main_uses": "F"},
+    {"no": "252", "common_name": "Sedaxane", "cas_rn": "874967-67-6", "main_uses": "F"},
+    {"no": "253", "common_name": "Siduron", "cas_rn": "1982-49-6", "main_uses": "H"},
+    {"no": "254", "common_name": "Simazine", "cas_rn": "122-34-9", "main_uses": "H"},
+    {"no": "255", "common_name": "Sodium dimethyl dithio carbamate", "cas_rn": "128-04-1", "main_uses": "F"},
+    {"no": "256", "common_name": "Sodium fluoride", "cas_rn": "7681-49-4", "main_uses": "I"},
+    {"no": "257", "common_name": "Sodium fluoroacetate (1080)", "cas_rn": "62-74-8", "main_uses": "I/R"},
+    {"no": "258", "common_name": "Sodium hexafluorosilicate", "cas_rn": "16893-85-9", "main_uses": "I"},
+    {"no": "259", "common_name": "Spirodiclofen", "cas_rn": "148477-71-8", "main_uses": "I/A"},
+    {"no": "260", "common_name": "Sulfaquinoxaline (Sulphaquinoxaline)", "cas_rn": "59-40-5", "main_uses": "R/Synergist"},
+    {"no": "261", "common_name": "Sulfotep", "cas_rn": "3689-24-5", "main_uses": "I/A"},
+    {"no": "262", "common_name": "Sulprofos", "cas_rn": "35400-43-2", "main_uses": "I"},
+    {"no": "263", "common_name": "TCMTB", "cas_rn": "21564-17-0", "main_uses": "F"},
+    {"no": "264", "common_name": "TDE (DDD)", "cas_rn": "72-54-8", "main_uses": "I"},
+    {"no": "265", "common_name": "Tebupirimfos (Tebupirimifos)", "cas_rn": "96182-53-5", "main_uses": "I"},
+    {"no": "266", "common_name": "Tecnazene (Technazene)", "cas_rn": "117-18-0", "main_uses": "F/PGR"},
+    {"no": "267", "common_name": "TEPP (Tetraethyl pyrophosphate)", "cas_rn": "107-49-3", "main_uses": "I/A"},
+    {"no": "268", "common_name": "Terbufos", "cas_rn": "13071-79-9", "main_uses": "I/N"},
+    {"no": "269", "common_name": "Tetrachlorvinphos", "cas_rn": "22248-79-9", "main_uses": "I/A"},
+    {"no": "270", "common_name": "Tetradifon", "cas_rn": "116-29-0", "main_uses": "I/A"},
+    {"no": "271", "common_name": "Thiodicarb", "cas_rn": "59669-26-0", "main_uses": "I/Mo"},
+    {"no": "272", "common_name": "Thiofanox", "cas_rn": "39196-18-4", "main_uses": "I/A"},
+    {"no": "273", "common_name": "Thiometon", "cas_rn": "640-15-3", "main_uses": "I/A"},
+    {"no": "274", "common_name": "Thionazin", "cas_rn": "297-97-2", "main_uses": "I/N"},
+    {"no": "275", "common_name": "Thiacloprid", "cas_rn": "111988-49-9", "main_uses": "I"},
+    {"no": "276", "common_name": "Thiophanate-methyl", "cas_rn": "32564-05-8", "main_uses": "F/WPr"},
+    {"no": "277", "common_name": "Thiram (Tetramethylthiuram disulfide) (in formulations with benomyl and carbofuran)", "cas_rn": "137-26-8", "main_uses": "F/I/N"},
+    {"no": "278", "common_name": "Tolylfluanid", "cas_rn": "731-27-1", "main_uses": "F"},
+    {"no": "279", "common_name": "Triazophos", "cas_rn": "24017-47-8", "main_uses": "I/A/N"},
+    {"no": "280", "common_name": "Trichlorfon", "cas_rn": "52-68-6", "main_uses": "I"},
+    {"no": "281", "common_name": "Tridemorph", "cas_rn": "81412-43-3", "main_uses": "F"},
+    {"no": "282", "common_name": "Trifluralin", "cas_rn": "1582-09-8", "main_uses": "H"},
+    {"no": "283", "common_name": "Triorganostannic compounds, including all Tributyltin compounds [Tributyltin benzoate] [Tributyltin chloride] [Tributyltin fluoride] [Tributyltin linoleate] [Tributyltin methacrylate] [Tributyltin naphthenate] [Tributyltin oxide]", "cas_rn": "56-35-9; 688-73-3; 4342-36-3; 1461-22-9; 1983-10-4; 24124-25-2; 2155-70-6; 85409-17-2; 56-35-9", "main_uses": "F"},
+    {"no": "284", "common_name": "Vamidothion", "cas_rn": "2275-23-2", "main_uses": "I/A"},
+    {"no": "285", "common_name": "Vinclozolin", "cas_rn": "50471-44-8", "main_uses": "F"},
+    {"no": "286", "common_name": "Zineb", "cas_rn": "12122-67-7", "main_uses": "F"},
+]
+
+ARABIC_NAME_OVERRIDES = {
+    "Acephate": "أسيفات",
+    "Acetochlor": "أسيتوكلور",
+    "Acrolein": "أكرولين",
+    "Acrylonitrile": "أكريلونيتريل",
+    "Alachlor": "ألاكلور",
+    "Aldicarb": "ألديكارب",
+    "Aldoxycarb": "ألدوكسيكارب",
+    "Aldrin": "ألدرين",
+    "Amitraz": "أميتراز",
+    "Atrazine": "أترازين",
+    "Azamethiphos": "أزامثيفوس",
+    "Azinphos-ethyl": "أزينفوس إيثيل",
+    "Azinphos-methyl": "أزينفوس ميثيل",
+    "Bendiocarb": "بنديوكارب",
+    "Benomyl (Dustable powder formulation at or above 7 per cent)": "بنوميل",
+    "Bensulide": "بنسوليد",
+    "Binapacryl": "بيناباكريل",
+    "Butachlor": "بيوتاكلور",
+    "Cadusafos": "كادوسافوس",
+    "Captafol": "كابتافول",
+    "Carbaryl": "كاربريل",
+    "Carbendazim": "كاربندازيم",
+    "Carbofuran": "كاربوفوران",
+    "Carbosulfan": "كاربوسلفان",
+    "Chlorfenapyr": "كلورفينابير",
+    "Chlorothalonil": "كلوروثالونيل",
+    "Climbazole": "كليمبازول",
+    "Coumaphos": "كومافوس",
+    "Cyflufenamid": "سيفلوفيناميد",
+    "Cyhalothrin": "سيهالوثرين",
+    "Cyhexatin": "سيهكساتين",
+    "Daminozide": "دامينوزايد",
+    "Diazinon": "ديازينون",
+    "Dicofol": "ديكوفول",
+    "Dieldrin": "دايلدرين",
+    "Dimethoate": "ديميثوات",
+    "Diniconazole-M": "دينيكونازول إم",
+    "Diuron": "ديورون",
+    "Edifenphos": "إديفينفوس",
+    "Endosulfan": "إندوسلفان",
+    "Endrin": "إندرين",
+    "Epoxiconazole": "إيبوكسيكونازول",
+    "Ethion": "إيثيون",
+    "Ethirimol": "إثيريمول",
+    "Etridiazole": "إتريديازول",
+    "Fenarimol": "فيناريمول",
+    "Fenobucarb": "فينوبوكارب",
+    "Fenoxycarb": "فينوكسيكارب",
+    "Fenthion": "فينثيون",
+    "Fenvalerate": "فينفاليرات",
+    "Ferbam": "فيربام",
+    "Fluazifop-butyl": "فلوازيفوب بيوتيل",
+    "Flufenoxuron": "فلوفينوكسورون",
+    "Flusilazole": "فلوسيلازول",
+    "Fluvalinate": "فلوفالينات",
+    "Folpet": "فولبت",
+    "Fonofos": "فونوفوس",
+    "Formetanate": "فورميتانيت",
+    "Heptachlor": "هيبتاكلور",
+    "Hexaconazole": "هكساكونازول",
+    "Hexazinone": "هكزازينون",
+    "Imazalil": "إيمازاليل",
+    "Iprodione": "إيبروديون",
+    "Iprovalicarb": "إيبروفاليكارب",
+    "Isoxaflutole": "إيزوكسافلوتول",
+    "Isoxathion": "إيزوكساثيون",
+    "Kresoxim-methyl": "كريسوكسيم ميثيل",
+    "Linuron": "لينيورون",
+    "Malathion": "مالاثيون",
+    "Maleic hydrazide": "ماليك هيدرازيد",
+    "Mancozeb": "مانكوزيب",
+    "Maneb": "مانيب",
+    "Mecoprop-P": "ميكوبروب بي",
+    "Mepanipyrim": "ميبانيبيريم",
+    "Methidathion": "ميثيداثيون",
+    "Methomyl": "ميثوميل",
+    "Metiram": "ميتيرام",
+    "Mirex": "ميركس",
+    "Monocrotophos": "مونوكروتوفوس",
+    "Naphthalene": "نفثالين",
+    "Nicotine": "نيكوتين",
+    "Nitrobenzene": "نيتروبنزين",
+    "Omethoate": "أوميثوات",
+    "Oryzalin": "أوريزالين",
+    "Oxadiazon": "أوكساديازون",
+    "Oxadixyl": "أوكساديكسيل",
+    "Oxyfluorfen": "أوكسي فلورفين",
+    "Paraquat dichloride [Paraquat]": "باراكوات ثنائي الكلوريد",
+    "Parathion (Parathion-ethyl)": "باراثيون",
+    "Pebulate": "بيبوليت",
+    "Phorate": "فورات",
+    "Phosalone": "فوسالون",
+    "Picloram": "بيكلورام",
+    "Pirimicarb": "بيريميكارب",
+    "Procymidon (Procymidone)": "بروسيميدون",
+    "Profenofos": "بروفينوفوس",
+    "Propargite": "بروبارجيت",
+    "Propoxur": "بروبوكسور",
+    "Pymetrozine": "بيميتروزين",
+    "Pyrazophos": "بيرازوفوس",
+    "Quintozene (PCNB)": "كوينتوزين",
+    "Resmethrin": "ريسمثرين",
+    "Rotenone": "روتينون",
+    "Sedaxane": "سيداكسان",
+    "Simazine": "سيمزين",
+    "Spirodiclofen": "سبيروديكلوفين",
+    "Sulfotep": "سلفوتيب",
+    "Sulprofos": "سلبروفوس",
+    "Terbufos": "تيربوفوس",
+    "Tetrachlorvinphos": "تيتراكلورفينفوس",
+    "Tetradifon": "تيتراديفون",
+    "Thiodicarb": "ثيوديكارب",
+    "Thiofanox": "ثيوفانوكس",
+    "Thiometon": "ثيوميتون",
+    "Thionazin": "ثيونازين",
+    "Thiacloprid": "ثياكلوبريد",
+    "Thiophanate-methyl": "ثيوفانات ميثيل",
+    "Tolylfluanid": "توليـل فلوانيد",
+    "Triazophos": "ترايازوفوس",
+    "Trichlorfon": "ترايكلورفون",
+    "Tridemorph": "ترايديمورف",
+    "Trifluralin": "ترايفلورالين",
+    "Vamidothion": "فاميدوثيون",
+    "Vinclozolin": "فينكلوزولين",
+    "Zineb": "زينيب",
+    "DDT": "دي دي تي",
+}
+
+USE_CODE_AR = {
+    "I": "مبيد حشري",
+    "A": "مبيد أكاروسي",
+    "F": "مبيد فطري",
+    "H": "مبيد أعشاب",
+    "N": "مبيد نيماتودي",
+    "B": "مبيد بكتيري",
+    "R": "مبيد قوارض",
+    "PGR": "منظم نمو نباتي",
+    "FM": "مبخر أو مدخن",
+    "IR": "طارد حشرات",
+    "RP": "طارد",
+    "Mt": "مبيد عث",
+    "Mi": "مطهر أو معقم",
+    "FR": "مطهر تربة أو استخدام خاص",
+    "Ov": "مبيد بيوض",
+    "Av": "مبيد طيور",
+    "AL": "مبيد طحالب",
+    "Mo": "مبيد رخويات",
+    "TX": "تصنيف خاص",
+    "Synergist": "مادة مساعدة",
+    "WPr": "معالجة أخشاب",
+    "DF": "مطهر تربة",
+    "T": "استخدام خاص",
+    "Pesticide": "مبيد",
+    "-": "غير محدد",
+    "Herbicide safener": "مادة حماية من مبيدات الأعشاب",
+}
+
+def _normalize_banned_text(text):
+    text = str(text).strip().lower()
+    text = text.replace("أ", "ا").replace("إ", "ا").replace("آ", "ا")
+    text = text.replace("ة", "ه").replace("ى", "ي")
+    text = text.replace("_", " ").replace("-", " ")
+    text = re.sub(r"[^\w\s/().\[\];,+]+", " ", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
+
+def _simple_arabic_fallback(name):
+    return name
+
+def get_arabic_name(common_name):
+    return ARABIC_NAME_OVERRIDES.get(common_name, _simple_arabic_fallback(common_name))
+
+def get_classification_ar(main_uses):
+    value = main_uses.strip()
+    if value in USE_CODE_AR:
+        return USE_CODE_AR[value]
+
+    tokens = re.split(r"[/,;=]+", value.replace("[", "").replace("]", ""))
+    mapped = []
+    seen = set()
+
+    for token in tokens:
+        token = token.strip()
+        if not token:
+            continue
+        mapped_value = USE_CODE_AR.get(token, token)
+        if mapped_value not in seen:
+            mapped.append(mapped_value)
+            seen.add(mapped_value)
+
+    return " / ".join(mapped) if mapped else value
+
+def _build_banned_aliases(item):
+    aliases = set()
+    common_name = item["common_name"]
+    cas_rn = item["cas_rn"]
+
+    aliases.add(_normalize_banned_text(common_name))
+    aliases.add(_normalize_banned_text(cas_rn))
+    aliases.add(_normalize_banned_text(item["no"]))
+    aliases.add(_normalize_banned_text(get_arabic_name(common_name)))
+
+    for part in re.split(r"[\[\]\(\);,/]", common_name):
+        part = part.strip()
+        if part:
+            aliases.add(_normalize_banned_text(part))
+
+    for cas_part in re.split(r"[;\[\]\(\),/]", cas_rn):
+        cas_part = cas_part.strip()
+        if cas_part:
+            aliases.add(_normalize_banned_text(cas_part))
+
+    return {a for a in aliases if a}
+
+def find_banned_pesticide(query):
+    q = _normalize_banned_text(query)
+    if not q:
+        return None
+
+    for item in BANNED_PESTICIDES:
+        if q == _normalize_banned_text(item["no"]):
+            return item
+
+    for item in BANNED_PESTICIDES:
+        aliases = _build_banned_aliases(item)
+
+        if q in aliases:
+            return item
+
+        for alias in aliases:
+            if len(q) >= 3 and q in alias:
+                return item
+            if len(alias) >= 3 and alias in q:
+                return item
+
+    return None
+
+def format_banned_pesticide(item):
+    arabic_name = get_arabic_name(item["common_name"])
+    classification_ar = get_classification_ar(item["main_uses"])
+
+    return (
+        f"🚫 المادة الفعالة المحظورة\n\n"
+        f"🔢 الرقم: {item['no']}\n"
+        f"🧪 الاسم العربي: {arabic_name}\n"
+        f"🧪 English Name: {item['common_name']}\n"
+        f"🧾 CAS RN: {item['cas_rn']}\n"
+        f"📊 التصنيف: {classification_ar}\n"
+        f"📌 Main Uses: {item['main_uses']}\n\n"
+        f"تواصل معنا لتحديث المعلومات\n"
+        f"966501211056"
+    )
+
+def banned_pesticides_handler(update, context):
+    if not update.message or not update.message.text:
+        return
+
+    text = update.message.text.strip()
+    item = find_banned_pesticide(text)
+
+    if item:
+        update.message.reply_text(format_banned_pesticide(item))
+        raise DispatcherHandlerStop
+
+dp.add_handler(
+    MessageHandler(Filters.text & ~Filters.command, banned_pesticides_handler),
+    group=-1
+)
+
 updater.start_polling()
 updater.idle()
