@@ -1686,21 +1686,52 @@ def find_banned_pesticide(query):
     return None
 
 def format_banned_pesticide(item):
-
     arabic_name = get_arabic_name(item["common_name"])
     classification_ar = get_classification_ar(item["main_uses"])
 
+    # تحويل Main Uses إلى نص عربي أوضح
+    main_uses_map = {
+        "I": "حشري",
+        "A": "أكاروسي",
+        "F": "فطري",
+        "H": "أعشاب",
+        "N": "نيماتودي",
+        "B": "بكتيري",
+        "R": "قوارض",
+        "PGR": "منظم نمو",
+        "FM": "تبخيري",
+        "IR": "طارد حشرات",
+        "RP": "طارد",
+        "Mt": "مبيد عث",
+        "Mi": "مطهر",
+        "FR": "مطهر تربة",
+        "Ov": "مبيد بيوض",
+        "Av": "طيور",
+        "AL": "طحالب",
+        "Mo": "رخويات",
+        "TX": "تصنيف خاص",
+        "Synergist": "مادة مساعدة",
+        "WPr": "معالجة أخشاب",
+        "DF": "مطهر تربة",
+        "T": "استخدام خاص",
+        "Pesticide": "مبيد",
+        "-": "غير محدد",
+        "Herbicide safener": "مادة حماية من مبيدات الأعشاب",
+    }
+
+    main_uses_ar = main_uses_map.get(item["main_uses"], item["main_uses"])
+
     text = (
-        f"🚫 معلومة مادة محظورة\n\n"
+        f"🚫 معلومات مادة محظورة\n\n"
         f"🔢 الرقم: {item['no']}\n"
         f"🔹 الاسم العربي: {arabic_name}\n"
-        f"🔹English Name: {item['common_name']}\n"
+        f"🔹 الاسم الإنجليزي: {item['common_name']}\n"
         f"🔹 الحالة: محظور\n"
-        f"🔹 CAS: {item['cas_rn']}\n"
+        f"🔹 رقم CAS: {item['cas_rn']}\n"
         f"📊 التصنيف: {classification_ar}\n"
-        f"📌 Main Uses: {item['main_uses']}\n\n"
+        f"📌 الاستخدامات الرئيسية: {main_uses_ar} ({item['main_uses']})\n\n"
         f"ℹ️ تنبيه مهم:\n"
-        f"قد يتم تحديث حالة بعض المواد لاحقًا سواءً بالحظر أو رفع الحظر أو تعديل البيانات.\n"
+        f"قد يتم تحديث حالة بعض المواد لاحقًا سواءً بالحظر أو رفع الحظر أو تعديل البيانات. "
         f"إذا كانت المعلومات قديمة أو احتجت للتأكد من آخر تحديث، يرجى التواصل معنا ليتم تحديث البيانات."
     )
 
