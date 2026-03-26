@@ -11,12 +11,13 @@ import re
 TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_CHAT_ID = 8535080592
 
+users = set()
+orders_count = 0
+
 STORE_URL = "https://jothrah.com/"
 WHATSAPP_URL = "https://wa.me/966501211056"
 CONTACT_PHONE = "966501211056"
 
-USERS = set()
-TOTAL_REQUESTS = 0
 # ============================================
 # تخزين مؤقت لطلبات الصور
 # ============================================
@@ -939,8 +940,8 @@ def stats_command(update, context):
         return
 
     update.message.reply_text(
-        f"👥 عدد المستخدمين: {len(USERS)}\n"
-        f"📊 عدد الطلبات: {TOTAL_REQUESTS}"
+        f"👥 عدد المستخدمين: {len(users)}\n"
+        f"📊 عدد الطلبات: {orders_count}"
     )
 
 
@@ -948,12 +949,12 @@ def users_command(update, context):
     if update.effective_user.id != ADMIN_CHAT_ID:
         return
 
-    if not USERS:
+    if not users:
         update.message.reply_text("لا يوجد مستخدمين بعد")
         return
 
     text = "👥 قائمة المستخدمين:\n\n"
-    for user in USERS:
+    for user in users:
         text += f"{user}\n"
 
     update.message.reply_text(text[:4000])
@@ -1031,10 +1032,10 @@ def handle_phone(update, context):
 def reply(update, context):
     user_id = update.effective_user.id
 
-    USERS.add(user_id)
+    users.add(user_id)
 
-    global TOTAL_REQUESTS
-    TOTAL_REQUESTS += 1
+    global orders_count
+    orders_count += 1
 
     save_data()
 
@@ -1669,29 +1670,29 @@ STATS_FILE = "stats.json"
 
 def save_data():
     data = {
-        "users": list(USERS),
-        "requests": TOTAL_REQUESTS
+        "users": list(users),
+        "requests": orders_count
     }
     with open(STATS_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 def load_data():
-    global USERS, TOTAL_REQUESTS
+    global users, orders_count
 
     if not os.path.exists(STATS_FILE):
-        USERS = set()
-        TOTAL_REQUESTS = 0
+        users = set()
+        orders_count = 0
         return
 
     try:
         with open(STATS_FILE, "r", encoding="utf-8") as f:
             data = json.load(f)
 
-        USERS = set(data.get("users", []))
-        TOTAL_REQUESTS = int(data.get("requests", 0))
+        users = set(data.get("users", []))
+        orders_count = int(data.get("requests", 0))
     except:
-        USERS = set()
-        TOTAL_REQUESTS = 0
+        users = set()
+        orders_count = 0
 
 load_data()
 
