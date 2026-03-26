@@ -1030,65 +1030,64 @@ def handle_phone(update, context):
         reply_markup=build_whatsapp_only_button()
     )
 
+
 def reply(update, context):
     global orders_count
 
-    text = update.message.text.strip().lower()
+    user_message = update.message.text or ""
+    text = user_message.strip().lower()
 
-    # ================================
-    # المواد المحظورة
-    # ================================
-    for key, item in BANNED_DATABASE.items():
-        if text == key or text == item["arabic_name"].lower() or text == item["english_name"].lower():
-
-            response = f"""🚫 معلومة مادة محظورة
-🔢 الرقم: {item['number']}
-🔹 الاسم العربي: {item['arabic_name']}
-🔹 English Name: {item['english_name']}
-🔹 الحالة: {item['status']}
-🔹 CAS: {item['cas']}
-🔹 الاستخدام: {item['usage']}
-📊 التصنيف: {item['classification']}
-📌 Main Uses: {item['main_uses']}
-
-ℹ️ تنبيه مهم:
-قد يتم تحديث حالة بعض المواد لاحقًا سواءً بالحظر أو رفع الحظر أو تعديل البيانات.
-
-تواصل معنا لتحديث المعلومات
-966501211056
-"""
-            update.message.reply_text(response)
-            return
-
-    # ================================
-    # عداد الطلبات
-    # ================================
-    orders_count += 1
-
+    # إذا كنا ننتظر رقم الجوال
     user_id = update.effective_user.id
-    users.add(user_id)
+    if waiting_for_phone.get(user_id):
+        if is_phone_number(user_message):
+            handle_phone(update, context)
+        else:
+            update.message.reply_text(
+                "📱 فضلًا اكتب رقم جوال صحيح حتى يتم التواصل معك عبر واتساب.\n\n"
+                "مثال:\n0501211056",
+                reply_markup=build_whatsapp_only_button()
+            )
+        return
 
-    # ================================
-    # البحث في المبيدات
-    # ================================
-    for key, data in PESTICIDE_DATABASE.items():
-        if text in data["aliases"]:
-            update.message.reply_text(data["response"])
-            return
-            
+    # تسجيل الطلب والمستخدم
+    users.add(user_id)
+    orders_count += 1
     save_data()
 
+    # بحث سريع في قاعدة banned_data.py
+    for key, item in BANNED_DATABASE.items():
+        if (
+            text == str(key).strip().lower()
+            or text == str(item.get("arabic_name", "")).strip().lower()
+            or text == str(item.get("english_name", "")).strip().lower()
+        ):
+            response = f"""🚫 معلومات مادة محظورة
+
+🔢 الرقم: {item['number']}
+🔹 الاسم العربي: {item['arabic_name']}
+🔹 الاسم الإنجليزي: {item['english_name']}
+🔹 الحالة: {item['status']}
+🔹 رقم CAS: {item['cas']}
+📊 التصنيف: {item['classification']}
+📌 الاستخدامات الرئيسية: {item['main_uses']}
+
+ℹ️ تنبيه مهم:
+قد يتم تحديث حالة بعض المواد لاحقًا سواءً بالحظر أو رفع الحظر أو تعديل البيانات. إذا كانت المعلومات قديمة أو احتجت للتأكد من آخر تحديث، يرجى التواصل معنا ليتم تحديث البيانات."""
+            keyboard = InlineKeyboardMarkup([
+                [InlineKeyboardButton("📞 تواصل معنا لتحديث المعلومات", url=WHATSAPP_URL)]
+            ])
+            update.message.reply_text(response, reply_markup=keyboard)
+            return
+
+    # بحث في قائمة 286 مادة محظورة
     item = find_banned_pesticide(user_message)
-if item:
-    text, keyboard = format_banned_pesticide(item)
+    if item:
+        text_msg, keyboard = format_banned_pesticide(item)
+        update.message.reply_text(text_msg, reply_markup=keyboard)
+        return
 
-    update.message.reply_text(
-        text,
-        reply_markup=keyboard
-    )
-    return
-
-    # أولاً: بحث مباشر في بطاقات المواد/المبيدات
+    # بحث مباشر في بطاقات المواد/المبيدات
     pesticide_item = find_pesticide(user_message)
     if pesticide_item:
         handle_pesticide_card(update, context, pesticide_item)
@@ -1119,6 +1118,7 @@ if item:
         "يمكنك تجربة البحث داخل متجر جذرة، أو إرسال صورة، أو التواصل معنا عبر واتساب وسنساعدك في اختيار الحل المناسب.",
         reply_markup=reply_markup
     )
+
 
 print("Bot started...")
 
@@ -1671,52 +1671,21 @@ def find_banned_pesticide(query):
     return None
 
 def format_banned_pesticide(item):
+
     arabic_name = get_arabic_name(item["common_name"])
     classification_ar = get_classification_ar(item["main_uses"])
 
-    # تحويل Main Uses إلى نص عربي أوضح
-    main_uses_map = {
-        "I": "حشري",
-        "A": "أكاروسي",
-        "F": "فطري",
-        "H": "أعشاب",
-        "N": "نيماتودي",
-        "B": "بكتيري",
-        "R": "قوارض",
-        "PGR": "منظم نمو",
-        "FM": "تبخيري",
-        "IR": "طارد حشرات",
-        "RP": "طارد",
-        "Mt": "مبيد عث",
-        "Mi": "مطهر",
-        "FR": "مطهر تربة",
-        "Ov": "مبيد بيوض",
-        "Av": "طيور",
-        "AL": "طحالب",
-        "Mo": "رخويات",
-        "TX": "تصنيف خاص",
-        "Synergist": "مادة مساعدة",
-        "WPr": "معالجة أخشاب",
-        "DF": "مطهر تربة",
-        "T": "استخدام خاص",
-        "Pesticide": "مبيد",
-        "-": "غير محدد",
-        "Herbicide safener": "مادة حماية من مبيدات الأعشاب",
-    }
-
-    main_uses_ar = main_uses_map.get(item["main_uses"], item["main_uses"])
-
     text = (
-        f"🚫 معلومات مادة محظورة\n\n"
+        f"🚫 معلومة مادة محظورة\n\n"
         f"🔢 الرقم: {item['no']}\n"
         f"🔹 الاسم العربي: {arabic_name}\n"
-        f"🔹 الاسم الإنجليزي: {item['common_name']}\n"
+        f"🔹English Name: {item['common_name']}\n"
         f"🔹 الحالة: محظور\n"
-        f"🔹 رقم CAS: {item['cas_rn']}\n"
+        f"🔹 CAS: {item['cas_rn']}\n"
         f"📊 التصنيف: {classification_ar}\n"
-        f"📌 الاستخدامات الرئيسية: {main_uses_ar} ({item['main_uses']})\n\n"
+        f"📌 Main Uses: {item['main_uses']}\n\n"
         f"ℹ️ تنبيه مهم:\n"
-        f"قد يتم تحديث حالة بعض المواد لاحقًا سواءً بالحظر أو رفع الحظر أو تعديل البيانات. "
+        f"قد يتم تحديث حالة بعض المواد لاحقًا سواءً بالحظر أو رفع الحظر أو تعديل البيانات.\n"
         f"إذا كانت المعلومات قديمة أو احتجت للتأكد من آخر تحديث، يرجى التواصل معنا ليتم تحديث البيانات."
     )
 
