@@ -1648,18 +1648,6 @@ def format_banned_pesticide(item):
     ]
 
     return text, InlineKeyboardMarkup(keyboard)
-    
-def banned_pesticides_handler(update, context):
-    if not update.message or not update.message.text:
-        return
-
-    text = update.message.text.strip()
-    item = find_banned_pesticide(text)
-
-    if item:
-        text, keyboard = format_banned_pesticide(item)
-        update.message.reply_text(text, reply_markup=keyboard)
-        raise DispatcherHandlerStop
 
 STATS_FILE = "stats.json"
 
