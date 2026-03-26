@@ -1063,33 +1063,29 @@ dp.add_handler(MessageHandler(Filters.text & ~Filters.command, reply))
 from telegram.ext import MessageHandler, Filters, DispatcherHandlerStop
 import re
 
-# =========================
-# تجهيز قاعدة البيانات
-# =========================
+# =========================================
+# إذا كان BANNED_PESTICIDES_RAW موجود عندك مسبقًا
+# سيتم تحويله تلقائيًا إلى قائمة منظمة
+# =========================================
+if "BANNED_PESTICIDES" not in globals():
+    BANNED_PESTICIDES = []
 
-BANNED_PESTICIDES = []
-for line in BANNED_PESTICIDES_RAW.splitlines():
-    parts = [p.strip() for p in line.split("|")]
-    if len(parts) == 4:
-        BANNED_PESTICIDES.append({
-            "no": parts[0],
-            "common_name": parts[1],
-            "cas_rn": parts[2],
-            "main_uses": parts[3],
-        })
+    if "BANNED_PESTICIDES_RAW" in globals():
+        for line in BANNED_PESTICIDES_RAW.splitlines():
+            parts = [p.strip() for p in line.split("|")]
+            if len(parts) == 4:
+                BANNED_PESTICIDES.append({
+                    "no": parts[0],
+                    "common_name": parts[1],
+                    "cas_rn": parts[2],
+                    "main_uses": parts[3],
+                })
 
-# =========================
-# قاموس أسماء عربية احترافية
-# =========================
-
+# =========================================
+# أسماء عربية احترافية
+# =========================================
 ARABIC_NAME_OVERRIDES = {
-    "1,3-Dichloropropene": "1,3-ثنائي كلورو بروبين",
-    "2,3,4,5-Bistetrahydro-2-furaldehyde (ENT 17596) (Bisbutenylenetetrahydro furfural)": "2,3,4,5-بيس تتراهيدرو-2-فورالدهيد",
-    "2,4,5-T [2,4,5-T-trolamine] [2,4,5-T triethylammonium] [2,4,5-T-isoctyl]": "2,4,5-تي ومشتقاته",
-    "2,4,5-TCP (2,4,5-Trichlorophenol)": "2,4,5-ثلاثي كلورو فينول",
-    "2,4-D ((2,4-dichlorophenoxy) acetic acid)": "2,4-دي",
     "Acephate": "أسيفات",
-    "Acifluorfen (sodium salt) [Acifluorfen-sodium]": "أسيفلورفين صوديوم",
     "Acetochlor": "أسيتوكلور",
     "Acrolein": "أكرولين",
     "Acrylonitrile": "أكريلونيتريل",
@@ -1098,12 +1094,9 @@ ARABIC_NAME_OVERRIDES = {
     "Aldoxycarb": "ألدوكسيكارب",
     "Aldrin": "ألدرين",
     "Allethrin (bioallethrin)": "ألثرين",
-    "Alpha-chlorohydrin": "ألفا-كلوروهيدرين",
-    "Alpha-HCH / Alpha Hexachlorocyclohexane / Alpha-BHC / Alpha-HCH": "ألفا-هكساكلورو سيكلوهكسان",
     "Amitraz": "أميتراز",
     "Anthraquinone": "أنثراكينون",
     "Aramite": "أرامايت",
-    "Arsenic acid (and its compounds) [Arsenic pentoxide] [Cacodylic acid; dimethylarsinic acid] [MSMA] [Sodium arsenate] [Cacodylate; sodium dimethylarsinate] [Chromated copper arsenate; CCA] [Arsenic trioxide] [Calcium arsenate] [Copper arsenate] [Lead arsenate] [Sodium arsenite]": "حمض الزرنيخ ومركباته",
     "Atrazine": "أترازين",
     "Azamethiphos": "أزامثيفوس",
     "Azinphos-ethyl": "أزينفوس-إيثيل",
@@ -1112,244 +1105,102 @@ ARABIC_NAME_OVERRIDES = {
     "Benomyl (Dustable powder formulation at or above 7 per cent)": "بنوميل",
     "Bensulide": "بنسوليد",
     "Benthiavalicarb-isopropyl": "بنتيافاليكارب-أيزوبروبيل",
-    "HCH, Benzenehexachloride (Gamma-HCH) [Lindane (gamma-HCH)]": "ليندين (جاما-هكساكلورو سيكلوهكسان)",
-    "beta-HCH; beta-BCH": "بيتا-هكساكلورو سيكلوهكسان",
     "Binapacryl": "بيناباكريل",
-    "Bioallethrin, S-cyclopentenyl isomers (S-Bioallethrin)": "بيوألثرين",
     "Blasticidin-S": "بلاستيسيدين-إس",
-    "Bromophos [Bromophos-ethyl]": "بروموفوس",
     "Butachlor": "بيوتاكلور",
-    "Butocarboxim": "بيوتوكاربوكسيم",
-    "Butoxycarboxim": "بيوتوكسي كاربوكسيم",
-    "Cadmium": "كادميوم",
-    "Cadmium Calcium Copper Zinc Chromate Sulphate (Cadmium Compounds)": "مركبات الكادميوم",
     "Cadusafos": "كادوسافوس",
-    "Calcium arsenate": "زرنيخات الكالسيوم",
-    "Calcium cyanamide": "سياناميد الكالسيوم",
-    "Camphechlor (Toxaphene)": "توكسافين",
     "Captafol": "كابتافول",
     "Carbaryl": "كاربريل",
     "Carbendazim": "كاربندازيم",
-    "Carbon disulphide (Carbon disulfide)": "ثنائي كبريتيد الكربون",
     "Carbofuran": "كاربوفوران",
-    "Carbon tetrachloride": "رباعي كلوريد الكربون",
-    "Carbophenothion": "كاربوفينوثيون",
     "Carbosulfan": "كاربوسلفان",
     "Cartap [Cartap hydrochloride]": "كارتاب",
-    "Chinomethionat (Oxythioquinox)": "أوكسيثيوكينوكس",
-    "Chloranil": "كلورانيل",
     "Chlordane": "كلوردان",
-    "Chlordecone (Kepone)": "كلورديكون",
-    "Chlordimeform [Chlordimform hydrochloride]": "كلورديميفورم",
-    "Chlorethoxyfos (Chlorethoxyfos)": "كلورإيثوكسي فوس",
     "Chlorfenapyr": "كلورفينابير",
-    "Chlorfenvinphos, CVP": "كلورفينفينفوس",
-    "Chlormephos": "كلورميفوس",
-    "Chlorobenzilate": "كلوروبنزيليت",
-    "Chloroform": "كلوروفورم",
-    "Chloropicrin": "كلوروبيكرين",
-    "Chloropropylate": "كلوروبروبيلات",
     "Chlorothalonil": "كلوروثالونيل",
-    "Chlorthiophos": "كلورثيوفوس",
-    "Chlozolinate": "كلوزولينات",
     "Climbazole": "كليمبازول",
     "Coumaphos": "كومافوس",
-    "Creosote": "كريوزوت",
-    "Crimidine": "كريميدين",
-    "Cyanamide (Hydrogen cyanamide)": "سياناميد الهيدروجين",
     "Cyanazine": "سيانازين",
-    "Cyanide Compounds / Hydrogen cyanide [Calcium cyanide] [Sodium cyanide]": "مركبات السيانيد",
-    "Cycloheximide": "سيكلوهكسيميد",
     "Cyflufenamid": "سيفلوفيناميد",
     "Cyhalothrin": "سيهالوثرين",
     "Cyhexatin": "سيهكساتين",
     "Daminozide": "دامينوزايد",
-    "Dimethoate": "ديميثوات",
-    "DBCP (1,2-dibromo-3-chloropropane) (dibromochloropropane)": "دي بي سي بي",
-    "DDT": "دي دي تي",
-    "Demeton [Demeton-O] [Demeton-S]": "ديميتون",
-    "Demeton-S-methyl": "ديميتون-إس-ميثيل",
-    "Di-allate (Diallate)": "دي أليت",
     "Diazinon": "ديازينون",
-    "Dichlobenil": "دايكلوبنيل",
-    "Diclofop-methyl": "ديكلوفوب-ميثيل",
     "Dicofol": "ديكوفول",
-    "Dicrotophos": "ديكروتوفوس",
     "Dieldrin": "دايلدرين",
-    "Dimefox": "دايميفوكس",
-    "Dimethenamid": "ديميثيناميد",
+    "Dimethoate": "ديميثوات",
     "Diniconazole-M": "دينيكونازول-إم",
-    "Dinitramine": "دينيترا مين",
-    "Dinobuton": "دينوبوتون",
-    "Dinoseb acetate (Dinoseb and its salts)": "أسيتات الدينوسيب",
-    "Dinoseb and Dinoseb salts": "دينوسيب وأملاحه",
-    "Dinoterb": "دينوترب",
-    "Dioxathion": "ديوكساثيون",
-    "Dipropyl isocinchomeronate (MGK 326)": "ديبروبيل أيزو سينكوميرونات",
-    "Disulfoton": "ديسلفوتون",
-    "Ditalimfos": "ديتاليمفوس",
     "Diuron": "ديورون",
-    "DNOC (Dinitroorthocresol) and its salts [Ammonium salt] [Potassium salt] [Sodium salt]": "دينوك وأملاحه",
     "Edifenphos": "إديفينفوس",
     "Endosulfan": "إندوسلفان",
     "Endrin": "إندرين",
-    "Epichlorohydrin": "إبيكلوروهيدرين",
-    "EPN": "إي بي إن",
     "Epoxiconazole": "إيبوكسيكونازول",
-    "Erbon": "إربون",
-    "Ergocalciferol (Vitamin D2)": "إرغوكالسيفيرول",
-    "Ethiofencarb": "إيثيوفينكارب",
     "Ethion": "إيثيون",
     "Ethirimol": "إثيريمول",
-    "Ethoprop / Ethoprophos": "إيثوبروف",
-    "Ethyl hexanediol (Ethyl hexyleneglycol (6-12))": "إيثيل هكسانديول",
-    "Ethylene dibromide (1,2-Dibromoethane) (EDB)": "ثنائي بروميد الإيثيلين",
-    "Ethylene dichloride (EDC)": "ثنائي كلوريد الإيثيلين",
-    "Ethylene oxide": "أكسيد الإيثيلين",
-    "Ethylene thiourea (ethylenethiourea)": "إيثيلين ثيوريا",
     "Etridiazole": "إتريديازول",
-    "Etrimfos": "إتريمفوس",
     "Fenarimol": "فيناريمول",
-    "Fenchlorazole-ethyl": "فينكلورازول-إيثيل",
-    "Fenoprop, Fenoprop-butotyl (Silvex)": "فينوبروب",
     "Fenobucarb": "فينوبوكارب",
-    "Fenothiocarb": "فينوثيوكارب",
     "Fenoxycarb": "فينوكسيكارب",
-    "Fensulfothion": "فينسلفوثيون",
-    "Fenthiaprop [Fenthiaprop-ethyl]": "فينثيابروب",
     "Fenthion": "فينثيون",
-    "Fentin [Fentin acetate (Triphenyltin acetate)] [Fentin hydroxide (Triphenyltin hydroxide)]": "فينتين",
-    "Fenuron-TCA (Fenurontrichloroacetate)": "فينيورون-تي سي إيه",
     "Fenvalerate": "فينفاليرات",
     "Ferbam": "فيربام",
     "Fluazifop-butyl": "فلوازيفوب-بيوتيل",
-    "Fluazolate": "فلوازولات",
-    "Flucythrinate": "فلوثراينات",
     "Flufenoxuron": "فلوفينوكسورون",
-    "Fluorine compounds [Methanesulfonyl fluoride] [Sodium fluoride] [Sodium hexafluorosilicate / Sodium fluorosilicate]": "مركبات الفلور",
-    "Fluoroacetamide": "فلوروأسيتاميد",
-    "Flurenol": "فلورينول",
-    "Flurprimidol": "فلوربريميدول",
     "Flusilazole": "فلوسيلازول",
-    "Fluthiacet-methyl": "فلوثياسيت-ميثيل",
     "Fluvalinate": "فلوفالينات",
     "Folpet": "فولبت",
     "Fonofos": "فونوفوس",
     "Formetanate": "فورميتانيت",
-    "Fosthietan": "فوستهيتان",
-    "Furathiocarb": "فوراثيوكارب",
-    "Furilazole": "فوريلازول",
-    "Haloxyfop [Haloxyfop-etotyl] [Haloxyfop-P-methyl] [Haloxyfop-methyl] (unstated stereochemistry)": "هالوكسي فوب ومشتقاته",
     "Heptachlor": "هيبتاكلور",
-    "Heptenophos": "هيبتينوفوس",
-    "Hexachlorobenzene": "هكساكلوروبنزين",
     "Hexaconazole": "هكساكونازول",
-    "Hexaethyltetraphosphate (HETP)": "هيكسا إيثيل تترافوسفات",
     "Hexazinone": "هكزازينون",
     "Imazalil": "إيمازاليل",
-    "Iminoctadine [Iminoctadine triacetate] [Iminoctadinetris (albesilate)]": "إيمينوكتادين",
     "Iprodione": "إيبروديون",
     "Iprovalicarb": "إيبروفاليكارب",
-    "Isazophos (Isazofos)": "إيزازوفوس",
-    "Isobenzan": "إيزوبنزان",
-    "Isodrin (Isomers of eldrin)": "إيزودرين",
-    "Isofenphos": "إيزوفينفوس",
-    "Isopyrazam": "إيزوبيرازام",
     "Isoxaflutole": "إيزوكسافلوتول",
     "Isoxathion": "إيزوكساثيون",
-    "Kelevan": "كيليفان",
     "Kresoxim-methyl": "كريسوكسيم-ميثيل",
-    "Lead compounds [Lead arsenate] [Lead arsenite]": "مركبات الرصاص",
-    "Leptophos": "ليبتوفوس",
     "Linuron": "لينيورون",
     "Malathion": "مالاثيون",
     "Maleic hydrazide": "ماليك هيدرازيد",
     "Mancozeb": "مانكوزيب",
     "Maneb": "مانيب",
-    "MCPA-thioethyl": "إم سي بي إيه-ثايوإيثيل",
-    "Mecarbam": "ميكاربام",
-    "Mecoprop (MCPP)": "ميكوبروب",
-    "Mercury and its compounds [Chloromethoxypropylmercuric acetate (CPMA)] [Diphenylmercurydodecenylsuccinate (PMDS)] [Mercuric chloride] [Mercuric oxide] [Mercurous chloride] [Methoxyethyl mercury acetate] [Methylmercury acetate] [Methoxyethylmercury silicate] [Methylmercury dicyandiamide] [Phenylmercuric oleate (PMO)] [Phenylmercuric salicylate] [Phenylmercuric acetate (PMA)] [Phenylmercurydimethyldithiocarbamate] [Phenylmercuric nitrate]": "الزئبق ومركباته",
     "Mecoprop-P": "ميكوبروب-بي",
     "Mepanipyrim": "ميبانيبيريم",
-    "Mephospholan (Mephosfolan)": "ميفوسفولان",
-    "Metam-sodium (Sodium methyldithiocarbamate)": "ميتام-صوديوم",
-    "Methamidophos (soluble liquid formulations of the substance that exceed 600 g active ingredient/l)": "ميثاميدوفوس",
     "Methidathion": "ميثيداثيون",
     "Methomyl": "ميثوميل",
-    "Methyl bromide": "بروميد الميثيل",
-    "Methyl isothiocyanate": "ميثيل أيزوثيوسيانات",
     "Metiram": "ميتيرام",
-    "Metoxuron": "ميتوكسورون",
-    "Mevinphos": "ميفينفوس",
     "Mirex": "ميركس",
     "Monocrotophos": "مونوكروتوفوس",
-    "Monolinuron": "مونولينورون",
-    "Monuron (monuron-TCA)": "مونورون",
-    "Morfamquat (Morfamquat dichloride)": "مورفامكوات",
     "Naphthalene": "نفثالين",
     "Nicotine": "نيكوتين",
     "Nitrobenzene": "نيتروبنزين",
-    "Nitrofen (TOK)": "نيتروفين",
-    "Octamethylpyrophosphoramide (OMPA)": "أوكتاميثيل بايروفوسفوراميد",
     "Omethoate": "أوميثوات",
     "Oryzalin": "أوريزالين",
     "Oxadiazon": "أوكساديازون",
     "Oxadixyl": "أوكساديكسيل",
-    "Oxydemeton-methyl": "أوكسي ديميتون-ميثيل",
-    "Oxydeprofos": "أوكسي ديبروفوس",
     "Oxyfluorfen": "أوكسي فلورفين",
     "Paraquat dichloride [Paraquat]": "باراكوات ثنائي الكلوريد",
     "Parathion (Parathion-ethyl)": "باراثيون",
-    "Parathion-methyl (emulsifiable concentrates (EC) at or above 19.5% active ingredient and dusts at or above 1.5% active ingredient)": "باراثيون-ميثيل",
     "Pebulate": "بيبوليت",
-    "Pentachlorobenzene (PCB) (except mono- and dichlorinated)": "بنتاكلوروبنزين",
-    "Pentachlorophenol / PCP (Pentachlorophenol) [Pentachlorophenyllaurate] [Sodium pentachlorophenoxide]": "بنتاكلوروفينول",
-    "Phenthoate": "فينثوات",
     "Phorate": "فورات",
-    "Phosacetim": "فوساسيتيم",
     "Phosalone": "فوسالون",
-    "Phosphamidon (mixture, (E) & (Z) isomers), (soluble liquid formulations of the substance that exceed 1,000 g active ingredient/l) [E-Phosphamidon] [Z-Phosphamidon]": "فوسفاميدون",
     "Picloram": "بيكلورام",
     "Pirimicarb": "بيريميكارب",
-    "Pirimiphos-ethyl": "بيريميفوس-إيثيل",
-    "Polychloroterpenes [Strobane (Terpene polychlorinates)]": "متعددات كلور التربين",
     "Procymidon (Procymidone)": "بروسيميدون",
     "Profenofos": "بروفينوفوس",
-    "Propachlor": "بروباكلور",
     "Propargite": "بروبارجيت",
-    "Propetamphos": "بروبيتامفوس",
-    "Propham": "بروفام",
     "Propoxur": "بروبوكسور",
-    "Prothoate": "بروثوات",
     "Pymetrozine": "بيميتروزين",
-    "Pyraflufen-ethyl": "بيرافلوفين-إيثيل",
-    "Pyrazachlor": "بيرازاكلور",
     "Pyrazophos": "بيرازوفوس",
-    "Pyriminil (Pyrinuron)": "بيريمينيل",
     "Quintozene (PCNB)": "كوينتوزين",
     "Resmethrin": "ريسمثرين",
     "Rotenone": "روتينون",
-    "Safrole": "سافرول",
-    "Schradan": "شرادان",
-    "Scilliroside": "سيليوروسايد",
-    "Sec-butylamine": "سيك-بيوتيل أمين",
     "Sedaxane": "سيداكسان",
-    "Siduron": "سيدورون",
     "Simazine": "سيمزين",
-    "Sodium dimethyl dithio carbamate": "ثنائي ثيوكاربامات ثنائي ميثيل الصوديوم",
-    "Sodium fluoride": "فلوريد الصوديوم",
-    "Sodium fluoroacetate (1080)": "فلوروأسيتات الصوديوم",
-    "Sodium hexafluorosilicate": "هكسا فلورو سيليكات الصوديوم",
     "Spirodiclofen": "سبيروديكلوفين",
-    "Sulfaquinoxaline (Sulphaquinoxaline)": "سلفاكوينوكسالين",
     "Sulfotep": "سلفوتيب",
     "Sulprofos": "سلبروفوس",
-    "TCMTB": "تي سي إم تي بي",
-    "TDE (DDD)": "تي دي إي",
-    "Tebupirimfos (Tebupirimifos)": "تيبوبيريمفوس",
-    "Tecnazene (Technazene)": "تكنزين",
-    "TEPP (Tetraethyl pyrophosphate)": "تيترا إيثيل بايروفوسفات",
     "Terbufos": "تيربوفوس",
     "Tetrachlorvinphos": "تيتراكلورفينفوس",
     "Tetradifon": "تيتراديفون",
@@ -1365,15 +1216,11 @@ ARABIC_NAME_OVERRIDES = {
     "Trichlorfon": "ترايكلورفون",
     "Tridemorph": "ترايديمورف",
     "Trifluralin": "ترايفلورالين",
-    "Triorganostannic compounds, including all Tributyltin compounds [Tributyltin benzoate] [Tributyltin chloride] [Tributyltin fluoride] [Tributyltin linoleate] [Tributyltin methacrylate] [Tributyltin naphthenate] [Tributyltin oxide]": "مركبات التراي أورغانوستانيك",
     "Vamidothion": "فاميدوثيون",
     "Vinclozolin": "فينكلوزولين",
     "Zineb": "زينيب",
+    "DDT": "دي دي تي",
 }
-
-# =========================
-# تصنيفات Main Uses
-# =========================
 
 USE_CODE_AR = {
     "I": "مبيد حشري",
@@ -1386,27 +1233,23 @@ USE_CODE_AR = {
     "PGR": "منظم نمو نباتي",
     "FM": "مبخر/مدخن",
     "IR": "طارد حشرات",
-    "RP": "طارد طيور/حيوانات",
+    "RP": "طارد",
     "Mt": "مبيد عث",
-    "Mi": "مطهر/معقم بذور",
-    "FR": "مبيد فطري/طارد",
+    "Mi": "مطهر/معقم",
+    "FR": "مطهر تربة/استخدام خاص",
     "Ov": "مبيد بيوض",
     "Av": "مبيد طيور",
     "AL": "مبيد طحالب",
     "Mo": "مبيد رخويات",
-    "TX": "سام/تصنيف خاص",
-    "Synergist": "مادة مساعدة/مُعزِّز فعالية",
+    "TX": "تصنيف خاص",
+    "Synergist": "مادة مساعدة",
     "WPr": "معالجة أخشاب",
     "DF": "مطهر تربة",
-    "T": "مبيد قراد/حلم أو استخدام بيطري خاص",
+    "T": "استخدام خاص",
     "Pesticide": "مبيد",
     "-": "غير محدد",
-    "Herbicide safener": "مادة حماية للمحاصيل من مبيدات الأعشاب",
+    "Herbicide safener": "مادة حماية من مبيدات الأعشاب",
 }
-
-# =========================
-# أدوات مساعدة
-# =========================
 
 def _normalize_banned_text(text):
     text = str(text).strip().lower()
@@ -1437,22 +1280,19 @@ def _simple_arabic_fallback(name):
         "arsenite": "زرنيخيت",
         "cyanide": "سيانيد",
         "compounds": "مركبات",
-        "and its compounds": "ومركباته",
     }
 
     result = name
     for en, ar in replacements.items():
         result = re.sub(en, ar, result, flags=re.IGNORECASE)
-
     return result
 
 def get_arabic_name(common_name):
-    if common_name in ARABIC_NAME_OVERRIDES:
-        return ARABIC_NAME_OVERRIDES[common_name]
-    return _simple_arabic_fallback(common_name)
+    return ARABIC_NAME_OVERRIDES.get(common_name, _simple_arabic_fallback(common_name))
 
 def get_classification_ar(main_uses):
     value = main_uses.strip()
+
     if value in USE_CODE_AR:
         return USE_CODE_AR[value]
 
@@ -1499,12 +1339,10 @@ def find_banned_pesticide(query):
     if not q:
         return None
 
-    # مطابقة مباشرة بالرقم
     for item in BANNED_PESTICIDES:
         if q == _normalize_banned_text(item["no"]):
             return item
 
-    # مطابقة بالأسماء/CAS
     for item in BANNED_PESTICIDES:
         aliases = _build_banned_aliases(item)
 
@@ -1538,6 +1376,10 @@ def format_banned_pesticide(item):
 def banned_pesticides_handler(update, context):
     if not update.message or not update.message.text:
         return
+
+    if "BANNED_PESTICIDES" not in globals() or not BANNED_PESTICIDES:
+        update.message.reply_text("⚠️ قاعدة بيانات المواد المحظورة غير مضافة بعد داخل الكود.")
+        raise DispatcherHandlerStop
 
     text = update.message.text.strip()
     item = find_banned_pesticide(text)
