@@ -1060,6 +1060,7 @@ dp.add_handler(CommandHandler("categories", categories_command))
 dp.add_handler(MessageHandler(Filters.photo, handle_photo))
 dp.add_handler(MessageHandler(Filters.text & ~Filters.command, reply))
 
+from telegram.ext import MessageHandler, Filters, DispatcherHandlerStop
 import re
 
 # =========================
