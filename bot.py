@@ -1060,5 +1060,198 @@ dp.add_handler(CommandHandler("categories", categories_command))
 dp.add_handler(MessageHandler(Filters.photo, handle_photo))
 dp.add_handler(MessageHandler(Filters.text & ~Filters.command, reply))
 
+# ==============================
+# banned materials addon
+# paste this block before:
+# updater.start_polling()
+# updater.idle()
+# ==============================
+
+import re
+from telegram.ext import DispatcherHandlerStop
+
+BANNED_MATERIALS = [
+    {
+        "name_en": "Paraquat",
+        "name_ar": "باراكوات",
+        "status": "محظور",
+        "cas": "1910-42-5",
+        "use": "مبيد أعشاب",
+        "notes": "مادة محظورة ضمن قائمة المبيدات المحظورة.",
+        "aliases": ["paraquat", "باراكوات", "باراكوت"]
+    },
+    {
+        "name_en": "Parathion",
+        "name_ar": "باراثيون",
+        "status": "محظور",
+        "cas": "56-38-2",
+        "use": "مبيد حشري",
+        "notes": "مادة شديدة السمية ومذكورة ضمن المواد المحظورة.",
+        "aliases": ["parathion", "باراثيون"]
+    },
+    {
+        "name_en": "Parathion-methyl",
+        "name_ar": "باراثيون ميثيل",
+        "status": "محظور",
+        "cas": "298-00-0",
+        "use": "مبيد حشري",
+        "notes": "مادة محظورة ضمن القائمة.",
+        "aliases": ["parathion methyl", "parathion-methyl", "باراثيون ميثيل", "ميثيل باراثيون"]
+    },
+    {
+        "name_en": "Diazinon",
+        "name_ar": "دايزينون",
+        "status": "محظور",
+        "cas": "333-41-5",
+        "use": "مبيد حشري",
+        "notes": "تحقق من التحديثات الرسمية عند الحاجة، هذه المادة مضافة هنا كجزء من قائمة المواد المحظورة.",
+        "aliases": ["diazinon", "دايزينون", "ديازينون"]
+    },
+    {
+        "name_en": "Malathion",
+        "name_ar": "مالاثيون",
+        "status": "محظور",
+        "cas": "121-75-5",
+        "use": "مبيد حشري",
+        "notes": "مادة محظورة ضمن القائمة.",
+        "aliases": ["malathion", "مالاثيون"]
+    },
+    {
+        "name_en": "Carbofuran",
+        "name_ar": "كاربوفيوران",
+        "status": "محظور",
+        "cas": "1563-66-2",
+        "use": "مبيد حشري / نيماتودي",
+        "notes": "مادة محظورة ضمن القائمة.",
+        "aliases": ["carbofuran", "كاربوفيوران", "كاربوفيوران"]
+    },
+    {
+        "name_en": "Mancozeb",
+        "name_ar": "مانكوزيب",
+        "status": "محظور",
+        "cas": "8018-01-7",
+        "use": "مبيد فطري",
+        "notes": "مادة محظورة ضمن القائمة.",
+        "aliases": ["mancozeb", "مانكوزيب"]
+    },
+    {
+        "name_en": "Chlorothalonil",
+        "name_ar": "كلوروثالونيل",
+        "status": "محظور",
+        "cas": "1897-45-6",
+        "use": "مبيد فطري",
+        "notes": "مادة محظورة ضمن القائمة.",
+        "aliases": ["chlorothalonil", "كلوروثالونيل", "كلورثالونيل"]
+    },
+    {
+        "name_en": "Acephate",
+        "name_ar": "أسيفات",
+        "status": "محظور",
+        "cas": "30560-19-1",
+        "use": "مبيد حشري",
+        "notes": "مادة محظورة ضمن القائمة.",
+        "aliases": ["acephate", "اسيفات", "أسيفات"]
+    },
+    {
+        "name_en": "Methamidophos",
+        "name_ar": "ميثاميدوفوس",
+        "status": "محظور",
+        "cas": "10265-92-6",
+        "use": "مبيد حشري",
+        "notes": "مادة محظورة ضمن القائمة.",
+        "aliases": ["methamidophos", "ميثاميدوفوس", "مثاميدوفوس"]
+    }
+]
+
+
+def normalize_material_text(text):
+    if not text:
+        return ""
+
+    text = text.strip().lower()
+    text = text.replace("أ", "ا").replace("إ", "ا").replace("آ", "ا")
+    text = text.replace("ة", "ه")
+    text = text.replace("ى", "ي")
+    text = text.replace("ؤ", "و")
+    text = text.replace("ئ", "ي")
+    text = text.replace("-", " ")
+    text = re.sub(r"[^\w\s/]", " ", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
+
+
+# بناء فهرس بحث سريع
+BANNED_INDEX = {}
+
+for item in BANNED_MATERIALS:
+    keys = set()
+
+    keys.add(item["name_en"])
+    keys.add(item["name_ar"])
+
+    for alias in item.get("aliases", []):
+        keys.add(alias)
+
+    for key in keys:
+        nk = normalize_material_text(key)
+        if nk:
+            BANNED_INDEX[nk] = item
+
+
+def search_banned_material(user_text):
+    q = normalize_material_text(user_text)
+    if not q:
+        return None
+
+    # 1) تطابق مباشر كامل
+    if q in BANNED_INDEX:
+        return BANNED_INDEX[q]
+
+    # 2) بحث احتواء: لو المستخدم كتب جملة فيها اسم المادة
+    for key, item in BANNED_INDEX.items():
+        if key and key in q:
+            return item
+
+    # 3) بحث بالعكس: لو المستخدم كتب جزء من الاسم
+    for key, item in BANNED_INDEX.items():
+        if q and q in key:
+            return item
+
+    return None
+
+
+def format_banned_material_message(item):
+    return (
+        "⚠️ *معلومة مادة محظورة*\n\n"
+        f"🔹 *الاسم الإنجليزي:* {item['name_en']}\n"
+        f"🔹 *الاسم العربي:* {item['name_ar']}\n"
+        f"🔹 *الحالة:* {item['status']}\n"
+        f"🔹 *CAS:* {item['cas']}\n"
+        f"🔹 *الاستخدام:* {item['use']}\n"
+        f"🔹 *ملاحظات إضافية:* {item['notes']}"
+    )
+
+
+def banned_materials_handler(update, context):
+    if not update.message or not update.message.text:
+        return
+
+    user_text = update.message.text.strip()
+    item = search_banned_material(user_text)
+
+    if item:
+        update.message.reply_text(
+            format_banned_material_message(item),
+            parse_mode="Markdown"
+        )
+        raise DispatcherHandlerStop()
+
+
+# هذا الهاندلر يشتغل قبل reply الحالي حقك
+dp.add_handler(
+    MessageHandler(Filters.text & ~Filters.command, banned_materials_handler),
+    group=-1
+)
+
 updater.start_polling()
 updater.idle()
