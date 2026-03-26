@@ -9,7 +9,7 @@ import re
 # الإعدادات
 # ============================================
 TOKEN = os.getenv("BOT_TOKEN")
-ADMIN_CHAT_ID = 1184896317
+ADMIN_CHAT_ID = 8535080592
 
 STORE_URL = "https://jothrah.com/"
 WHATSAPP_URL = "https://wa.me/966501211056"
