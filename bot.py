@@ -1,5 +1,4 @@
 from banned_data import BANNED_DATABASE
-from restricted_data import find_restricted_pesticide
 import os
 import json
 from urllib.parse import quote
@@ -1031,85 +1030,64 @@ def handle_phone(update, context):
         reply_markup=build_whatsapp_only_button()
     )
 
+
 def reply(update, context):
     global orders_count
 
     user_message = update.message.text or ""
     text = user_message.strip().lower()
 
-    # البحث في المواد المقيدة
-    item_name, restricted_item = find_restricted_pesticide(user_message)
-    if restricted_item:
-        restricted_text = f"""⚠️ مادة مقيدة
-
-🔹 الاسم: {restricted_item['arabic']}
-🔹 English: {item_name.title()}
-🔹 CAS: {restricted_item['cas']}
-🔹 الاستخدام: {restricted_item['uses']}
-
-📌 القيد:
-{restricted_item['restriction']}
-"""
-
-        search_url = build_search_url(item_name)
-        reply_markup = InlineKeyboardMarkup([
-            [InlineKeyboardButton("🛒 عرض المنتجات", url=search_url)],
-            [InlineKeyboardButton("📞 تواصل واتساب", url=WHATSAPP_URL)]
-        ])
-
-        update.message.reply_text(restricted_text, reply_markup=reply_markup)
-        return
-
-    # البحث في المواد المحظورة المختصرة
-    for key, item in BANNED_DATABASE.items():
-        if text == key or text == item["arabic_name"].lower() or text == item["english_name"].lower():
-            response = f"""🚫 معلومة مادة محظورة
-🔢 الرقم: {item['number']}
-🔹 الاسم العربي: {item['arabic_name']}
-🔹 English Name: {item['english_name']}
-🔹 الحالة: {item['status']}
-🔹 CAS: {item['cas']}
-🔹 الاستخدام: {item['usage']}
-📊 التصنيف: {item['classification']}
-📌 Main Uses: {item['main_uses']}
-
-ℹ️ تنبيه مهم:
-قد يتم تحديث حالة بعض المواد لاحقًا سواءً بالحظر أو رفع الحظر أو تعديل البيانات.
-
-تواصل معنا لتحديث المعلومات
-966501211056
-"""
-            update.message.reply_text(response)
-            return
-
-    user_id = update.effective_user.id
-    users.add(user_id)
-    orders_count += 1
-    save_data()
-
-    # البحث في قائمة المواد المحظورة الكاملة
-    banned_item = find_banned_pesticide(user_message)
-    if banned_item:
-        text_msg, keyboard = format_banned_pesticide(banned_item)
-        update.message.reply_text(text_msg, reply_markup=keyboard)
-        return
-
     # إذا كنا ننتظر رقم الجوال
+    user_id = update.effective_user.id
     if waiting_for_phone.get(user_id):
         if is_phone_number(user_message):
             handle_phone(update, context)
         else:
             update.message.reply_text(
-                "📱 فضلًا اكتب رقم جوال صحيح حتى يتم التواصل معك عبر واتساب.
-
-"
-                "مثال:
-0501211056",
+                "📱 فضلًا اكتب رقم جوال صحيح حتى يتم التواصل معك عبر واتساب.\n\n"
+                "مثال:\n0501211056",
                 reply_markup=build_whatsapp_only_button()
             )
         return
 
-    # أولاً: بحث مباشر في بطاقات المواد/المبيدات
+    # تسجيل الطلب والمستخدم
+    users.add(user_id)
+    orders_count += 1
+    save_data()
+
+    # بحث سريع في قاعدة banned_data.py
+    for key, item in BANNED_DATABASE.items():
+        if (
+            text == str(key).strip().lower()
+            or text == str(item.get("arabic_name", "")).strip().lower()
+            or text == str(item.get("english_name", "")).strip().lower()
+        ):
+            response = f"""🚫 معلومات مادة محظورة
+
+🔢 الرقم: {item['number']}
+🔹 الاسم العربي: {item['arabic_name']}
+🔹 الاسم الإنجليزي: {item['english_name']}
+🔹 الحالة: {item['status']}
+🔹 رقم CAS: {item['cas']}
+📊 التصنيف: {item['classification']}
+📌 الاستخدامات الرئيسية: {item['main_uses']}
+
+ℹ️ تنبيه مهم:
+قد يتم تحديث حالة بعض المواد لاحقًا سواءً بالحظر أو رفع الحظر أو تعديل البيانات. إذا كانت المعلومات قديمة أو احتجت للتأكد من آخر تحديث، يرجى التواصل معنا ليتم تحديث البيانات."""
+            keyboard = InlineKeyboardMarkup([
+                [InlineKeyboardButton("📞 تواصل معنا لتحديث المعلومات", url=WHATSAPP_URL)]
+            ])
+            update.message.reply_text(response, reply_markup=keyboard)
+            return
+
+    # بحث في قائمة 286 مادة محظورة
+    item = find_banned_pesticide(user_message)
+    if item:
+        text_msg, keyboard = format_banned_pesticide(item)
+        update.message.reply_text(text_msg, reply_markup=keyboard)
+        return
+
+    # بحث مباشر في بطاقات المواد/المبيدات
     pesticide_item = find_pesticide(user_message)
     if pesticide_item:
         handle_pesticide_card(update, context, pesticide_item)
@@ -1119,15 +1097,9 @@ def reply(update, context):
     ambiguous = detect_ambiguous(user_message)
     if ambiguous:
         update.message.reply_text(
-            "🤔 الكلمة المكتوبة تحتمل أكثر من معنى، ماذا تقصد؟
-
-"
-            + "
-".join([f"- {item}" for item in ambiguous]) +
-            f"
-
-📞 أو تواصل معنا عبر الواتساب:
-{WHATSAPP_URL}"
+            "🤔 الكلمة المكتوبة تحتمل أكثر من معنى، ماذا تقصد؟\n\n"
+            + "\n".join([f"- {item}" for item in ambiguous]) +
+            f"\n\n📞 أو تواصل معنا عبر الواتساب:\n{WHATSAPP_URL}"
         )
         return
 
@@ -1142,12 +1114,11 @@ def reply(update, context):
     reply_markup = build_main_buttons(search_url)
 
     update.message.reply_text(
-        "🔍 لم يتم التعرف على المشكلة بدقة.
-
-"
+        "🔍 لم يتم التعرف على المشكلة بدقة.\n\n"
         "يمكنك تجربة البحث داخل متجر جذرة، أو إرسال صورة، أو التواصل معنا عبر واتساب وسنساعدك في اختيار الحل المناسب.",
         reply_markup=reply_markup
     )
+
 
 print("Bot started...")
 
