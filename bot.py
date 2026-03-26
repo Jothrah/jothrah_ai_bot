@@ -1,3 +1,4 @@
+from banned_data import BANNED_DATABASE
 import os
 import json
 from urllib.parse import quote
@@ -1030,6 +1031,32 @@ def handle_phone(update, context):
     )
 
 def reply(update, context):
+    text = update.message.text.strip().lower()
+
+# البحث في المواد المحظورة
+for key, item in BANNED_DATABASE.items():
+    if text == key or text == item["arabic_name"].lower() or text == item["english_name"].lower():
+
+        response = f"""🚫 معلومة مادة محظورة
+🔢 الرقم: {item['number']}
+🔹 الاسم العربي: {item['arabic_name']}
+🔹 English Name: {item['english_name']}
+🔹 الحالة: {item['status']}
+🔹 CAS: {item['cas']}
+🔹 الاستخدام: {item['usage']}
+📊 التصنيف: {item['classification']}
+📌 Main Uses: {item['main_uses']}
+
+ℹ️ تنبيه مهم:
+قد يتم تحديث حالة بعض المواد لاحقًا سواءً بالحظر أو رفع الحظر أو تعديل البيانات.
+
+تواصل معنا لتحديث المعلومات
+966501211056
+"""
+
+        update.message.reply_text(response)
+        return
+        
     user_id = update.effective_user.id
 
     users.add(user_id)
