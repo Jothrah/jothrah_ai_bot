@@ -934,6 +934,16 @@ def help_command(update, context):
         "- أكلونيفين"
     )
 
+def stats_command(update, context):
+    if update.effective_user.id != ADMIN_CHAT_ID:
+        return
+
+    update.message.reply_text(
+        f"👥 عدد المستخدمين: {len(USERS)}\n"
+        f"📊 عدد الطلبات: {TOTAL_REQUESTS}"
+    )
+
+
 def users_command(update, context):
     if update.effective_user.id != ADMIN_CHAT_ID:
         return
