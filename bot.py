@@ -942,10 +942,6 @@ def stats_command(update, context):
         f"👥 عدد المستخدمين: {len(USERS)}\n"
         f"📊 عدد الطلبات: {TOTAL_REQUESTS}"
     )
-
-def reply(update, context):
-    user_id = update.effective_user.id
-    ...
     
 def categories_command(update, context):
     text = "📚 التصنيفات المتاحة داخل البوت:\n\n"
@@ -1028,6 +1024,12 @@ def reply(update, context):
     save_data()
 
     user_message = update.message.text or ""
+
+    item = find_banned_pesticide(user_message)
+    if item:
+        text, keyboard = format_banned_pesticide(item)
+        update.message.reply_text(text, reply_markup=keyboard)
+        return
 
     # إذا كنا ننتظر رقم الجوال
     if waiting_for_phone.get(user_id):
