@@ -1,4 +1,3 @@
-from restricted_data import RESTRICTED_PESTICIDES
 import os
 import json
 from urllib.parse import quote
