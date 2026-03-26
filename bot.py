@@ -1048,7 +1048,7 @@ def reply(update, context):
     user_message = update.message.text or ""
     text = user_message.strip().lower()
 
-        item_name, item = find_restricted_pesticide(user_message)
+    item_name, item = find_restricted_pesticide(user_message)
     if item:
         handle_restricted_pesticide(update, item_name, item)
         return
