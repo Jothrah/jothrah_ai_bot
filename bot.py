@@ -935,7 +935,7 @@ def help_command(update, context):
     )
 
 def stats_command(update, context):
-  if update.effective_user.id != ADMIN_CHAT_ID:
+    if update.effective_user.id != ADMIN_CHAT_ID:
         return
 
     update.message.reply_text(
