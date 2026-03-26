@@ -846,10 +846,21 @@ def clean_phone(text: str) -> str:
 
 def detect_topic(user_message: str):
     text = normalize_text(user_message)
+    words = text.split()
+
     for topic_name, topic_data in PEST_INFO.items():
         for keyword in topic_data["keywords"]:
-            if normalize_text(keyword) in text:
-                return topic_name
+            normalized_keyword = normalize_text(keyword)
+
+            # إذا كانت العبارة أكثر من كلمة: نبحث عنها كعبارة كاملة
+            if " " in normalized_keyword:
+                if normalized_keyword in text:
+                    return topic_name
+            else:
+                # إذا كلمة واحدة: لازم تكون كلمة مستقلة، مو جزء من كلمة ثانية
+                if normalized_keyword in words:
+                    return topic_name
+
     return None
 
 def detect_ambiguous(user_message: str):
