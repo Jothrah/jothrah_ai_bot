@@ -916,7 +916,7 @@ def send_lead_to_admin(update, context, phone: str):
 # ============================================
 def start(update, context):
     keyboard = [
-        [InlineKeyboardButton("🛒 زيارة المتجر", url=STORE_URL)],
+        [InlineKeyboardButton("🛒 عرض المنتجات", url=STORE_URL)],
         [InlineKeyboardButton("📞 تواصل واتساب", url=WHATSAPP_URL)],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -1152,9 +1152,7 @@ dp.add_handler(MessageHandler(Filters.text & ~Filters.command, reply))
 # =========================
 # قائمة المواد الفعالة المحظورة
 # انسخها كاملة قبل:
-# updater.start_polling()
-# updater.idle()
-# =========================
+# # =========================
 
 import re
 from telegram.ext import MessageHandler, Filters, DispatcherHandlerStop
@@ -1972,8 +1970,7 @@ def handle_restricted_pesticide(update, item_name, item):
 قد يتم تحديث حالة بعض المواد سواء بالتقييد او فك القيد او تعديل البيانات ، إذا كانت المعلومات قديمة أو احتجت للتأكد من آخر تحديث يرجى التواصل معنا ليتم تحديث البيانات
 
 📞 تواصل معنا لتحديث المعلومات
-{CONTACT_PHONE}
-"""
+966501211056"""
 
     update.message.reply_text(restricted_text)
 
