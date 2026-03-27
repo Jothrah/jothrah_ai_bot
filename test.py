@@ -989,7 +989,6 @@ keyboard = [
 
 reply_markup = InlineKeyboardMarkup(keyboard)
 
-update.message.reply_text(text, reply_markup=reply_markup)
 
 # ============================================
 # الردود
