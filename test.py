@@ -9,7 +9,7 @@ import re
 # ============================================
 # الإعدادات
 # ============================================
-TOKEN = os.getenv("BOT_TOKEN")
+TOKEN = os.getenv("BOTEST_TOKEN")
 ADMIN_CHAT_ID = 8535080592
 
 users = set()
