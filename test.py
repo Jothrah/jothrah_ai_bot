@@ -1980,7 +1980,7 @@ def find_restricted_pesticide(text):
 إذا كانت المعلومات قديمة أو احتجت للتأكد من آخر تحديث، يرجى التواصل معنا ليتم تحديث البيانات.
 """
 
-    if item_name == "cypermethrin":
+    if item_name and "cypermethrin" in item_name.lower():
         keyboard = InlineKeyboardMarkup([
             [InlineKeyboardButton("🐄 البيطرة", callback_data="vet_use")],
             [InlineKeyboardButton("🏠 الصحة العامة", callback_data="public_use")],
