@@ -1053,7 +1053,8 @@ def handle_phone(update, context):
 
 
 def reply(update, context):
-    global orders_count
+    update.message.reply_text("test ok")
+    return
 
     user_message = update.message.text or ""
     text = user_message.strip().lower()
