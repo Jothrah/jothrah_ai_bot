@@ -1990,5 +1990,3 @@ def find_restricted_pesticide(text):
         update.message.reply_text(restricted_text, reply_markup=keyboard)
     else:
         update.message.reply_text(restricted_text)
-updater.start_polling()
-updater.idle()
