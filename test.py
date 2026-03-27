@@ -1985,6 +1985,17 @@ def handle_restricted_pesticide(update, item_name, item):
         [InlineKeyboardButton("📞 تواصل معنا لتحديث المعلومات", url=WHATSAPP_URL)]
     ])
 
+    if item_name == "cypermethrin":
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("🐄 البيطرة", callback_data="vet_use")],
+        [InlineKeyboardButton("🏠 الصحة العامة", callback_data="public_use")],
+        [InlineKeyboardButton("🚫 الحظر الزراعي", callback_data="agri_ban")],
+        [InlineKeyboardButton("📞 تواصل معنا", url="https://wa.me/966501211056")]
+    ])
+
     update.message.reply_text(restricted_text, reply_markup=keyboard)
+
+else:
+    update.message.reply_text(restricted_text)
 updater.start_polling()
 updater.idle()
