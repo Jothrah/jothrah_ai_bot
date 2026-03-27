@@ -1965,7 +1965,7 @@ def find_restricted_pesticide(text):
     return None, None
     
     def handle_restricted_pesticide(update, item_name, item):
-    restricted_text = f"""⚠️ مادة مقيدة
+        restricted_text = f"""⚠️ مادة مقيدة
 
 🔹 الاسم: {item['arabic']}
 🔹 English: {item_name.title()}
