@@ -979,6 +979,17 @@ def categories_command(update, context):
             text += f"   - {item}\n"
         text += "\n"
     update.message.reply_text(text)
+    from telegram import InlineKeyboardMarkup, InlineKeyboardButton
+
+keyboard = [
+    [InlineKeyboardButton("🐄 البيطرة", callback_data="vet_use")],
+    [InlineKeyboardButton("🏠 الصحة العامة", callback_data="public_use")],
+    [InlineKeyboardButton("🚫 الحظر الزراعي", callback_data="agri_ban")]
+]
+
+reply_markup = InlineKeyboardMarkup(keyboard)
+
+update.message.reply_text(text, reply_markup=reply_markup)
 
 # ============================================
 # الردود
