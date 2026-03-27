@@ -1053,10 +1053,15 @@ def handle_phone(update, context):
 
 
 def reply(update, context):
+    print("REPLY HIT")
+
     user_message = update.message.text or ""
+    print("MSG:", user_message)
+
     text = user_message.strip().lower()
 
-    item_name, item = find_restricted_pesticide(user_message)
+    item_name, item = find_restricted_pesticide(text)
+
     if item:
         handle_restricted_pesticide(update, item_name, item)
         return
