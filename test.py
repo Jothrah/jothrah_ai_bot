@@ -9,7 +9,7 @@ import re
 # ============================================
 # الإعدادات
 # ============================================
-TOKEN = os.getenv("BOTEST_TOKEN")
+TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_CHAT_ID = 8535080592
 
 users = set()
@@ -970,7 +970,7 @@ def users_command(update, context):
         text += f"{user}\n"
 
     update.message.reply_text(text[:4000])
-
+    
 def categories_command(update, context):
     text = "📚 التصنيفات المتاحة داخل البوت:\n\n"
     for group_name, items in CATEGORY_GROUPS.items():
@@ -979,16 +979,6 @@ def categories_command(update, context):
             text += f"   - {item}\n"
         text += "\n"
     update.message.reply_text(text)
-    from telegram import InlineKeyboardMarkup, InlineKeyboardButton
-
-keyboard = [
-    [InlineKeyboardButton("🐄 البيطرة", callback_data="vet_use")],
-    [InlineKeyboardButton("🏠 الصحة العامة", callback_data="public_use")],
-    [InlineKeyboardButton("🚫 الحظر الزراعي", callback_data="agri_ban")]
-]
-
-reply_markup = InlineKeyboardMarkup(keyboard)
-
 
 # ============================================
 # الردود
@@ -1053,15 +1043,12 @@ def handle_phone(update, context):
 
 
 def reply(update, context):
-    print("REPLY HIT")
+    global orders_count
 
     user_message = update.message.text or ""
-    print("MSG:", user_message)
-
     text = user_message.strip().lower()
 
-    item_name, item = find_restricted_pesticide(text)
-
+    item_name, item = find_restricted_pesticide(user_message)
     if item:
         handle_restricted_pesticide(update, item_name, item)
         return
@@ -1880,19 +1867,19 @@ RESTRICTED_DATABASE = {
         "uses": "I",
         "restriction": "لأغراض الصحة العامة WP يقيد لمستحضرات الـ فقط، ويستخدم بموافقة وإشراف / حسب من تراه السلطة المختصة",
     },
-        "alpha-cypermethrin": {
+    "cypermethrin": {
+        "arabic": "سايبرمثرين",
+        "aliases": ["سايبرمثرين", "سيبرمثرين", "cypermethrin"],
+        "cas": "52315-07-8",
+        "uses": "I",
+        "restriction": "يقيد للاستخدام البيطري فقط لمكافحة الطفيليات الخارجية، للصحة العامة وكذلك كطعوم المصائد الحشرية وللاستخدام الزراعي لمكافحة آفات محاصيل الأعلاف والحبوب، أو يستخدم بموافقة وإشراف / حسب من تراه السلطة المختصة",
+    },
+    "alpha-cypermethrin": {
         "arabic": "ألفا-سايبرمثرين",
         "aliases": ["الفا سايبرمثرين", "ألفا سايبرمثرين", "ألفا-سايبرمثرين", "alpha-cypermethrin"],
         "cas": "67375-30-8",
         "uses": "I",
         "restriction": "يقيد للاستخدام البيطري فقط لمكافحة الطفيليات الخارجية، وكذلك كطعوم المصائد الحشرية، ويستخدم بموافقة وإشراف / حسب من تراه السلطة المختصة",
-    },
-    "cypermethrin": {
-    "arabic": "سايبرمثرين",
-    "aliases": ["سايبرمثرين", "Cypermethrin"],
-    "cas": "52315-07-8",
-    "uses": "I",
-    "restriction": "مقيد للاستخدام البيطري والصحة العامة فقط، وتم حظر الاستخدام الزراعي في 2026"
     },
     "zeta-cypermethrin": {
         "arabic": "زيتا-سايبرمثرين",
@@ -1966,9 +1953,10 @@ def find_restricted_pesticide(text):
                 return name, data
 
     return None, None
-    
-    def handle_restricted_pesticide(update, item_name, item):
-        restricted_text = f"""⚠️ مادة مقيدة
+
+
+def handle_restricted_pesticide(update, item_name, item):
+    restricted_text = f"""⚠️ مادة مقيدة
 
 🔹 الاسم: {item['arabic']}
 🔹 English: {item_name.title()}
@@ -1979,17 +1967,13 @@ def find_restricted_pesticide(text):
 {item['restriction']}
 
 ℹ️ تنبيه مهم:
-قد يتم تحديث حالة بعض المواد سواء بالتقييد أو فك القيد أو تعديل البيانات.
-إذا كانت المعلومات قديمة أو احتجت للتأكد من آخر تحديث، يرجى التواصل معنا ليتم تحديث البيانات.
+قد يتم تحديث حالة بعض المواد سواء بالتقييد او فك القيد او تعديل البيانات ، إذا كانت المعلومات قديمة أو احتجت للتأكد من آخر تحديث يرجى التواصل معنا ليتم تحديث البيانات
 """
 
-    if item_name and "cypermethrin" in item_name.lower():
-        keyboard = InlineKeyboardMarkup([
-            [InlineKeyboardButton("🐄 البيطرة", callback_data="vet_use")],
-            [InlineKeyboardButton("🏠 الصحة العامة", callback_data="public_use")],
-            [InlineKeyboardButton("🚫 الحظر الزراعي", callback_data="agri_ban")],
-            [InlineKeyboardButton("📞 تواصل معنا", url="https://wa.me/966501211056")]
-        ])
-        update.message.reply_text(restricted_text, reply_markup=keyboard)
-    else:
-        update.message.reply_text(restricted_text)
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("📞 تواصل معنا لتحديث المعلومات", url=WHATSAPP_URL)]
+    ])
+
+    update.message.reply_text(restricted_text, reply_markup=keyboard)
+updater.start_polling()
+updater.idle()
