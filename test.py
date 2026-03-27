@@ -1963,9 +1963,8 @@ def find_restricted_pesticide(text):
                 return name, data
 
     return None, None
-
-
-def handle_restricted_pesticide(update, item_name, item):
+    
+    def handle_restricted_pesticide(update, item_name, item):
     restricted_text = f"""⚠️ مادة مقيدة
 
 🔹 الاسم: {item['arabic']}
@@ -1977,24 +1976,19 @@ def handle_restricted_pesticide(update, item_name, item):
 {item['restriction']}
 
 ℹ️ تنبيه مهم:
-قد يتم تحديث حالة بعض المواد سواء بالتقييد او فك القيد او تعديل البيانات ، إذا كانت المعلومات قديمة أو احتجت للتأكد من آخر تحديث يرجى التواصل معنا ليتم تحديث البيانات
+قد يتم تحديث حالة بعض المواد سواء بالتقييد أو فك القيد أو تعديل البيانات.
+إذا كانت المعلومات قديمة أو احتجت للتأكد من آخر تحديث، يرجى التواصل معنا ليتم تحديث البيانات.
 """
 
-    keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("📞 تواصل معنا لتحديث المعلومات", url=WHATSAPP_URL)]
-    ])
-
-if item_name == "cypermethrin":
-    keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("🐄 البيطرة", callback_data="vet_use")],
-        [InlineKeyboardButton("🏠 الصحة العامة", callback_data="public_use")],
-        [InlineKeyboardButton("🚫 الحظر الزراعي", callback_data="agri_ban")],
-        [InlineKeyboardButton("📞 تواصل معنا", url="https://wa.me/966501211056")]
-    ])
-
-    update.message.reply_text(restricted_text, reply_markup=keyboard)
-
-else:
-    update.message.reply_text(restricted_text)
+    if item_name == "cypermethrin":
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("🐄 البيطرة", callback_data="vet_use")],
+            [InlineKeyboardButton("🏠 الصحة العامة", callback_data="public_use")],
+            [InlineKeyboardButton("🚫 الحظر الزراعي", callback_data="agri_ban")],
+            [InlineKeyboardButton("📞 تواصل معنا", url="https://wa.me/966501211056")]
+        ])
+        update.message.reply_text(restricted_text, reply_markup=keyboard)
+    else:
+        update.message.reply_text(restricted_text)
 updater.start_polling()
 updater.idle()
