@@ -1,1283 +1,1731 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>مولد ملصق مبيد</title>
-
-  <style>
-    @page {
-      size: A4 landscape;
-      margin: 0;
-    }
-
-    * {
-      box-sizing: border-box;
-    }
-
-    body {
-      margin: 0;
-      font-family: Tahoma, Arial, sans-serif;
-      background: #e7e7e7;
-      color: #111;
-    }
-
-    .app-wrap {
-      width: 100%;
-      min-height: 100vh;
-      padding: 20px;
-    }
-
-    .form-card {
-      max-width: 860px;
-      margin: 0 auto 24px auto;
-      background: #f3f3f3;
-      border: 1px solid #d0d0d0;
-      border-radius: 18px;
-      padding: 28px 26px;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.08);
-    }
-
-    .form-title {
-      margin: 0 0 18px 0;
-      text-align: center;
-      font-size: 30px;
-      font-weight: 700;
-    }
-
-    .grid-2 {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px;
-    }
-
-    .field {
-      margin-bottom: 16px;
-    }
-
-    .field label {
-      display: block;
-      font-size: 15px;
-      font-weight: 700;
-      margin-bottom: 8px;
-      color: #222;
-    }
-
-    .field input,
-    .field select,
-    .field textarea {
-      width: 100%;
-      border: 2px solid #cfcfcf;
-      border-radius: 14px;
-      background: #dcdcdc;
-      padding: 14px 18px;
-      font-size: 20px;
-      font-family: inherit;
-      outline: none;
-    }
-
-    .field textarea {
-      min-height: 92px;
-      resize: vertical;
-      font-size: 17px;
-      line-height: 1.6;
-    }
-
-    .field input:focus,
-    .field select:focus,
-    .field textarea:focus {
-      border-color: #999;
-      background: #e5e5e5;
-    }
-
-    .field-note {
-      font-size: 13px;
-      color: #666;
-      margin-top: 6px;
-      padding-right: 4px;
-      line-height: 1.6;
-    }
-
-    .btn-row {
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-      justify-content: center;
-      margin-top: 20px;
-    }
-
-    .btn {
-      border: none;
-      border-radius: 14px;
-      padding: 16px 26px;
-      font-size: 22px;
-      font-family: inherit;
-      cursor: pointer;
-      min-width: 220px;
-    }
-
-    .btn-generate {
-      background: #ff4f87;
-      color: #000;
-      font-weight: 700;
-    }
-
-    .btn-print {
-      background: #111;
-      color: #fff;
-      font-weight: 700;
-    }
-
-    .preview-wrap {
-      max-width: 1600px;
-      margin: 0 auto;
-      overflow-x: auto;
-    }
-
-    .sheet {
-      width: 297mm;
-      height: 210mm;
-      margin: 0 auto;
-      background: #fff;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.18);
-      padding: 6mm 5mm;
-      overflow: hidden;
-      position: relative;
-    }
-
-    .columns {
-      direction: ltr;
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      column-gap: 10px;
-      height: 100%;
-    }
-
-    .col {
-      direction: rtl;
-      position: relative;
-      padding: 4px 12px 48px 12px;
-      height: 100%;
-      font-size: 12px;
-      line-height: 1.42;
-      color: #111;
-    }
-
-    .col-left,
-    .col-middle {
-      border-right: 2px dashed #000;
-    }
-
-    .section-title {
-      margin: 0 0 6px 0;
-      color: #4a8f2f;
-      font-size: 15px;
-      font-weight: 700;
-      line-height: 1.2;
-    }
-
-    .section-text {
-      margin: 0 0 10px 0;
-    }
-
-    .section-list {
-      margin: 0 0 10px 0;
-      padding-right: 18px;
-    }
-
-    .section-list li {
-      margin-bottom: 4px;
-    }
-
-    .top-strip {
-      direction: ltr;
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      border: 2px solid #000;
-      margin: 4px 0 14px 0;
-      text-align: center;
-      font-weight: 700;
-      font-size: 15px;
-    }
-
-    .cell {
-      padding: 6px;
-      border-left: 1px solid #000;
-    }
-
-    .cell:first-child {
-      border-left: none;
-    }
-
-    .light {
-      background: #eee;
-      color: #000;
-    }
-
-    .dark {
-      background: #000;
-      color: #fff;
-    }
-
-    .product-name-wrap {
-      margin-bottom: 10px;
-    }
-
-    .product-name-wrap.powder {
-      text-align: right;
-    }
-
-    .product-name-wrap.liquid {
-      text-align: center;
-    }
-
-    .product-name-ar {
-      color: #5f8f43;
-      font-size: 30px;
-      font-weight: 700;
-      line-height: 1.12;
-      margin: 0 0 4px 0;
-    }
-
-    .product-name-en {
-      color: #5f8f43;
-      font-size: 25px;
-      font-weight: 700;
-      line-height: 1.12;
-      margin: 0 0 10px 0;
-      direction: ltr;
-    }
-
-    .product-desc {
-      color: #ff1d1d;
-      font-size: 15px;
-      font-weight: 700;
-      text-align: right;
-      margin-bottom: 10px;
-    }
-
-    .product-desc.liquid {
-      text-align: center;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 10px;
-      font-size: 12px;
-    }
-
-    th, td {
-      border: 1px solid #000;
-      padding: 4px 6px;
-      vertical-align: middle;
-    }
-
-    th {
-      font-weight: 700;
-    }
-
-    .usage-table th,
-    .usage-table td {
-      text-align: center;
-    }
-
-    .text-right {
-      text-align: right !important;
-    }
-
-    .warning-text {
-      color: #ff1d1d;
-      font-size: 13px;
-      font-weight: 700;
-      text-align: center;
-      line-height: 1.35;
-      margin: 8px 0 10px 0;
-    }
-
-    .reg-number {
-      color: #4a8f2f;
-      font-weight: 700;
-      font-size: 13px;
-      text-align: center;
-      margin-top: 6px;
-    }
-
-    .reg-value {
-      text-align: center;
-      color: #4a8f2f;
-      font-size: 14px;
-      font-weight: 700;
-      margin: 3px 0 10px 0;
-      direction: ltr;
-    }
-
-    .footer-company {
-      margin-top: 8px;
-      font-size: 12px;
-      line-height: 1.45;
-    }
-
-    .footer-company .label {
-      color: #4a8f2f;
-      font-weight: 700;
-    }
-
-    .logo-box {
-      margin-top: 10px;
-      text-align: center;
-      min-height: 72px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border: 1px dashed #bbb;
-      padding: 8px;
-      overflow: hidden;
-    }
-
-    .logo-box img {
-      max-width: 100%;
-      max-height: 68px;
-      object-fit: contain;
-      display: block;
-    }
-
-    .logo-placeholder {
-      color: #666;
-      font-size: 13px;
-      font-weight: 700;
-    }
-
-    .yellow-bar {
-      position: absolute;
-      right: 12px;
-      left: 12px;
-      bottom: 6px;
-      height: 34px;
-      background: #fff200;
-    }
-
-    .hidden-print {
-      display: block;
-    }
-
-    @media print {
-      body {
-        background: #fff;
-      }
-
-      .hidden-print {
-        display: none !important;
-      }
-
-      .app-wrap {
-        padding: 0;
-      }
-
-      .preview-wrap {
-        max-width: none;
-        margin: 0;
-        overflow: visible;
-      }
-
-      .sheet {
-        width: 297mm;
-        height: 210mm;
-        box-shadow: none;
-        margin: 0;
-      }
-    }
-  </style>
-</head>
-<body>
-  <div class="app-wrap">
-
-    <div class="form-card hidden-print">
-      <h1 class="form-title">إنشاء الملصق</h1>
-
-      <div class="grid-2">
-        <div class="field">
-          <label for="trade_name_ar">اسم المبيد بالعربي</label>
-          <input id="trade_name_ar" type="text" value="أكوكيم" placeholder="اسم المبيد بالعربي">
-        </div>
-
-        <div class="field">
-          <label for="trade_name_en">اسم المبيد بالإنجليزي</label>
-          <input id="trade_name_en" type="text" value="ACOCHEM" placeholder="اسم المبيد بالإنجليزي">
-        </div>
-      </div>
-
-      <div class="grid-2">
-        <div class="field">
-          <label for="concentration">النسبة</label>
-          <input id="concentration" type="text" value="25%" placeholder="النسبة">
-        </div>
-
-        <div class="field">
-          <label for="formulation">هيئة المبيد</label>
-          <select id="formulation"></select>
-          <div class="field-note" id="formulation_note"></div>
-        </div>
-      </div>
-
-      <div class="grid-2">
-        <div class="field">
-          <label for="pesticide_category">فئة المبيد</label>
-          <select id="pesticide_category">
-            <option value="insecticide" selected>مبيد حشري</option>
-            <option value="acaricide">مبيد أكاروسي</option>
-            <option value="fungicide">مبيد فطري</option>
-            <option value="herbicide">مبيد أعشاب</option>
-            <option value="nematicide">مبيد نيماتودي</option>
-            <option value="growth_regulator">منظم نمو نباتي</option>
-            <option value="molluscicide">مبيد قواقع</option>
-            <option value="adjuvant">مادة مساعدة / ناشرة</option>
-            <option value="attractant_repellent">مادة جاذبة / طاردة</option>
-          </select>
-        </div>
-
-        <div class="field">
-          <label for="group_text">رمز المجموعة</label>
-          <input id="group_text" type="text" value="4A" placeholder="مثال: 4A">
-        </div>
-      </div>
-
-      <div class="field">
-        <label for="active_select">المادة الفعالة</label>
-        <select id="active_select"></select>
-        <div class="field-note">القائمة تحتوي الاسم العربي والإنجليزي</div>
-      </div>
-
-      <div class="grid-2">
-        <div class="field">
-          <label for="registration_mode">حالة التسجيل</label>
-          <select id="registration_mode">
-            <option value="trial" selected>بدون رقم تسجيل للتجربة</option>
-            <option value="registered">يوجد رقم تسجيل</option>
-          </select>
-        </div>
-
-        <div class="field">
-          <label for="registration_number">رقم التسجيل بالمملكة</label>
-          <input id="registration_number" type="text" value="" placeholder="رقم التسجيل بالمملكة">
-        </div>
-      </div>
-
-      <div class="grid-2">
-        <div class="field">
-          <label for="manufacturer">الشركة المنتجة</label>
-          <input id="manufacturer" type="text" value="فابكو" placeholder="الشركة المنتجة">
-        </div>
-
-        <div class="field">
-          <label for="agent">الوكيل الحصري / الموزعون</label>
-          <input id="agent" type="text" value="التكامل الوطنية" placeholder="الوكيل الحصري / الموزعون">
-        </div>
-      </div>
-
-      <div class="field">
-        <label for="agent_logo">شعار الوكيل الحصري</label>
-        <input id="agent_logo" type="file" accept="image/*">
-        <div class="field-note">ارفع الشعار، وسيظهر مباشرة داخل النموذج</div>
-      </div>
-
-      <div class="btn-row">
-        <button class="btn btn-generate" onclick="generateLabel()">إنشاء الملصق</button>
-        <button class="btn btn-print" onclick="window.print()">طباعة / حفظ PDF</button>
-      </div>
-    </div>
-
-    <div class="preview-wrap">
-      <div class="sheet" id="labelSheet">
-        <div class="columns">
-
-          <!-- العمود الأيسر -->
-          <div class="col col-left">
-            <h3 class="section-title">قابلية الخلط:</h3>
-            <p class="section-text" id="out_mixing_text"></p>
-
-            <h3 class="section-title">التخزين:</h3>
-            <p class="section-text" id="out_storage_text"></p>
-
-            <h3 class="section-title">الأثر على الإنسان والبيئة والحيوان:</h3>
-            <p class="section-text" id="out_effect_text"></p>
-
-            <h3 class="section-title">أعراض التسمم:</h3>
-            <p class="section-text" id="out_symptoms_text"></p>
-
-            <h3 class="section-title">مضاد التسمم:</h3>
-            <p class="section-text" id="out_antidote_text"></p>
-
-            <h3 class="section-title">احتياطات:</h3>
-            <div id="out_precautions_text"></div>
-
-            <h3 class="section-title">التخلص من العبوات الفارغة:</h3>
-            <p class="section-text" id="out_disposal_text"></p>
-
-            <h3 class="section-title">الضمان:</h3>
-            <p class="section-text" id="out_warranty_text"></p>
-
-            <div class="yellow-bar"></div>
-          </div>
-
-          <!-- العمود الأوسط -->
-          <div class="col col-middle">
-            <h3 class="section-title">الخواص:</h3>
-            <p class="section-text" id="out_properties_text"></p>
-
-            <h3 class="section-title">معدل الاستخدام:</h3>
-            <table class="usage-table">
-              <tr>
-                <th>المحصول</th>
-                <th>الآفة</th>
-                <th>المعدل</th>
-                <th>فترة التحريم</th>
-              </tr>
-              <tr>
-                <td class="text-right">الخضروات</td>
-                <td>المن</td>
-                <td>40 جم / 100 لتر</td>
-                <td>7 أيام</td>
-              </tr>
-            </table>
-
-            <h3 class="section-title">ملاحظة:</h3>
-            <div id="out_note_text"></div>
-
-            <h3 class="section-title">فترة إعادة الدخول للحقل المعامل:</h3>
-            <p class="section-text" id="out_rei_text"></p>
-
-            <div class="yellow-bar"></div>
-          </div>
-
-          <!-- العمود الأيمن -->
-          <div class="col col-right">
-            <div class="top-strip">
-              <div class="cell light">GROUP</div>
-              <div class="cell dark" id="out_group_value">4A</div>
-              <div class="cell light" id="out_pesticide_type_text">INSECTICIDE</div>
-            </div>
-
-            <div id="product_name_wrap" class="product-name-wrap powder">
-              <div class="product-name-ar" id="out_trade_name_ar">أكوكيم 25% دبليو بي</div>
-              <div class="product-name-en" id="out_trade_name_en">ACOCHEM 25% WP</div>
-            </div>
-
-            <div class="product-desc" id="out_product_desc">
-              مبيد حشري جهازي على هيئة مسحوق قابل للبلل (WP)
-            </div>
-
-            <h3 class="section-title">التركيب:</h3>
-            <table>
-              <tr>
-                <th>التركيب:</th>
-                <th>النسبة</th>
-                <th>Ratio</th>
-                <th>Composition</th>
-              </tr>
-              <tr>
-                <td id="out_active_ar">إيميداكلوبريد</td>
-                <td id="out_concentration_ar">25%</td>
-                <td id="out_concentration_ratio">25%</td>
-                <td id="out_active_en">Imidacloprid</td>
-              </tr>
-              <tr>
-                <td>مواد مضافة</td>
-                <td id="out_additives_ar">75%</td>
-                <td id="out_additives_ratio">75%</td>
-                <td>Additives</td>
-              </tr>
-              <tr>
-                <td>المجموع</td>
-                <td>100%</td>
-                <td>100%</td>
-                <td>Total</td>
-              </tr>
-            </table>
-
-            <div class="warning-text">
-              مبيد مقيد تحت إشراف فني مختص<br>
-              يحفظ بعيداً عن متناول الأطفال
-            </div>
-
-            <h3 class="section-title">الإسعافات الأولية:</h3>
-            <div id="out_first_aid_text"></div>
-
-            <div class="reg-number">رقم التسجيل بالمملكة العربية السعودية</div>
-            <div class="reg-value" id="out_registration_value">( - - - )</div>
-
-            <table>
-              <tr>
-                <th>تاريخ الإنتاج</th>
-                <th>تاريخ الانتهاء</th>
-                <th>رقم الدفعة</th>
-              </tr>
-              <tr>
-                <td>&nbsp;</td>
-                <td>&nbsp;</td>
-                <td>&nbsp;</td>
-              </tr>
-            </table>
-
-            <div class="footer-company">
-              <div><span class="label">إنتاج:</span> <span id="out_manufacturer">فابكو</span></div>
-              <div><span class="label">الوكيل والموزعون:</span> <span id="out_agent">التكامل الوطنية</span></div>
-            </div>
-
-            <div class="logo-box" id="logo_box">
-              <span class="logo-placeholder">شعار الوكيل الحصري</span>
-            </div>
-
-            <div class="yellow-bar"></div>
-          </div>
-
-        </div>
-      </div>
-    </div>
-
-  </div>
-
-  <script>
-    const FORMULATIONS = [
-      {
-        code: "CS",
-        ar: "كبسولات معلقة",
-        en: "Capsule suspension",
-        def: "معلق ثابت من كبسولات في سائل تستخدم عادة بعد التخفيف بالماء.",
-        type: "liquid"
-      },
-      {
-        code: "DC",
-        ar: "مركز قابل للانتشار",
-        en: "Dispersible concentrate",
-        def: "سائل متجانس لمادة صلبة قابلة للانتشار عند التخفيف.",
-        type: "liquid"
-      },
-      {
-        code: "DP",
-        ar: "مسحوق تعفير",
-        en: "Dustable powder",
-        def: "مسحوق قابل للتعفير.",
-        type: "powder"
-      },
-      {
-        code: "EC",
-        ar: "مركز قابل للاستحلاب",
-        en: "Emulsifiable concentrate",
-        def: "سائل متجانس يستخدم كمستحلب عند التخفيف بالماء.",
-        type: "liquid"
-      },
-      {
-        code: "EW",
-        ar: "مستحلب زيت في الماء",
-        en: "Emulsion oil in water",
-        def: "سائل غير متجانس يحتوي على محلول المبيد في مذيب عضوي مكوناً كريات زيتية منتشرة في الوسط المائي.",
-        type: "liquid"
-      },
-      {
-        code: "FS",
-        ar: "مركز انسيابي لمعاملة البذور",
-        en: "Flowable concentrate for seed",
-        def: "معلق ثابت لمعاملة البذور مباشرة أو بعد التخفيف بالماء.",
-        type: "liquid"
-      },
-      {
-        code: "GR",
-        ar: "حبيبات",
-        en: "Granules",
-        def: "حبات صلبة انسيابية ذات مجال حجمي محدد للاستخدام المباشر.",
-        type: "powder"
-      },
-      {
-        code: "ME",
-        ar: "مستحلب دقيق",
-        en: "Micro emulsion",
-        def: "مركز سائل رائق يحتوي على زيت وماء يستخدم مباشرة أو بعد التخفيف بالماء مكوناً مستحلباً دقيقاً أو مستحلباً عالياً.",
-        type: "liquid"
-      },
-      {
-        code: "OD",
-        ar: "مركز زيتي قابل للانتشار",
-        en: "Oil dispersion",
-        def: "معلق ثابت للمادة الفعالة في سائل غير ممتزج بالماء وقد يحتوي على مواد فعالة أخرى وينتشر عند التخفيف بالماء.",
-        type: "liquid"
-      },
-      {
-        code: "SC",
-        ar: "معلقة مركز",
-        en: "Suspension concentrate",
-        def: "معلق ثابت من المادة الفعالة يخفف بالماء عند الاستخدام.",
-        type: "liquid"
-      },
-      {
-        code: "SE",
-        ar: "معلق مستحلب",
-        en: "Suspo-emulsion",
-        def: "سائل غير متجانس يحتوي على مادة فعالة منتشرة في صورة كريات في الوسط المائي.",
-        type: "liquid"
-      },
-      {
-        code: "SG",
-        ar: "حبيبات قابلة للذوبان في الماء",
-        en: "Water soluble granules",
-        def: "مستحلب في صورة حبيبات تذوب في الماء مكونة محلولاً حقيقياً.",
-        type: "powder"
-      },
-      {
-        code: "SL",
-        ar: "مركز قابل للذوبان",
-        en: "Soluble concentrate",
-        def: "سائل رائق متآلف يستخدم كمحلول حقيقي من المادة الفعالة بعد التخفيف بالماء.",
-        type: "liquid"
-      },
-      {
-        code: "SP",
-        ar: "مسحوق قابل للذوبان في الماء",
-        en: "Water soluble powder",
-        def: "مسحوق قابل للذوبان في الماء عند الاستخدام.",
-        type: "powder"
-      },
-      {
-        code: "ST",
-        ar: "أقراص قابلة للذوبان في الماء",
-        en: "Water soluble tablets",
-        def: "أقراص قابلة للذوبان في الماء تستخدم في صورة مكونة محلول مائي.",
-        type: "powder"
-      },
-      {
-        code: "UL",
-        ar: "محلول رش متناهي الصغر",
-        en: "Ultra low volume liquid",
-        def: "محلول متجانس يستخدم بالات متخصصة في الرش متناهي الصغر.",
-        type: "liquid"
-      },
-      {
-        code: "WG",
-        ar: "حبيبات قابلة للانتشار في الماء",
-        en: "Water dispersible granules",
-        def: "حبيبات تتفكك وتنتشر عند خلطها بالماء.",
-        type: "powder"
-      },
-      {
-        code: "WP",
-        ar: "مسحوق قابل للبلل",
-        en: "Wettable powder",
-        def: "مسحوق يستخدم كمعلق بعد انتشاره في الماء.",
-        type: "powder"
-      },
-      {
-        code: "WS",
-        ar: "مسحوق قابل للانتشار في الماء لمعاملة البذور",
-        en: "Water dispersible powder for slurry seed treatment",
-        def: "مسحوق ينتشر بتركيزات عالية في الماء قبل استخدامه على البذور في شكل عجينة.",
-        type: "powder"
-      },
-      {
-        code: "ZC",
-        ar: "مستحضر مخلوط من كبسولات معلقة ومعلقات مركزة",
-        en: "A mixed formulation of CS and SC",
-        def: "معلق ثابت من كبسولات معلقة ومعلقات مركزة تستخدم بعد التخفيف بالماء.",
-        type: "liquid"
-      }
-    ];
-
-    const CATEGORY_META = {
-      insecticide: {
-        ar: "مبيد حشري",
-        en: "INSECTICIDE",
-        defaultGroup: "4A"
-      },
-      acaricide: {
-        ar: "مبيد أكاروسي",
-        en: "ACARICIDE",
-        defaultGroup: ""
-      },
-      fungicide: {
-        ar: "مبيد فطري",
-        en: "FUNGICIDE",
-        defaultGroup: ""
-      },
-      herbicide: {
-        ar: "مبيد أعشاب",
-        en: "HERBICIDE",
-        defaultGroup: ""
-      },
-      nematicide: {
-        ar: "مبيد نيماتودي",
-        en: "NEMATICIDE",
-        defaultGroup: ""
-      },
-      growth_regulator: {
-        ar: "منظم نمو نباتي",
-        en: "PLANT GROWTH REGULATOR",
-        defaultGroup: ""
-      },
-      molluscicide: {
-        ar: "مبيد قواقع",
-        en: "MOLLUSCICIDE",
-        defaultGroup: ""
-      },
-      adjuvant: {
-        ar: "مادة مساعدة / ناشرة",
-        en: "ADJUVANT",
-        defaultGroup: ""
-      },
-      attractant_repellent: {
-        ar: "مادة جاذبة / طاردة",
-        en: "ATTRACTANT / REPELLENT",
-        defaultGroup: ""
-      }
-    };
-
-    const ACTIVE_INGREDIENTS = [
-      { cat: "المبيدات الحشرية", en: "Acetamiprid", ar: "أسيتامبريد" },
-      { cat: "المبيدات الحشرية", en: "Alfa-Cypermethrin", ar: "ألفا سايبرمثرين" },
-      { cat: "المبيدات الحشرية", en: "Aluminium phosphide", ar: "فوسفيد الألومنيوم" },
-      { cat: "المبيدات الحشرية", en: "Azadirachtin", ar: "أزادركتين" },
-      { cat: "المبيدات الحشرية", en: "Bacillus Thuringiensis Kurstaki", ar: "باسيلس ثورينجينسيس كورستاكي" },
-      { cat: "المبيدات الحشرية", en: "Bifenthrin", ar: "بايفنثرين" },
-      { cat: "المبيدات الحشرية", en: "Bistrifluron", ar: "بايستريفليورين" },
-      { cat: "المبيدات الحشرية", en: "Buprofezin", ar: "بيوبروفزين" },
-      { cat: "المبيدات الحشرية", en: "Chlorantraniliprole", ar: "كلورانتزانيلبرول" },
-      { cat: "المبيدات الحشرية", en: "Chlorfluazuron", ar: "كلورفلوازورون" },
-      { cat: "المبيدات الحشرية", en: "Cyantraniliprole", ar: "سيانتزانيلبرول" },
-      { cat: "المبيدات الحشرية", en: "Cypermethrin", ar: "سايبرمثرين" },
-      { cat: "المبيدات الحشرية", en: "Cyromazine", ar: "سايرومازين" },
-      { cat: "المبيدات الحشرية", en: "Deltamethrin", ar: "دلتامثرين" },
-      { cat: "المبيدات الحشرية", en: "Diflubenzuron", ar: "دايفلوبنزيورون" },
-      { cat: "المبيدات الحشرية", en: "Dinotefuran", ar: "داينوتيفوران" },
-      { cat: "المبيدات الحشرية", en: "Emamectin Benzoate", ar: "إيمامكتين بنزوات" },
-      { cat: "المبيدات الحشرية", en: "Esfenvalerate", ar: "اسفينفاليرات" },
-      { cat: "المبيدات الحشرية", en: "Fenitrothion", ar: "فينتروثيون" },
-      { cat: "المبيدات الحشرية", en: "Fenpropathrin", ar: "فينبروبارثرين" },
-      { cat: "المبيدات الحشرية", en: "Fipronil", ar: "فيبرونيل" },
-      { cat: "المبيدات الحشرية", en: "Flonicamid", ar: "فلونكاميد" },
-      { cat: "المبيدات الحشرية", en: "Flometoquin", ar: "فلوميتوكين" },
-      { cat: "المبيدات الحشرية", en: "Flupyradifurone", ar: "فلوبايراديفيورون" },
-      { cat: "المبيدات الحشرية", en: "Fluxametamide", ar: "فلوكساميتاميد" },
-      { cat: "المبيدات الحشرية", en: "Imidacloprid", ar: "إيميداكلوبريد" },
-      { cat: "المبيدات الحشرية", en: "Indoxacarb", ar: "اندوكسكارب" },
-      { cat: "المبيدات الحشرية", en: "Lambda cyhlothrin", ar: "لمبدا سيهالوثرين" },
-      { cat: "المبيدات الحشرية", en: "Lufenuron", ar: "لوفينيورون" },
-      { cat: "المبيدات الحشرية", en: "Matrine", ar: "ماترين" },
-      { cat: "المبيدات الحشرية", en: "Metaflumizone", ar: "ميتافلوميزون" },
-      { cat: "المبيدات الحشرية", en: "Methoxyfenozide", ar: "ميثوكسي فينوزيد" },
-      { cat: "المبيدات الحشرية", en: "Paraffin-OIL", ar: "زيت معدني بارافيني" },
-      { cat: "المبيدات الحشرية", en: "Pyrethrins", ar: "بايريثرنز" },
-      { cat: "المبيدات الحشرية", en: "Pirimiphos methyl", ar: "بيريميفوس ميثيل" },
-      { cat: "المبيدات الحشرية", en: "Pyridalyl", ar: "بايريداليل" },
-      { cat: "المبيدات الحشرية", en: "Pyrifluquinazon", ar: "بيريفلوكوينازون" },
-      { cat: "المبيدات الحشرية", en: "Pyriproxyfen", ar: "بايريبروكسيفين" },
-      { cat: "المبيدات الحشرية", en: "Spinetoram", ar: "سبينتورام" },
-      { cat: "المبيدات الحشرية", en: "Spinosad", ar: "سبينوساد" },
-      { cat: "المبيدات الحشرية", en: "SPIROMESIFEN", ar: "سبيروميسيفين" },
-      { cat: "المبيدات الحشرية", en: "Spirotetramat", ar: "سبيروتترامات" },
-      { cat: "المبيدات الحشرية", en: "Sulfoxaflor", ar: "سلفوكسافلور" },
-      { cat: "المبيدات الحشرية", en: "Thiamethoxam", ar: "ثياميثوكسام" },
-      { cat: "المبيدات الحشرية", en: "Thiocyclam Hydrogen Oxalate", ar: "ثيوسكلام هيدروجيني أوكسالت" },
-      { cat: "المبيدات الحشرية", en: "Tolfenpyrad", ar: "تولفينبيرد" },
-      { cat: "المبيدات الحشرية", en: "Tebufenozide", ar: "تيبوفينوزيد" },
-      { cat: "المبيدات الحشرية", en: "Thiamethoxam + Abamectin", ar: "ثياميثوكسام + أبامكتين" },
-      { cat: "المبيدات الحشرية", en: "Methoxyfenozide + Spinetoram", ar: "ميثوكسي فينوزيد + سبينتورام" },
-      { cat: "المبيدات الحشرية", en: "Bifenthrin + Abamectin", ar: "بايفنثرين + أبامكتين" },
-      { cat: "المبيدات الحشرية", en: "Buprofezin + Deltamethrin", ar: "بيوبروفزين + دلتامثرين" },
-      { cat: "المبيدات الحشرية", en: "Acetamiprid + Bistrifluron", ar: "أسيتامبريد + بايستريفليورين" },
-      { cat: "المبيدات الحشرية", en: "Cyantraniliprole + Abamectin", ar: "سيانتزانيلبرول + أبامكتين" },
-      { cat: "المبيدات الحشرية", en: "Imidacloprid + Bifenthrin", ar: "إيميداكلوبريد + بايفنثرين" },
-      { cat: "المبيدات الحشرية", en: "Imidacloprid + Abamectin", ar: "إيميداكلوبريد + أبامكتين" },
-      { cat: "المبيدات الحشرية", en: "Indoxacarb + Emamectin Benzoate", ar: "اندوكسكارب + إيمامكتين بنزوات" },
-      { cat: "المبيدات الحشرية", en: "Pyriproxyfen + Emamectin Benzoate", ar: "بايريبروكسيفين + إيمامكتين بنزوات" },
-      { cat: "المبيدات الحشرية", en: "Lufenuron + Emamectin Benzoate", ar: "لوفينورون + إيمامكتين بنزوات" },
-      { cat: "المبيدات الحشرية", en: "Lambda-Cyhalothrin + Emamectin Benzoate", ar: "لمبدا سيهالوثرين + إيمامكتين بنزوات" },
-      { cat: "المبيدات الحشرية", en: "Chlorantraniliprole + Abamectin", ar: "كلورانتزانيلبرول + أبامكتين" },
-      { cat: "المبيدات الحشرية", en: "Chlorantraniliprole + LambdaCyhalothrin", ar: "كلورانتزانيلبرول + لمبدا سيهالوثرين" },
-      { cat: "المبيدات الحشرية", en: "Thiamethoxam + Chlorantraniliprole", ar: "ثياميثوكسام + كلورانتزانيلبرول" },
-      { cat: "المبيدات الحشرية", en: "Indoxacarb + Acetamiprid", ar: "اندوكسكارب + أسيتامبريد" },
-      { cat: "المبيدات الحشرية", en: "Thiamethoxam + Lambda-Cyhalothrin", ar: "ثياميثوكسام + لمبدا سيهالوثرين" },
-
-      { cat: "المبيدات الأكاروسية", en: "Abamectin", ar: "أبامكتين" },
-      { cat: "المبيدات الأكاروسية", en: "Acequinocyl", ar: "أسيكوينوسيل" },
-      { cat: "المبيدات الأكاروسية", en: "Acrinathrin", ar: "أكريناثرين" },
-      { cat: "المبيدات الأكاروسية", en: "Bifenazate", ar: "بايفينزيت" },
-      { cat: "المبيدات الأكاروسية", en: "Clofentezine", ar: "كلوفنتازين" },
-      { cat: "المبيدات الأكاروسية", en: "Cyenopyrafen", ar: "سيينوبيرافن" },
-      { cat: "المبيدات الأكاروسية", en: "Cyflumetofen", ar: "سيفلوميتوفن" },
-      { cat: "المبيدات الأكاروسية", en: "Etoxazole", ar: "إيتوكسازول" },
-      { cat: "المبيدات الأكاروسية", en: "Fenpyroximate", ar: "فينبايروكسيمات" },
-      { cat: "المبيدات الأكاروسية", en: "Hexythiazox", ar: "هكسيثيازوكس" },
-      { cat: "المبيدات الأكاروسية", en: "Milbemectin", ar: "ميلبمكتين" },
-      { cat: "المبيدات الأكاروسية", en: "Pyridaben", ar: "بيريدابين" },
-      { cat: "المبيدات الأكاروسية", en: "Bifenazate + Etoxazole", ar: "بايفينزيت + إيتوكسازول" },
-      { cat: "المبيدات الأكاروسية", en: "Abamectin + Etoxazole", ar: "أبامكتين + إيتوكسازول" },
-      { cat: "المبيدات الأكاروسية", en: "Abamectin + Bifenazate", ar: "أبامكتين + بايفينزيت" },
-
-      { cat: "المبيدات الفطرية", en: "Azoxystrobin", ar: "أزوكسي ستروبين" },
-      { cat: "المبيدات الفطرية", en: "Bacillus Subtilis (QST713)", ar: "باسيلس سبتلس (كيو اس تي 713)" },
-      { cat: "المبيدات الفطرية", en: "Chinsol (8-hydroxyquinoline sulphate)", ar: "سينشول (8 كبريتات هيدروكسي كينولين)" },
-      { cat: "المبيدات الفطرية", en: "Copper Hydroxide", ar: "هيدروكسيد النحاس" },
-      { cat: "المبيدات الفطرية", en: "Copper Oxin", ar: "أوكسين النحاس" },
-      { cat: "المبيدات الفطرية", en: "Copper Oxychloride", ar: "أوكسي كلوريد النحاس" },
-      { cat: "المبيدات الفطرية", en: "Cyazofamid", ar: "سيازوفاميد" },
-      { cat: "المبيدات الفطرية", en: "Difenoconazole", ar: "دايفينوكونازول" },
-      { cat: "المبيدات الفطرية", en: "Fenpyrazamine", ar: "فينبيرازامين" },
-      { cat: "المبيدات الفطرية", en: "Fenhexamid", ar: "فينهكساميد" },
-      { cat: "المبيدات الفطرية", en: "Penthiopyrad", ar: "بنتيوبراد" },
-      { cat: "المبيدات الفطرية", en: "Fludioxonil", ar: "فلوديوكسونيل" },
-      { cat: "المبيدات الفطرية", en: "Flutianil", ar: "فلوتيانيل" },
-      { cat: "المبيدات الفطرية", en: "Fosetyl Aluminum", ar: "فوسيتيل ألمنيوم" },
-      { cat: "المبيدات الفطرية", en: "Hymexazol", ar: "هيمكسازول" },
-      { cat: "المبيدات الفطرية", en: "Metalaxyl", ar: "ميتالاكسيل" },
-      { cat: "المبيدات الفطرية", en: "Metalaxyl M", ar: "ميتالاكسيل إم" },
-      { cat: "المبيدات الفطرية", en: "Metalaxyl M + COPPER HYDROXIDE", ar: "ميتالاكسيل إم + هيدروكسيد النحاس" },
-      { cat: "المبيدات الفطرية", en: "Metrafenone", ar: "ميترافينون" },
-      { cat: "المبيدات الفطرية", en: "Myclobutanil", ar: "ميكلوبوتانيل" },
-      { cat: "المبيدات الفطرية", en: "Penconazole", ar: "بينكونازول" },
-      { cat: "المبيدات الفطرية", en: "Prochloraz", ar: "بروكلوراز" },
-      { cat: "المبيدات الفطرية", en: "Propamocarb HCL", ar: "بروياموكارب هيدروكلوريد" },
-      { cat: "المبيدات الفطرية", en: "Propiconazole", ar: "بروبيكونازول" },
-      { cat: "المبيدات الفطرية", en: "PYRIMETHANIL", ar: "بيريميثانيل" },
-      { cat: "المبيدات الفطرية", en: "Spiroxamine", ar: "سبيروكسامين" },
-      { cat: "المبيدات الفطرية", en: "SULFUR", ar: "كبريت" },
-      { cat: "المبيدات الفطرية", en: "Tebuconazole", ar: "تيبوكونازول" },
-      { cat: "المبيدات الفطرية", en: "Tolclofos–Methyl", ar: "تولكلوفوس – ميثيل" },
-      { cat: "المبيدات الفطرية", en: "Triadimenol", ar: "ترياديمينول" },
-      { cat: "المبيدات الفطرية", en: "Trifloxystrobin", ar: "ترايفلوكسستروبين" },
-      { cat: "المبيدات الفطرية", en: "Pyraclostrobin + Boscalid", ar: "بيراكلوستروبين + بوسكاليد" },
-      { cat: "المبيدات الفطرية", en: "Cymoxanil + Famoxadone", ar: "سايموكسانيل + فاموكسادون" },
-      { cat: "المبيدات الفطرية", en: "Cymoxanil + Propamocarb HCL", ar: "سايموكسانيل + بروياموكارب هيدروكلوريد" },
-      { cat: "المبيدات الفطرية", en: "Azoxystrobin + Cyproconazole", ar: "أزوكسيستروبين + سايبروكونازول" },
-      { cat: "المبيدات الفطرية", en: "Azoxystrobin + Propiconazole", ar: "أزوكسيستروبين + بروبيكونازول" },
-      { cat: "المبيدات الفطرية", en: "Difenoconazole + Metalaxyl M", ar: "دايفينوكونازول + ميتالاكسيل إم" },
-      { cat: "المبيدات الفطرية", en: "Azoxystrobin + Difenoconazole", ar: "أزوكسيستروبين + دايفينوكونازول" },
-      { cat: "المبيدات الفطرية", en: "Fluopyram + Trifloxystrobin", ar: "فلوبايرام + ترايفلوكسستروبين" },
-      { cat: "المبيدات الفطرية", en: "Difenoconazole + Propiconazole", ar: "دايفينوكونازول + بروبيكونازول" },
-      { cat: "المبيدات الفطرية", en: "Azoxystrobin + Metalaxyl M", ar: "أزوكسيستروبين + ميتالاكسيل إم" },
-      { cat: "المبيدات الفطرية", en: "Mandipropamid + Difenoconazole", ar: "مانديبروياميد + دايفينوكونازول" },
-      { cat: "المبيدات الفطرية", en: "Cyprodinil + Fludioxonil", ar: "سايبرودينيل + فلوديوكسونيل" },
-      { cat: "المبيدات الفطرية", en: "Fosetyl Aluminum + Flumorph", ar: "فوسيتيل ألمنيوم + فلومورف" },
-      { cat: "المبيدات الفطرية", en: "Dimethomorph + Pyraclostrobin", ar: "دايمثومورف + بيراكلوستروبين" },
-      { cat: "المبيدات الفطرية", en: "Metalaxyl + Copper Oxychloride", ar: "ميتالاكسيل + أوكسي كلوريد النحاس" },
-      { cat: "المبيدات الفطرية", en: "Benalaxyl + Copper Oxychloride", ar: "بينالاكسيل + أوكسي كلوريد النحاس" },
-      { cat: "المبيدات الفطرية", en: "Fosetyl Aluminum + Propamocarb", ar: "فوسيتيل ألمنيوم + بروباموكارب" },
-      { cat: "المبيدات الفطرية", en: "Cymoxanil + Copper Oxychloride", ar: "سايموكسانيل + أوكسي كلوريد النحاس" },
-      { cat: "المبيدات الفطرية", en: "Pydiflumetofen (Adepidyn) + Difenoconazole", ar: "بايديفلوميتوفين (أديبيدين) + دايفينوكونازول" },
-      { cat: "المبيدات الفطرية", en: "OXATHIAPIPROLIN + Famoxadone", ar: "أوكساثيابيرولين + فاموكسادون" },
-      { cat: "المبيدات الفطرية", en: "Dimethomorph + Cymoxanil", ar: "دايمثومورف + سايموكسانيل" },
-      { cat: "المبيدات الفطرية", en: "Mandipropamid + OXATHIAPIPROLIN", ar: "مانديبروياميد + أوكساثيابيرولين" },
-
-      { cat: "المبيدات العشبية", en: "Aclonifen", ar: "اكلونيفين" },
-      { cat: "المبيدات العشبية", en: "BENTAZONE", ar: "بنتازون" },
-      { cat: "المبيدات العشبية", en: "Bromoxynil Octanoate", ar: "بروموكسينيل أوكتانويت" },
-      { cat: "المبيدات العشبية", en: "Clethodim", ar: "كلثوديم" },
-      { cat: "المبيدات العشبية", en: "Clomazone", ar: "كلومازون" },
-      { cat: "المبيدات العشبية", en: "Cycloxydim", ar: "سيكلوكسيديم" },
-      { cat: "المبيدات العشبية", en: "Diquat Dibromide", ar: "دايكوات دايبروماديد" },
-      { cat: "المبيدات العشبية", en: "Florasulam", ar: "فلوراسولام" },
-      { cat: "المبيدات العشبية", en: "Fluazifop-P-Butyl", ar: "فلوازيفوب – بي – بيويتيل" },
-      { cat: "المبيدات العشبية", en: "FLUMETSULAM", ar: "فلوميتسولام" },
-      { cat: "المبيدات العشبية", en: "GLUFOSINATE - AMMONIUM", ar: "جلوفوسينيت أمونيوم" },
-      { cat: "المبيدات العشبية", en: "Glyphosate", ar: "جليفوسيت" },
-      { cat: "المبيدات العشبية", en: "IMAZAMOX", ar: "إيمازاموكس" },
-      { cat: "المبيدات العشبية", en: "Imazethapyr", ar: "إيمازيثابير" },
-      { cat: "المبيدات العشبية", en: "Mesosulfuron-methyl + lodosulfuron-methyl-sodium", ar: "ميزوسلفيورون ميثيل + أيودوسلفيورون ميثيل صوديوم" },
-      { cat: "المبيدات العشبية", en: "Metribuzin", ar: "ميتريبوزين" },
-      { cat: "المبيدات العشبية", en: "Nicosulfuron", ar: "نيكوسلفورون" },
-      { cat: "المبيدات العشبية", en: "Rimsulfuron", ar: "ريمسلفورون" },
-      { cat: "المبيدات العشبية", en: "Pendimethalin", ar: "بنديميثالين" },
-      { cat: "المبيدات العشبية", en: "Pinoxaden", ar: "بينوكسادين" },
-      { cat: "المبيدات العشبية", en: "PROMETRYN", ar: "بروميترين" },
-      { cat: "المبيدات العشبية", en: "Prodiamine", ar: "بروديامين" },
-      { cat: "المبيدات العشبية", en: "Prosulfocarb", ar: "بروسلفوكارب" },
-      { cat: "المبيدات العشبية", en: "PYROXASULFONE", ar: "بيروكساسلفون" },
-      { cat: "المبيدات العشبية", en: "Quizalofop-P-ethyl", ar: "كويزالوفوب – بي – إيثيل" },
-      { cat: "المبيدات العشبية", en: "SULFENTRAZONE", ar: "سولفينترازون" },
-      { cat: "المبيدات العشبية", en: "S-METOLACHLOR", ar: "إس ميتولاكلور" },
-      { cat: "المبيدات العشبية", en: "Tribenuron Methyl", ar: "ترايبينورون ميثيل" },
-      { cat: "المبيدات العشبية", en: "Bromoxynil Octanoate + Diflufenican", ar: "بروموكسينيل أوكتانويت + ديفلوفينكان" },
-
-      { cat: "المبيدات النيماتودية", en: "Cinnamaldehyde", ar: "سينمالدهيد" },
-      { cat: "المبيدات النيماتودية", en: "Fluopyram", ar: "فلوبايرام" },
-      { cat: "المبيدات النيماتودية", en: "Fosthiazate", ar: "فوسثيازيت" },
-      { cat: "المبيدات النيماتودية", en: "Imicyafos", ar: "إميسيافوس" },
-      { cat: "المبيدات النيماتودية", en: "Oxamyl", ar: "أوكساميل" },
-      { cat: "المبيدات النيماتودية", en: "Metam-potassium", ar: "ميتام بوتاسيوم" },
-
-      { cat: "منظمات النمو النباتية", en: "Chlorpropham", ar: "كلوربروفام" },
-      { cat: "منظمات النمو النباتية", en: "Trinexapac ethyl", ar: "ترينيكساباك إيثل" },
-      { cat: "منظمات النمو النباتية", en: "1-naphthyl acetic acid (1-NAA) + gibberellic acid + Glycine", ar: "حمض نفثيل أسيتيك + حمض الجبريليك + جلايسين" },
-      { cat: "منظمات النمو النباتية", en: "1-naphthyl acetic acid (1-NAA) + 1-naphthyl acetamide", ar: "حمض نفثيل أسييد + نفثيل أستاميد" },
-      { cat: "منظمات النمو النباتية", en: "gibberellic acid", ar: "حمض الجبريليك" },
-
-      { cat: "مبيدات القواقع", en: "Metaldehyde", ar: "ميتالدهيد" },
-
-      { cat: "المواد المساعدة والناشرة", en: "Alcohol Ethoxylat, AlkylPhenol Ethoxylate", ar: "الكيل الكحول إيثوكسيلات" },
-      { cat: "المواد المساعدة والناشرة", en: "polyether Polysiloxane", ar: "بولي إيثر بولي سيلوكسـان" },
-      { cat: "المواد المساعدة والناشرة", en: "Glycol Ethoxylate + Polydimethylsiloxane", ar: "جلايكول إيثوكسيلات + ثنائي ميثيل سيليوگزان" },
-
-      { cat: "المواد الجاذبة والطاردة", en: "Hydrolysed proteins", ar: "البروتينات المتحللة بالماء" },
-      { cat: "المواد الجاذبة والطاردة", en: "(E,Z,Z)-3,8,11-Tetradecatrienyl acetate", ar: "(إي زد زد) 3,8,11-تتراديكاترينيـل أسيتات" },
-      { cat: "المواد الجاذبة والطاردة", en: "(3E;8Z;11Z)-3,8-tetradecatrien-1-yl acetate and (3E,8Z tetradecadien-1-yl acetate), (E,Z)-3,8-tetradecatrienyl acetate", ar: "(3E;8Z;11Z)-3,8 تترديكاترين 1-يل أسيتات و (3E,8Z تترديكادين-1-يل أسيتات) , (E,Z)-3,8 تترديكاترينيل أسيتات" },
-      { cat: "المواد الجاذبة والطاردة", en: "(3E;8Z;11Z)-3,8-tetradecatrien-1-yl acetate and (3E,8Z tetradecadien-1-yl acetate), (E,Z)-3,8-tetradecatrienyl acetate +", ar: "(3E;8Z;11Z)-3,8 تترديكاترين 1-يل أسيتات و (3E,8Z تترديكادين-1-يل أسيتات) + ..." },
-      { cat: "المواد الجاذبة والطاردة", en: "4-Methyl-5-Nonanol + 4-Methyl-5-Nonanone", ar: "4 ميثيل -5 نونانول + 4 ميثيل -5 نونانون" }
-    ];
-
-    const STATIC_CONTENT = {
-      mixing: "يمكن خلطه مع عدد من المبيدات المناسبة ويجب الرش مباشرة بعد الخلط، ويفضل عمل تجربة مصغرة قبل الخلط بكميات كبيرة.",
-      storage: "يحفظ في عبواته الأصلية محكمة الإغلاق في مكان جاف جيد التهوية بعيداً عن مصادر الحرارة وأشعة الشمس المباشرة وبعيداً عن متناول الأطفال وبعيداً عن المواد الغذائية والأعلاف والبذور والأسمدة.",
-      effect: "يجب تجنب ملامسة المبيد للعين أو الجلد أو استنشاقه، كما يجب عدم تلويث مصادر المياه أو تعريض الكائنات غير المستهدفة للمبيد.",
-      symptoms: "قد تظهر أعراض تسمم بحسب نوع التعرض وتركيز المادة الفعالة، ويجب التعامل الطبي الفوري عند الاشتباه بالتسمم.",
-      antidote: "لا توجد جرعة مضادة محددة بشكل عام، ويتم العلاج حسب الأعراض الظاهرة وتوجيهات الطبيب.",
-      precautions: `• اتبع التعليمات المدونة على بطاقة المعلومات بدقة.
-• ارتدِ الملابس الواقية عند خلط المبيد أو استخدامه.
-• تجنب استنشاق أبخرة أو غبار المبيد.
-• لا تأكل أو تشرب أو تدخن أثناء الاستخدام.
-• اغسل الجسم والملابس الواقية جيداً بعد الاستخدام.`,
-      disposalPowder: "يمنع منعاً باتاً إعادة استخدام عبوات المبيد الفارغة لأي غرض كان، ويتم التخلص منها في الحاويات المخصصة لذلك وفق التعليمات المعتمدة.",
-      disposalLiquid: "يجب غسل العبوة ثلاث مرات وإفراغها في خزان الرش وعدم إعادة استخدامها لأي غرض، ثم التخلص منها في الحاويات المخصصة لذلك.",
-      warranty: "تضمن الشركة المنتج في عبواته الأصلية وذلك تحت ظروف التخزين المناسبة، ولا تتحمل أي أضرار ناتجة عن سوء التخزين أو الاستخدام.",
-      firstAid: `• في حالة ملامسته العينين: تغسل فوراً بالماء النظيف لمدة 15 دقيقة على الأقل.
-• في حالة ملامسته للجلد: تنزع الملابس الملوثة وتغسل أجزاء الجسم جيداً بالماء والصابون.
-• في حالة الاستنشاق: ينقل المصاب إلى منطقة جيدة التهوية بعيداً عن مكان التلوث ويستدعى الطبيب.
-• في حالة ابتلاع المبيد: يعطى المصاب 1 – 2 كأس من الماء حسب الإرشادات الطبية.
-• في حالة التعرض للمبيد الاتصال على الرقم الموحد لوزارة الصحة 937.`,
-      note: `• يجب إجراء تجربة مصغرة قبل الاستخدام الواسع عند الحاجة.
-• يراعى إدخال المبيد ضمن برنامج مكافحة متكاملة والتبادل مع المبيدات الأخرى عند تكرار الاستخدام.`,
-      rei: "12 ساعة"
-    };
-
-    const logoInput = document.getElementById("agent_logo");
-    let logoDataUrl = "";
-
-    function initFormulations() {
-      const select = document.getElementById("formulation");
-      select.innerHTML = FORMULATIONS.map(f =>
-        `<option value="${f.code}" ${f.code === "WP" ? "selected" : ""}>${f.code} — ${f.ar} — ${f.en}</option>`
-      ).join("");
-      updateFormulationNote();
-    }
-
-    function updateFormulationNote() {
-      const code = document.getElementById("formulation").value;
-      const f = FORMULATIONS.find(x => x.code === code);
-      const note = document.getElementById("formulation_note");
-      if (!f) {
-        note.textContent = "";
-        return;
-      }
-      note.textContent = `${f.ar} | ${f.en} | ${f.def}`;
-    }
-
-    function initActiveIngredients() {
-      const select = document.getElementById("active_select");
-      const groups = {};
-
-      ACTIVE_INGREDIENTS.forEach(item => {
-        if (!groups[item.cat]) groups[item.cat] = [];
-        groups[item.cat].push(item);
-      });
-
-      let html = "";
-      Object.keys(groups).forEach(cat => {
-        html += `<optgroup label="${cat}">`;
-        groups[cat].forEach(item => {
-          const value = encodeURIComponent(JSON.stringify(item));
-          const selected = item.en === "Imidacloprid" ? "selected" : "";
-          html += `<option value="${value}" ${selected}>${item.ar} — ${item.en}</option>`;
-        });
-        html += `</optgroup>`;
-      });
-
-      select.innerHTML = html;
-    }
-
-    function escapeHtml(text) {
-      return text
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;");
-    }
-
-    function textToListOrParagraphs(text) {
-      const safe = escapeHtml(text);
-      const lines = safe.split("\n").filter(line => line.trim() !== "");
-      if (!lines.length) return "";
-
-      const allBullets = lines.every(line => line.trim().startsWith("•"));
-      if (allBullets) {
-        const items = lines.map(line => {
-          const cleaned = line.replace(/^•\s*/, "").trim();
-          return `<li>${cleaned}</li>`;
-        }).join("");
-        return `<ul class="section-list">${items}</ul>`;
-      }
-
-      return lines.map(line => `<p class="section-text">${line}</p>`).join("");
-    }
-
-    function getValue(id) {
-      return document.getElementById(id).value.trim();
-    }
-
-    function getSelectedActive() {
-      const raw = document.getElementById("active_select").value;
-      try {
-        return JSON.parse(decodeURIComponent(raw));
-      } catch {
-        return { en: "", ar: "" };
-      }
-    }
-
-    function getSelectedFormulation() {
-      const code = document.getElementById("formulation").value;
-      return FORMULATIONS.find(f => f.code === code);
-    }
-
-    function getArabicFormulationLabel(code) {
-      const f = FORMULATIONS.find(x => x.code === code);
-      return f ? f.ar : code;
-    }
-
-    function isPowderType(code) {
-      const f = FORMULATIONS.find(x => x.code === code);
-      return f ? f.type === "powder" : true;
-    }
-
-    function updateRegistrationState() {
-      const mode = document.getElementById("registration_mode").value;
-      const input = document.getElementById("registration_number");
-      input.disabled = mode !== "registered";
-      if (mode !== "registered") input.value = "";
-    }
-
-    function updateCategoryDefaults() {
-      const key = document.getElementById("pesticide_category").value;
-      const meta = CATEGORY_META[key];
-      if (!meta) return;
-      document.getElementById("group_text").value = document.getElementById("group_text").value || meta.defaultGroup;
-    }
-
-    function buildProductDescription(categoryKey, formulationCode) {
-      const cat = CATEGORY_META[categoryKey] || CATEGORY_META.insecticide;
-      const formulationAr = getArabicFormulationLabel(formulationCode);
-      return `${cat.ar} على هيئة ${formulationAr} (${formulationCode})`;
-    }
-
-    function generateLabel() {
-      const tradeNameAr = getValue("trade_name_ar");
-      const tradeNameEn = getValue("trade_name_en");
-      const concentration = getValue("concentration");
-      const formulation = getValue("formulation");
-      const active = getSelectedActive();
-      const registrationMode = getValue("registration_mode");
-      const registrationNumber = getValue("registration_number");
-      const manufacturer = getValue("manufacturer");
-      const agent = getValue("agent");
-      const groupText = getValue("group_text");
-      const categoryKey = getValue("pesticide_category");
-      const formulationInfo = getSelectedFormulation();
-      const categoryMeta = CATEGORY_META[categoryKey] || CATEGORY_META.insecticide;
-
-      const formLabelAr = getArabicFormulationLabel(formulation);
-      const finalNameAr = `${tradeNameAr} ${concentration} ${formLabelAr}`.trim();
-      const finalNameEn = `${tradeNameEn} ${concentration} ${formulation}`.trim();
-      const productDesc = buildProductDescription(categoryKey, formulation);
-
-      let regValue = "( - - - )";
-      if (registrationMode === "registered" && registrationNumber) {
-        regValue = registrationNumber;
-      }
-
-      const parsedPercent = parseFloat(concentration.replace("%", "").trim());
-      let additives = "—";
-      if (!isNaN(parsedPercent)) {
-        additives = `${Math.max(0, 100 - parsedPercent)}%`;
-      }
-
-      const powder = isPowderType(formulation);
-      const productWrap = document.getElementById("product_name_wrap");
-      const productDescEl = document.getElementById("out_product_desc");
-
-      productWrap.className = `product-name-wrap ${powder ? "powder" : "liquid"}`;
-      productDescEl.className = `product-desc ${powder ? "" : "liquid"}`.trim();
-
-      document.getElementById("out_group_value").textContent = groupText.replace("GROUP", "").trim();
-      document.getElementById("out_pesticide_type_text").textContent = categoryMeta.en;
-
-      document.getElementById("out_trade_name_ar").textContent = finalNameAr;
-      document.getElementById("out_trade_name_en").textContent = finalNameEn;
-      document.getElementById("out_product_desc").textContent = productDesc;
-
-      document.getElementById("out_active_ar").textContent = active.ar || active.en;
-      document.getElementById("out_concentration_ar").textContent = concentration;
-      document.getElementById("out_concentration_ratio").textContent = concentration;
-      document.getElementById("out_active_en").textContent = active.en || "";
-      document.getElementById("out_additives_ar").textContent = additives;
-      document.getElementById("out_additives_ratio").textContent = additives;
-
-      const dynamicProperties = formulationInfo
-        ? `${categoryMeta.ar} ${formulationInfo.def}`
-        : `${categoryMeta.ar} على هيئة ${formLabelAr} (${formulation})`;
-
-      document.getElementById("out_properties_text").textContent = dynamicProperties;
-      document.getElementById("out_mixing_text").textContent = STATIC_CONTENT.mixing;
-      document.getElementById("out_storage_text").textContent = STATIC_CONTENT.storage;
-      document.getElementById("out_effect_text").textContent = STATIC_CONTENT.effect;
-      document.getElementById("out_symptoms_text").textContent = STATIC_CONTENT.symptoms;
-      document.getElementById("out_antidote_text").textContent = STATIC_CONTENT.antidote;
-      document.getElementById("out_disposal_text").textContent = powder ? STATIC_CONTENT.disposalPowder : STATIC_CONTENT.disposalLiquid;
-      document.getElementById("out_warranty_text").textContent = STATIC_CONTENT.warranty;
-      document.getElementById("out_rei_text").textContent = STATIC_CONTENT.rei;
-
-      document.getElementById("out_precautions_text").innerHTML = textToListOrParagraphs(STATIC_CONTENT.precautions);
-      document.getElementById("out_note_text").innerHTML = textToListOrParagraphs(STATIC_CONTENT.note);
-      document.getElementById("out_first_aid_text").innerHTML = textToListOrParagraphs(STATIC_CONTENT.firstAid);
-
-      document.getElementById("out_registration_value").textContent = regValue;
-      document.getElementById("out_manufacturer").textContent = manufacturer;
-      document.getElementById("out_agent").textContent = agent;
-
-      const logoBox = document.getElementById("logo_box");
-      if (logoDataUrl) {
-        logoBox.innerHTML = `<img src="${logoDataUrl}" alt="Agent Logo">`;
-      } else {
-        logoBox.innerHTML = `<span class="logo-placeholder">شعار الوكيل الحصري</span>`;
-      }
-    }
-
-    logoInput.addEventListener("change", function (event) {
-      const file = event.target.files && event.target.files[0];
-      if (!file) {
-        logoDataUrl = "";
-        generateLabel();
-        return;
-      }
-
-      const reader = new FileReader();
-      reader.onload = function (e) {
-        logoDataUrl = e.target.result;
-        generateLabel();
-      };
-      reader.readAsDataURL(file);
-    });
-
-    document.getElementById("formulation").addEventListener("change", function () {
-      updateFormulationNote();
-      generateLabel();
-    });
-
-    document.getElementById("registration_mode").addEventListener("change", function () {
-      updateRegistrationState();
-      generateLabel();
-    });
-
-    document.getElementById("pesticide_category").addEventListener("change", function () {
-      generateLabel();
-    });
-
-    initFormulations();
-    initActiveIngredients();
-    updateRegistrationState();
-    generateLabel();
-  </script>
-</body>
-</html>
+from banned_data import BANNED_DATABASE
+import os
+import json
+from urllib.parse import quote
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
+import re
+
+# ============================================
+# الإعدادات
+# ============================================
+TOKEN = os.getenv("BOT_TOKEN")
+ADMIN_CHAT_ID = 8535080592
+
+users = set()
+orders_count = 0
+
+STORE_URL = "https://jothrah.com/"
+WHATSAPP_URL = "https://wa.me/966501211056"
+CONTACT_PHONE = "966501211056"
+
+# ============================================
+# تخزين مؤقت لطلبات الصور
+# ============================================
+user_last_photo = {}
+waiting_for_phone = {}
+
+# ============================================
+# قاعدة بيانات بطاقات المواد / المبيدات
+# ============================================
+PESTICIDE_DATABASE = {
+    "اكلونيفين": {
+        "name": "أكلونيفين 60% إس سي",
+        "aliases": [
+            "اكلونيفين",
+            "أكلونيفين",
+            "Aclonifen",
+            "aclonifen",
+            "Aclonifen 60% SC",
+            "aclonifen 60% sc",
+            "أكلونيفين 60% إس سي",
+            "اكلونيفين 60 اس سي",
+            "أكلونيفين 60 اس سي",
+            "مادة اكلونيفين",
+            "المادة الفعالة اكلونيفين",
+            "دايفينيل إيثر",
+            "دايفينيل ايثر"
+        ],
+        "type": "مبيد أعشاب",
+        "response": """🌿 أكلونيفين 60% إس سي (Aclonifen 60% SC)
+
+📌 الوصف
+مبيد أعشاب جهازي اختياري يُستخدم قبل الإنبات لمكافحة الأعشاب عريضة ورفيعة الأوراق في عدد من المحاصيل الزراعية.
+
+⚠️ أضرار الحشائش
+تسبب الحشائش عريضة ورفيعة الأوراق منافسة شديدة للمحصول على:
+💧 الماء
+🌱 العناصر الغذائية
+☀️ الضوء
+مما يؤدي إلى ضعف النمو وانخفاض الإنتاجية عند عدم مكافحتها مبكرًا.
+
+🧪 المواصفات الفنية
+• المادة الفعالة: أكلونيفين 60%
+• المجموعة الكيميائية: دايفينيل إيثر
+• هيئة المبيد: مركز معلق (SC)
+• فترة عودة الدخول للحقل: 12 ساعة
+
+💧 طرق ومعدلات الاستخدام
+
+🌾 البصل
+🪴 قبل الإنبات (بعد الزراعة) — معاملة واحدة فقط
+💧 1 لتر/هكتار
+
+🌾 الجزر
+🪴 بعد الزراعة حتى قبل ظهور النباتات
+💧 2.5 لتر/هكتار
+📌 المعاملة بطريقتين:
+1- معاملة واحدة خلال الموسم بعد الزراعة حتى ما قبل ظهور النبات على سطح التربة.
+2- تقسيم المعاملة على مرحلتين كالتالي:
+- المرحلة الأولى بمعدل 1.5 لتر للهكتار بعد الزراعة مباشرة.
+- المرحلة الثانية بمعدل 1 لتر للهكتار في مرحلة الورقة الثالثة لمحصول الجزر.
+
+🌾 البطاطس
+🪴 بعد الزراعة وقبل الإنبات وبعد الانتهاء من التحضين
+💧 3 لتر/هكتار
+
+🌾 عباد الشمس
+🪴 قبل الإنبات (بعد الزراعة) — معاملة واحدة فقط
+💧 3 لتر/هكتار
+
+🌾 الفاصوليا واللوبيا
+🪴 قبل الإنبات (بعد الزراعة) — معاملة واحدة فقط
+💧 3 لتر/هكتار
+
+🌾 الثوم
+🪴 قبل الإنبات (بعد الزراعة) — معاملة واحدة فقط
+💧 1 لتر/هكتار
+""",
+        "url": "https://pub-cd0f58e55c564e2eb5b6faa013d69fd6.r2.dev/cataloge/aclonifen.html"
+    }
+}
+
+# ============================================
+# تصنيفات المتجر
+# ============================================
+CATEGORY_GROUPS = {
+    "المبيدات الزراعية": [
+        "مستلزمات المكافحة المتكاملة IPM",
+        "الزيوت المعدنية الزراعية",
+        "مبيدات النيماتودا",
+        "مبيدات الأعشاب",
+        "مبيدات أعشاب رفيعة الأوراق",
+        "مبيدات أعشاب عريضة الاوراق",
+        "مبيدات أعشاب عامة (غير انتقائية)",
+        "مبيدات الاكاروسات (العنكبوت الاحمر)",
+        "مبيدات زراعية فطرية",
+        "مبيدات أمراض البذور",
+        "مبيدات اللطعة الارجوانية",
+        "مبيدات الانثراكنوز",
+        "مبيدات التفحمات",
+        "مبيدات الصدأ الفطري",
+        "مبيدات أعفان الثمار",
+        "مبيدات لفحة الساق",
+        "مبيدات تبقعات الأوراق",
+        "مبيدات أعفان الجذور",
+        "مبيدات البياض الزغبي",
+        "مبيدات البياض الدقيقي",
+        "مبيدات زراعية حشرية",
+        "مبيدات الجراد الصحراوي والنطاط",
+        "مبيدات صانعات الأنفاق",
+        "مبيدات العثة ذات الظهر الماسي",
+        "مبيدات دودة ثمار الطماطم",
+        "أكاروس صدأ الحمضيات",
+        "مبيدات الحشرات القشرية",
+        "مبيدات نطاطات الأوراق",
+        "مبيدات حفار الساق",
+        "مبيدات سوسة النخيل الحمراء",
+        "مبيدات الدودة القارضة",
+        "مبيدات البق الدقيقي",
+        "مبيدات ذبابة الفاكهة",
+        "مبيدات الذبابة البيضاء",
+        "مبيدات التربس",
+        "مبيدات المن",
+    ],
+    "مبيدات الصحة العامة": [
+        "مكافحة الفئران والقوارض",
+        "طعوم لينة",
+        "حبيبات",
+        "حبوب قمح",
+        "مكعبات شمعية",
+        "المصائد والافخاخ",
+        "محطات الطعوم",
+        "مبيدات الحشرات الطائرة",
+        "مبيدات الذباب",
+        "مبيدات البعوض",
+        "مبيدات النحل والدبابير",
+        "مبيدات الجراد",
+        "مبيدات الحشرات الزاحفة",
+        "مبيدات بق الفراش",
+        "مبيدات قمل الخشب",
+        "مبيدات قمل الكتب",
+        "مبيدات أم أربعة وأربعين",
+        "مبيدات العقارب والعناكب",
+        "مبيدات السمك الفضي",
+        "مبيدات الخنافس والسوس",
+        "مبيدات البراغيث",
+        "مبيدات النمل الأبيض",
+        "مبيدات النمل",
+        "مبيدات الصراصير",
+    ]
+}
+
+# ============================================
+# معلومات التصنيفات/الآفات
+# ============================================
+PEST_INFO = {
+    "مستلزمات المكافحة المتكاملة ipm": {
+        "keywords": ["مستلزمات المكافحة المتكاملة", "ipm", "المكافحة المتكاملة"],
+        "title": "مستلزمات المكافحة المتكاملة IPM",
+        "desc": "تشمل أدوات وبرامج المراقبة والوقاية والتقليل من الآفات قبل الاعتماد الكامل على المبيدات.",
+        "damage": "إهمال المكافحة المتكاملة قد يزيد من تكرار الإصابة وارتفاع تكلفة المعالجة لاحقًا.",
+        "control": "يُنصح باستخدام المصائد والمراقبة الدورية والدمج بين الوسائل الزراعية والميكانيكية والكيميائية عند الحاجة.",
+        "usage": "تُستخدم حسب نوع الأداة أو النظام المتبع داخل المزرعة أو البيت المحمي.",
+        "tips": "ابدأ بالمراقبة والكشف المبكر، وحدد نوع الآفة بدقة قبل اختيار المبيد المناسب.",
+        "search_term": "مستلزمات المكافحة المتكاملة IPM",
+    },
+    "الزيوت المعدنية الزراعية": {
+        "keywords": ["الزيوت المعدنية الزراعية", "زيت معدني", "زيوت معدنية"],
+        "title": "الزيوت المعدنية الزراعية",
+        "desc": "الزيوت المعدنية الزراعية تُستخدم للمساعدة في مكافحة بعض الآفات مثل الحشرات القشرية والبيض وبعض الحشرات الماصة.",
+        "damage": "عدم استخدام الزيت المناسب أو سوء التوقيت قد يضعف فعالية المكافحة أو يسبب إجهادًا للنبات.",
+        "control": "تُستخدم الزيوت المعدنية ضمن برامج المكافحة المتكاملة أو بالمشاركة مع توصيات فنية مناسبة.",
+        "usage": "يجب الالتزام بتعليمات الملصق، مع مراعاة الحرارة والمحصول وعدم الخلط غير المناسب.",
+        "tips": "تجنب الرش في الأجواء الحارة جدًا، وجرّب على مساحة صغيرة عند الحاجة قبل التعميم.",
+        "search_term": "الزيوت المعدنية الزراعية",
+    },
+    "مبيدات النيماتودا": {
+        "keywords": ["مبيدات النيماتودا", "نيماتودا", "nematode"],
+        "title": "مبيدات النيماتودا",
+        "desc": "النيماتودا آفات دقيقة تصيب الجذور وتؤثر على امتصاص الماء والعناصر وقد تسبب ضعفًا عامًا في النبات.",
+        "damage": "تسبب تقزمًا وضعف نمو وذبولًا وتراجعًا في المجموع الجذري والإنتاجية.",
+        "control": "تتم المكافحة باستخدام المنتجات المناسبة للنيماتودا مع دعم ذلك بالممارسات الزراعية الجيدة.",
+        "usage": "تختلف الطريقة حسب المنتج وقد تكون مع التربة أو مياه الري وفق تعليمات الملصق.",
+        "tips": "افحص الجذور والتربة عند الاشتباه، ولا تعتمد على الأعراض الظاهرية فقط دون تقييم جيد.",
+        "search_term": "مبيدات النيماتودا",
+    },
+    "مبيدات الأعشاب": {
+        "keywords": ["مبيدات الأعشاب", "اعشاب ضارة", "حشائش", "حشيشة"],
+        "title": "مبيدات الأعشاب",
+        "desc": "مبيدات الأعشاب تُستخدم لمكافحة الحشائش التي تنافس المحصول على الماء والغذاء والضوء.",
+        "damage": "الحشائش تقلل كفاءة المحصول وتزيد المنافسة وتؤثر على النمو والإنتاج.",
+        "control": "يُختار مبيد الأعشاب بحسب نوع الحشيشة والمحصول ومرحلة النمو.",
+        "usage": "يجب الالتزام بتعليمات الملصق والتأكد من توافق المبيد مع المحصول المستهدف.",
+        "tips": "التشخيص الصحيح لنوع الحشيشة مهم جدًا قبل استخدام أي مبيد.",
+        "search_term": "مبيدات الأعشاب",
+    },
+    "مبيدات أعشاب رفيعة الأوراق": {
+        "keywords": ["مبيدات أعشاب رفيعة الأوراق", "حشائش رفيعة", "حشائش ضيقة", "نجيليات"],
+        "title": "مبيدات أعشاب رفيعة الأوراق",
+        "desc": "تُستخدم لمكافحة الحشائش النجيلية أو رفيعة الأوراق في المحاصيل المناسبة.",
+        "damage": "الحشائش الرفيعة تنافس المحصول مبكرًا وقد تقلل الإنتاجية بشكل واضح.",
+        "control": "اختر مبيدًا مخصصًا للحشائش الرفيعة بما يتوافق مع المحصول.",
+        "usage": "يستخدم وفق تعليمات المنتج وفي المرحلة المناسبة من نمو الحشيشة.",
+        "tips": "لا تستخدم أي مبيد أعشاب بشكل عام دون التأكد من نوع الحشيشة والمحصول.",
+        "search_term": "مبيدات أعشاب رفيعة الأوراق",
+    },
+    "مبيدات أعشاب عريضة الاوراق": {
+        "keywords": ["مبيدات أعشاب عريضة الاوراق", "عريضة الاوراق", "عريضة الأوراق"],
+        "title": "مبيدات أعشاب عريضة الأوراق",
+        "desc": "تُستخدم لمكافحة الحشائش عريضة الأوراق في المحاصيل المناسبة.",
+        "damage": "الحشائش العريضة تسبب منافسة شديدة للمحصول على العناصر والضوء.",
+        "control": "اختر مبيدًا مناسبًا لعريضة الأوراق ومتوافقًا مع المحصول.",
+        "usage": "تطبّق المعاملة وفق توصيات الملصق والمرحلة المناسبة.",
+        "tips": "التفريق بين الحشائش العريضة والرفيعة مهم جدًا قبل المكافحة.",
+        "search_term": "مبيدات أعشاب عريضة الاوراق",
+    },
+    "مبيدات أعشاب عامة (غير انتقائية)": {
+        "keywords": ["مبيدات أعشاب عامة", "غير انتقائية", "مبيدات عامة"],
+        "title": "مبيدات أعشاب عامة (غير انتقائية)",
+        "desc": "تُستخدم هذه المبيدات لمكافحة طيف واسع من الحشائش، وغالبًا لا تميز بين الحشيشة والنبات المرغوب.",
+        "damage": "سوء الاستخدام قد يؤدي إلى ضرر مباشر للمحصول أو النباتات المجاورة.",
+        "control": "تُستخدم في المواقع المناسبة فقط وبحذر شديد.",
+        "usage": "يجب الالتزام الصارم بتعليمات الاستخدام ومواقع الرش المسموح بها.",
+        "tips": "احذر الانجراف والرش العشوائي قرب النباتات المرغوبة.",
+        "search_term": "مبيدات أعشاب عامة (غير انتقائية)",
+    },
+    "مبيدات الاكاروسات (العنكبوت الاحمر)": {
+        "keywords": ["مبيدات الاكاروسات", "العنكبوت الاحمر", "أكاروس", "اكاروس", "عنكبوت أحمر", "عنكبوت احمر"],
+        "title": "مبيدات الأكاروسات (العنكبوت الأحمر)",
+        "desc": "الأكاروسات من الآفات الدقيقة التي قد تسبب تبقعًا وضعفًا عامًا في الأوراق والنبات.",
+        "damage": "تؤدي إلى اصفرار أو تبقع دقيق وتراجع في النشاط النباتي.",
+        "control": "تتم المكافحة باستخدام المنتجات المخصصة للأكاروسات مع المتابعة الدقيقة.",
+        "usage": "يراعى تغطية الأوراق ومواقع الإصابة حسب تعليمات المنتج.",
+        "tips": "تظهر الإصابة غالبًا في ظروف الجفاف والحرارة، فتابع النباتات المعرضة للإجهاد.",
+        "search_term": "مبيدات الاكاروسات (العنكبوت الاحمر)",
+    },
+    "مبيدات زراعية فطرية": {
+        "keywords": ["مبيدات زراعية فطرية", "مبيد فطري", "امراض فطرية", "أمراض فطرية"],
+        "title": "مبيدات زراعية فطرية",
+        "desc": "المبيدات الفطرية تُستخدم لمكافحة الأمراض الفطرية التي تصيب الأوراق أو السيقان أو الجذور أو الثمار.",
+        "damage": "الأمراض الفطرية قد تؤثر على النمو والجودة والإنتاج وقد تنتشر سريعًا في الظروف المناسبة.",
+        "control": "تُختار المادة المناسبة حسب نوع المرض والمحصول ومرحلة الإصابة.",
+        "usage": "يجب الالتزام بتوصيات الملصق وفترات الأمان وطريقة التطبيق المناسبة.",
+        "tips": "ابدأ المكافحة مبكرًا وادعمها بتحسين التهوية وتنظيم الري.",
+        "search_term": "مبيدات زراعية فطرية",
+    },
+    "مبيدات أمراض البذور": {
+        "keywords": ["مبيدات أمراض البذور", "أمراض البذور"],
+        "title": "مبيدات أمراض البذور",
+        "desc": "تُستخدم لمعاملة البذور أو التربة للحد من الأمراض المرتبطة بمرحلة الإنبات والبادرات.",
+        "damage": "قد تؤدي أمراض البذور إلى ضعف أو عدم انتظام الإنبات وموت البادرات.",
+        "control": "تتم المعالجة باختيار المنتجات المناسبة لمعاملة البذور أو التربة.",
+        "usage": "تختلف طريقة الاستخدام حسب المنتج ونوع البذرة والمحصول.",
+        "tips": "استخدم بذورًا سليمة، وتجنب الرطوبة الزائدة في مرحلة الإنبات.",
+        "search_term": "مبيدات أمراض البذور",
+    },
+    "مبيدات اللطعة الارجوانية": {
+        "keywords": ["مبيدات اللطعة الارجوانية", "اللطعة الارجوانية", "اللطعة الأرجوانية"],
+        "title": "مبيدات اللطعة الأرجوانية",
+        "desc": "اللّطعة الأرجوانية من الأمراض الفطرية التي تظهر على بعض المحاصيل وقد تؤثر على المجموع الخضري وجودة النبات.",
+        "damage": "تسبب بقعًا وتدهورًا في الأنسجة المصابة عند تفاقم الإصابة.",
+        "control": "تتم المكافحة باستخدام المبيدات المناسبة للمرض وفق المحصول المستهدف.",
+        "usage": "يجب الالتزام بالتوصيات الخاصة بالمحصول والمنتج.",
+        "tips": "ابدأ المعالجة مبكرًا وتابع تطور الأعراض باستمرار.",
+        "search_term": "مبيدات اللطعة الارجوانية",
+    },
+    "مبيدات الانثراكنوز": {
+        "keywords": ["مبيدات الانثراكنوز", "الانثراكنوز", "أنثراكنوز", "انثراكنوز"],
+        "title": "مبيدات الأنثراكنوز",
+        "desc": "الأنثراكنوز من الأمراض الفطرية التي قد تصيب الأوراق أو الثمار أو الأنسجة المختلفة حسب المحصول.",
+        "damage": "يسبب بقعًا وتلفًا موضعيًا وقد يضعف الجودة والإنتاج.",
+        "control": "تتم المكافحة بالمبيدات المناسبة مع التخلص من الأجزاء المصابة عند الحاجة.",
+        "usage": "يُستخدم المنتج بحسب تعليمات الملصق ونوع المحصول.",
+        "tips": "المتابعة المبكرة ورفع النظافة الزراعية يساعدان في الحد من تطور الإصابة.",
+        "search_term": "مبيدات الانثراكنوز",
+    },
+    "مبيدات التفحمات": {
+        "keywords": ["مبيدات التفحمات", "التفحمات", "تفحم"],
+        "title": "مبيدات التفحمات",
+        "desc": "التفحمات أمراض فطرية تصيب بعض المحاصيل وتظهر بأعراض مميزة حسب نوع المحصول.",
+        "damage": "تؤثر على الجودة والإنتاج وقد ترتبط بمراحل البذور أو السنابل أو الأجزاء المصابة.",
+        "control": "تعتمد المكافحة على اختيار المنتج المناسب وإجراءات الوقاية الزراعية.",
+        "usage": "قد تشمل المعاملة البذور أو النبات حسب نوع المرض والمنتج.",
+        "tips": "الوقاية ومعاملة البذور في بعض الحالات مهمة جدًا لتقليل الإصابة.",
+        "search_term": "مبيدات التفحمات",
+    },
+    "مبيدات الصدأ الفطري": {
+        "keywords": ["مبيدات الصدأ الفطري", "الصدأ الفطري", "صدأ"],
+        "title": "مبيدات الصدأ الفطري",
+        "desc": "الصدأ الفطري يظهر كبثرات أو بقع على الأوراق أو الأجزاء المصابة حسب المحصول.",
+        "damage": "قد يؤدي إلى ضعف النمو وتراجع الكفاءة العامة للنبات.",
+        "control": "تتم المكافحة بالمبيدات المناسبة للصدأ حسب المحصول ومرحلة الإصابة.",
+        "usage": "يُستخدم المنتج وفق الملصق والتوصيات المعتمدة.",
+        "tips": "المتابعة المبكرة للأوراق تساعد كثيرًا في الحد من تطور المرض.",
+        "search_term": "مبيدات الصدأ الفطري",
+    },
+    "مبيدات أعفان الثمار": {
+        "keywords": ["مبيدات أعفان الثمار", "أعفان الثمار", "عفن الثمار"],
+        "title": "مبيدات أعفان الثمار",
+        "desc": "أعفان الثمار تؤثر على جودة الثمار وقيمتها التسويقية وقد تتفاقم مع الرطوبة أو الجروح.",
+        "damage": "تسبب خسائر مباشرة في الجودة والقابلية للتسويق والتخزين.",
+        "control": "تتم المكافحة باستخدام المنتجات المناسبة مع تحسين التداول وتقليل الجروح والرطوبة.",
+        "usage": "اتبع تعليمات المنتج المعتمد للمحصول والمشكلة.",
+        "tips": "التعامل الجيد مع الثمار وتقليل الرطوبة والضرر الميكانيكي مهم جدًا.",
+        "search_term": "مبيدات أعفان الثمار",
+    },
+    "مبيدات لفحة الساق": {
+        "keywords": ["مبيدات لفحة الساق", "لفحة الساق"],
+        "title": "مبيدات لفحة الساق",
+        "desc": "لفحة الساق من الأمراض التي قد تصيب الأنسجة القريبة من سطح التربة أو أجزاء الساق.",
+        "damage": "قد تؤدي إلى ضعف النبات أو موته في الحالات الشديدة.",
+        "control": "تتم المعالجة بالمبيدات المناسبة وتحسين الظروف الزراعية المساندة.",
+        "usage": "يختلف الاستخدام بحسب المنتج والمحصول ونمط الإصابة.",
+        "tips": "تقليل الرطوبة الزائدة وتحسين الصرف يدعمان نجاح المكافحة.",
+        "search_term": "مبيدات لفحة الساق",
+    },
+    "مبيدات تبقعات الأوراق": {
+        "keywords": ["مبيدات تبقعات الأوراق", "تبقعات الأوراق", "تبقع الأوراق", "تبقع الاوراق"],
+        "title": "مبيدات تبقعات الأوراق",
+        "desc": "تبقعات الأوراق من المشاكل الشائعة وقد تكون مرتبطة بمسببات فطرية أو غيرها حسب الحالة.",
+        "damage": "تسبب تراجعًا في كفاءة الأوراق وقد تؤثر على النمو والمظهر العام.",
+        "control": "تحتاج إلى تقييم جيد واختيار المبيد المناسب إذا ثبتت الطبيعة الفطرية للمشكلة.",
+        "usage": "تستخدم المعاملة وفق تعليمات المنتج والمحصول المستهدف.",
+        "tips": "لا تخلط بين التبقعات المرضية والإجهادات الأخرى دون تقييم مبدئي جيد.",
+        "search_term": "مبيدات تبقعات الأوراق",
+    },
+    "مبيدات أعفان الجذور": {
+        "keywords": ["مبيدات أعفان الجذور", "أعفان الجذور", "عفن الجذور", "تعفن الجذور"],
+        "title": "مبيدات أعفان الجذور",
+        "desc": "أعفان الجذور من المشاكل المرتبطة غالبًا بزيادة الرطوبة أو ضعف الصرف أو مسببات مرضية في منطقة الجذور.",
+        "damage": "تؤدي إلى ضعف النمو والذبول وتراجع المجموع الخضري والجذري.",
+        "control": "تتم المعالجة باختيار المبيد المناسب وتحسين الصرف وتقليل مسببات الإجهاد.",
+        "usage": "تختلف طريقة الاستخدام حسب المنتج وطبيعة المحصول ودرجة الإصابة.",
+        "tips": "تنظيم الري وتحسين الصرف من أهم الخطوات المساندة لنجاح المكافحة.",
+        "search_term": "مبيدات أعفان الجذور",
+    },
+    "مبيدات البياض الزغبي": {
+        "keywords": ["مبيدات البياض الزغبي", "البياض الزغبي", "بياض زغبي"],
+        "title": "مبيدات البياض الزغبي",
+        "desc": "البياض الزغبي من الأمراض التي ترتبط غالبًا بارتفاع الرطوبة والظروف المناسبة لانتشار المرض.",
+        "damage": "قد يسبب بقعًا وتدهورًا في الأوراق وضعفًا عامًا للنبات.",
+        "control": "تتم المكافحة بالمبيدات المناسبة وتحسين التهوية وتقليل الظروف المشجعة على الإصابة.",
+        "usage": "يستخدم المنتج وفق الملصق والتوصيات الخاصة بالمحصول والمرض.",
+        "tips": "خفف الرطوبة الزائدة وتابع النباتات خاصة في الأجواء المناسبة لتطور الإصابة.",
+        "search_term": "مبيدات البياض الزغبي",
+    },
+    "مبيدات البياض الدقيقي": {
+        "keywords": ["مبيدات البياض الدقيقي", "البياض الدقيقي", "بياض دقيقي"],
+        "title": "مبيدات البياض الدقيقي",
+        "desc": "البياض الدقيقي من الأمراض الفطرية الشائعة، ويظهر غالبًا على شكل نمو أبيض دقيقي على الأوراق أو الأجزاء المصابة.",
+        "damage": "يسبب ضعفًا في التمثيل الضوئي وتراجعًا في حيوية النبات وجودته عند اشتداد الإصابة.",
+        "control": "تتم المكافحة باستخدام المبيدات الفطرية المناسبة وتحسين الظروف الزراعية المحيطة.",
+        "usage": "يستخدم المبيد بحسب توصيات الملصق، مع بدء المعاملة عند بداية ظهور الأعراض.",
+        "tips": "حسن التهوية، وتجنب تزاحم النباتات، وتابع الأعراض من بدايتها.",
+        "search_term": "مبيدات البياض الدقيقي",
+    },
+    "مبيدات زراعية حشرية": {
+        "keywords": ["مبيدات زراعية حشرية", "مبيد حشري زراعي"],
+        "title": "مبيدات زراعية حشرية",
+        "desc": "تُستخدم لمكافحة الحشرات الزراعية القارضة أو الماصة أو الحافرة بحسب نوع الآفة والمحصول.",
+        "damage": "الآفات الحشرية قد تسبب ضعفًا عامًا وتشوهات وخسائر في الجودة والإنتاج.",
+        "control": "يجب اختيار المبيد المناسب بناءً على نوع الآفة ومرحلة الإصابة والمحصول.",
+        "usage": "اتبع تعليمات المنتج الموصى به بعناية.",
+        "tips": "التشخيص الدقيق للآفة أولًا يرفع نجاح المكافحة ويقلل الهدر.",
+        "search_term": "مبيدات زراعية حشرية",
+    },
+    "مبيدات الجراد الصحراوي والنطاط": {
+        "keywords": ["مبيدات الجراد الصحراوي والنطاط", "الجراد الصحراوي", "نطاط", "نطاطات", "جراد"],
+        "title": "مبيدات الجراد الصحراوي والنطاط",
+        "desc": "الجراد والنطاط من الآفات القارضة التي قد تسبب خسائر واسعة عند اشتداد الإصابة.",
+        "damage": "تؤدي إلى فقد كبير في المجموع الخضري والمحصول عند الانتشار.",
+        "control": "تتم المكافحة بالمبيدات المناسبة ضمن التوصيات المعتمدة لمثل هذه الآفات.",
+        "usage": "تعتمد الطريقة على المنتج وطبيعة الموقع والإصابة.",
+        "tips": "التدخل المبكر مهم جدًا في الإصابات الجماعية أو السريعة الانتشار.",
+        "search_term": "مبيدات الجراد الصحراوي والنطاط",
+    },
+    "مبيدات صانعات الأنفاق": {
+        "keywords": ["مبيدات صانعات الأنفاق", "صانعات الأنفاق", "صانعة الأنفاق", "حافرات الأوراق"],
+        "title": "مبيدات صانعات الأنفاق",
+        "desc": "صانعات الأنفاق آفات تترك مسارات داخل الأوراق نتيجة تغذية اليرقات داخل النسيج.",
+        "damage": "تضعف الورقة وتقلل كفاءتها وتؤثر على المظهر والنمو.",
+        "control": "تتم المكافحة بالمنتجات المناسبة لهذه الآفة مع إزالة الأجزاء شديدة الإصابة عند الحاجة.",
+        "usage": "تستخدم المبيدات وفق تعليمات الملصق والمحصول.",
+        "tips": "المتابعة المبكرة للأوراق تساعد في اكتشاف الإصابة قبل تفاقمها.",
+        "search_term": "مبيدات صانعات الأنفاق",
+    },
+    "مبيدات العثة ذات الظهر الماسي": {
+        "keywords": ["مبيدات العثة ذات الظهر الماسي", "العثة ذات الظهر الماسي"],
+        "title": "مبيدات العثة ذات الظهر الماسي",
+        "desc": "من الآفات المهمة على بعض المحاصيل وتسبب ضررًا على الأوراق والأجزاء الخضرية.",
+        "damage": "قد تؤدي إلى ضعف النمو وتراجع جودة النبات عند اشتداد الإصابة.",
+        "control": "تتم المكافحة بالمنتجات الموصى بها لهذه الآفة.",
+        "usage": "يختلف الاستخدام حسب المنتج والمحصول.",
+        "tips": "ابدأ المكافحة عند بداية ظهور الإصابة للحصول على نتائج أفضل.",
+        "search_term": "مبيدات العثة ذات الظهر الماسي",
+    },
+    "مبيدات دودة ثمار الطماطم": {
+        "keywords": ["مبيدات دودة ثمار الطماطم", "دودة ثمار الطماطم"],
+        "title": "مبيدات دودة ثمار الطماطم",
+        "desc": "دودة ثمار الطماطم من الآفات التي تصيب الثمار والأجزاء الزهرية والخضرية.",
+        "damage": "تسبب ثقوبًا وتلفًا مباشرًا للثمار وتؤثر على الجودة والتسويق.",
+        "control": "تتم المكافحة بالمنتجات المناسبة لليرقات على محصول الطماطم.",
+        "usage": "تُستخدم المعاملة مبكرًا عند بداية الإصابة ووفق تعليمات المنتج.",
+        "tips": "الفحص المنتظم للثمار والقمم النامية مهم للكشف المبكر.",
+        "search_term": "مبيدات دودة ثمار الطماطم",
+    },
+    "أكاروس صدأ الحمضيات": {
+        "keywords": ["أكاروس صدأ الحمضيات", "صدأ الحمضيات"],
+        "title": "أكاروس صدأ الحمضيات",
+        "desc": "آفة دقيقة تؤثر على أجزاء الحمضيات وقد تسبب تغيرات سطحية أو ضعفًا في الجودة.",
+        "damage": "تؤثر على المظهر والجودة التسويقية عند زيادة الإصابة.",
+        "control": "تتم المكافحة بالمبيدات المناسبة للأكاروس في الحمضيات.",
+        "usage": "اتبع تعليمات المنتج المعتمد للمحصول والآفة.",
+        "tips": "المراقبة المبكرة للثمار والأوراق تساعد على الحد من تطور الإصابة.",
+        "search_term": "أكاروس صدأ الحمضيات",
+    },
+    "مبيدات الحشرات القشرية": {
+        "keywords": ["مبيدات الحشرات القشرية", "الحشرات القشرية", "حشرة قشرية", "حشرات قشرية"],
+        "title": "مبيدات الحشرات القشرية",
+        "desc": "الحشرات القشرية آفات ماصة قد تلتصق بالأوراق أو الأفرع وتسبب ضعفًا عامًا للنبات.",
+        "damage": "قد تؤدي إلى ضعف النمو وظهور إفرازات عسلية ومشاكل ثانوية.",
+        "control": "تتم المكافحة بالمنتجات المناسبة وقد تدخل معها الزيوت الزراعية بحسب التوصية.",
+        "usage": "يراعى الوصول الجيد إلى الأجزاء المصابة وفق تعليمات المنتج.",
+        "tips": "افحص الأفرع والأجزاء السفلية للنبات باستمرار.",
+        "search_term": "مبيدات الحشرات القشرية",
+    },
+    "مبيدات نطاطات الأوراق": {
+        "keywords": ["مبيدات نطاطات الأوراق", "نطاطات الأوراق", "نطاط الأوراق"],
+        "title": "مبيدات نطاطات الأوراق",
+        "desc": "نطاطات الأوراق من الآفات الماصة التي قد تؤثر على حيوية النبات وتسبب أعراضًا مختلفة حسب المحصول.",
+        "damage": "تؤدي إلى ضعف عام وربما نقل بعض المسببات في بعض الحالات.",
+        "control": "تتم المكافحة بالمبيدات المناسبة للحشرات الماصة.",
+        "usage": "يطبق المنتج وفق التوصيات المعتمدة.",
+        "tips": "المتابعة الدورية تقلل من فرص تفاقم الإصابة.",
+        "search_term": "مبيدات نطاطات الأوراق",
+    },
+    "مبيدات حفار الساق": {
+        "keywords": ["مبيدات حفار الساق", "حفار الساق", "حفارات الساق"],
+        "title": "مبيدات حفار الساق",
+        "desc": "حفار الساق من الآفات التي قد تسبب ضعفًا داخليًا للأنسجة النباتية نتيجة الأنفاق والتغذية.",
+        "damage": "قد تؤدي الإصابة إلى الذبول أو ضعف عام أو تراجع في النمو.",
+        "control": "تتم المكافحة حسب نوع الحفار والمحصول باستخدام الحل المناسب.",
+        "usage": "يُراعى توقيت المعاملة وفق مرحلة الآفة والمحصول.",
+        "tips": "الملاحظة المبكرة مهمة لأن بعض الإصابات تكون داخلية قبل وضوحها خارجيًا.",
+        "search_term": "مبيدات حفار الساق",
+    },
+    "مبيدات سوسة النخيل الحمراء": {
+        "keywords": ["مبيدات سوسة النخيل الحمراء", "سوسة النخيل الحمراء"],
+        "title": "مبيدات سوسة النخيل الحمراء",
+        "desc": "سوسة النخيل الحمراء من أخطر آفات النخيل وتحتاج متابعة واكتشافًا مبكرًا.",
+        "damage": "قد تسبب أضرارًا كبيرة داخل جذع النخلة وقد تؤدي إلى خسائر شديدة عند التأخر في التدخل.",
+        "control": "تتم المكافحة ضمن برنامج متخصص يشمل الاكتشاف المبكر والمعاملة المناسبة.",
+        "usage": "تعتمد الطريقة على طبيعة الإصابة وبرنامج المكافحة المعتمد.",
+        "tips": "الفحص الدوري للنخيل ضروري جدًا، خاصة مع أي أعراض غير طبيعية.",
+        "search_term": "مبيدات سوسة النخيل الحمراء",
+    },
+    "مبيدات الدودة القارضة": {
+        "keywords": ["مبيدات الدودة القارضة", "الدودة القارضة"],
+        "title": "مبيدات الدودة القارضة",
+        "desc": "الدودة القارضة من الآفات التي تهاجم البادرات وقد تقطع النباتات الصغيرة قرب سطح التربة.",
+        "damage": "تسبب فقدًا مباشرًا في النباتات الحديثة وضعفًا في الكثافة النباتية.",
+        "control": "تتم المكافحة بالمبيدات المناسبة مع متابعة التربة وقاعدة النبات.",
+        "usage": "تختلف الطريقة حسب المنتج ونوع الإصابة.",
+        "tips": "راقب البادرات مبكرًا خصوصًا بعد الزراعة أو الإنبات.",
+        "search_term": "مبيدات الدودة القارضة",
+    },
+    "مبيدات البق الدقيقي": {
+        "keywords": ["مبيدات البق الدقيقي", "البق الدقيقي"],
+        "title": "مبيدات البق الدقيقي",
+        "desc": "البق الدقيقي من الحشرات الماصة التي تظهر غالبًا بشكل كتل قطنية بيضاء على النبات.",
+        "damage": "يسبب ضعف النمو وإفرازات عسلية وقد يتبعها عفن هبابي.",
+        "control": "تتم المكافحة بالمبيدات المناسبة للحشرات الماصة مع تغطية جيدة.",
+        "usage": "يجب الوصول الجيد إلى أماكن التجمع والإصابة وفق تعليمات المنتج.",
+        "tips": "افحص العقد والأجزاء المخفية جيدًا لأن الإصابة قد تبدأ فيها.",
+        "search_term": "مبيدات البق الدقيقي",
+    },
+    "مبيدات ذبابة الفاكهة": {
+        "keywords": ["مبيدات ذبابة الفاكهة", "ذبابة الفاكهة"],
+        "title": "مبيدات ذبابة الفاكهة",
+        "desc": "ذبابة الفاكهة من الآفات المهمة على العديد من الثمار وتؤثر على الجودة والتسويق.",
+        "damage": "قد تسبب تلفًا داخليًا للثمار وتراجعًا في الجودة والقيمة التسويقية.",
+        "control": "تتم المكافحة ضمن برنامج متكامل يشمل النظافة والمصائد والمعاملة المناسبة.",
+        "usage": "تختلف الطريقة حسب نوع المنتج والبرنامج المستخدم.",
+        "tips": "أزل الثمار المصابة والمتساقطة باستمرار ولا تتركها مصدرًا لاستمرار الإصابة.",
+        "search_term": "مبيدات ذبابة الفاكهة",
+    },
+    "مبيدات الذبابة البيضاء": {
+        "keywords": ["مبيدات الذبابة البيضاء", "الذبابة البيضاء", "ذبابة بيضاء"],
+        "title": "مبيدات الذبابة البيضاء",
+        "desc": "الذبابة البيضاء من الحشرات الماصة الشائعة في المحاصيل المختلفة.",
+        "damage": "قد تسبب اصفرارًا وضعفًا عامًا وإفرازات عسلية يتبعها عفن هبابي.",
+        "control": "تتم المكافحة بالمنتجات المناسبة للحشرات الماصة مع تغطية جيدة.",
+        "usage": "يراعى الرش الجيد خاصة على السطح السفلي للأوراق.",
+        "tips": "ابدأ المكافحة مبكرًا قبل زيادة الكثافة الحشرية وانتشارها.",
+        "search_term": "مبيدات الذبابة البيضاء",
+    },
+    "مبيدات التربس": {
+        "keywords": ["مبيدات التربس", "التربس", "تربس"],
+        "title": "مبيدات التربس",
+        "desc": "التربس من الآفات الدقيقة التي تصيب الأوراق والأزهار والثمار في بعض المحاصيل.",
+        "damage": "يسبب تشوهات سطحية أو فضية اللون وضعفًا في الجودة.",
+        "control": "تتم المكافحة باستخدام المنتجات المناسبة لهذه الآفة مع متابعة الإصابة بدقة.",
+        "usage": "تستخدم المبيدات حسب الملصق مع الحرص على تغطية أماكن الإصابة.",
+        "tips": "راقب الأعراض مبكرًا، خاصة على الأوراق والأزهار.",
+        "search_term": "مبيدات التربس",
+    },
+    "مبيدات المن": {
+        "keywords": ["مبيدات المن", "المن", "من", "حشرة المن"],
+        "title": "مبيدات المن",
+        "desc": "حشرة المن من الحشرات الماصة للعصارة، وتظهر غالبًا على النموات الحديثة والأوراق الطرية.",
+        "damage": "تسبب ضعف النمو وتجعد الأوراق وظهور إفرازات عسلية قد يتبعها عفن هبابي.",
+        "control": "تتم المكافحة باستخدام المبيدات المناسبة للحشرات الماصة مع متابعة الإصابة مبكرًا.",
+        "usage": "يكون الرش حسب تعليمات المنتج مع التركيز على أماكن الإصابة وتحت الأوراق عند الحاجة.",
+        "tips": "افحص النموات الحديثة باستمرار، وتدخل مبكرًا قبل زيادة الإصابة وانتشارها.",
+        "search_term": "مبيدات المن",
+    },
+    "مكافحة الفئران والقوارض": {
+        "keywords": ["مكافحة الفئران والقوارض", "الفئران", "قوارض", "جرذان", "فأر", "فئران"],
+        "title": "مكافحة الفئران والقوارض",
+        "desc": "القوارض من الآفات الخطرة في المنازل والمخازن، وقد تدخل من الفتحات والشقوق بحثًا عن الغذاء والماء.",
+        "damage": "قد تسبب تلفًا في المواد المخزنة وبعض التمديدات، كما أن وجودها غير صحي داخل المواقع السكنية أو التجارية.",
+        "control": "تتم المكافحة باستخدام الطعوم أو المصائد أو الوسائل المناسبة حسب طبيعة المكان والإصابة.",
+        "usage": "يجب اختيار الوسيلة المناسبة ووضعها في الأماكن الصحيحة بعيدًا عن الاستخدام الخاطئ.",
+        "tips": "أغلق الفتحات، واحفظ الطعام بإحكام، وقلل الفوضى والأماكن التي تختبئ فيها القوارض.",
+        "search_term": "مكافحة الفئران والقوارض",
+    },
+    "طعوم لينة": {
+        "keywords": ["طعوم لينة", "طعم لين"],
+        "title": "طعوم لينة",
+        "desc": "الطعوم اللينة من الخيارات المستخدمة في برامج مكافحة القوارض في بعض المواقع.",
+        "damage": "سوء وضع الطعم أو سوء اختياره قد يقلل الفعالية.",
+        "control": "تُستخدم ضمن برنامج مناسب لمكافحة القوارض وبحسب التعليمات.",
+        "usage": "توضع في المواقع المناسبة ويفضل ضمن محطات الطعوم عند الحاجة.",
+        "tips": "تأكد من وضع الطعوم في أماكن آمنة وبعيدة عن الاستخدام الخاطئ.",
+        "search_term": "طعوم لينة",
+    },
+    "حبيبات": {
+        "keywords": ["حبيبات"],
+        "title": "حبيبات",
+        "desc": "الحبيبات من أشكال بعض منتجات مكافحة القوارض أو الآفات حسب نوع المنتج.",
+        "damage": "اختيار الشكل غير المناسب قد يؤثر على كفاءة المكافحة.",
+        "control": "يتم اختيار الحبيبات حين تكون هي الصيغة المناسبة للحالة المستهدفة.",
+        "usage": "اتبع الملصق بدقة في طريقة التوزيع أو الوضع.",
+        "tips": "اختر الصيغة المناسبة بحسب نوع الإصابة ومكانها.",
+        "search_term": "حبيبات",
+    },
+    "حبوب قمح": {
+        "keywords": ["حبوب قمح"],
+        "title": "حبوب قمح",
+        "desc": "حبوب القمح من صور بعض الطعوم المستخدمة في مكافحة القوارض.",
+        "damage": "قد تقل الفعالية إذا وُضعت في مكان غير مناسب أو وُجدت مصادر غذاء منافسة.",
+        "control": "تُستخدم ضمن برنامج مناسب لمكافحة القوارض.",
+        "usage": "تُوضع في المواقع الملائمة أو داخل محطات الطعوم إذا أوصى المنتج بذلك.",
+        "tips": "قلل مصادر الغذاء الأخرى لرفع جاذبية الطعم.",
+        "search_term": "حبوب قمح",
+    },
+    "مكعبات شمعية": {
+        "keywords": ["مكعبات شمعية"],
+        "title": "مكعبات شمعية",
+        "desc": "المكعبات الشمعية من صور الطعوم المستخدمة في مكافحة القوارض، وتناسب بعض البيئات أكثر من غيرها.",
+        "damage": "سوء التوزيع أو وضعها في مكان غير مناسب قد يقلل من النتيجة.",
+        "control": "تُستخدم وفق برنامج مكافحة مناسب للقوارض.",
+        "usage": "توضع حسب تعليمات المنتج وفي المواقع الصحيحة.",
+        "tips": "اختيار الصيغة المناسبة للمكان مهم لنجاح المكافحة.",
+        "search_term": "مكعبات شمعية",
+    },
+    "المصائد والافخاخ": {
+        "keywords": ["المصائد والافخاخ", "المصائد", "الافخاخ", "مصيدة", "فخ"],
+        "title": "المصائد والأفخاخ",
+        "desc": "المصائد والأفخاخ من الوسائل المستخدمة ضمن برامج المكافحة المتكاملة للقوارض وبعض الآفات.",
+        "damage": "سوء التوزيع أو ضعف المتابعة قد يقلل من الكفاءة.",
+        "control": "تُستخدم في المواقع التي تناسب هذا النوع من المعالجة.",
+        "usage": "توضع في مسارات الحركة والمواقع المناسبة بحسب نوع المصيدة.",
+        "tips": "راقب النتائج باستمرار وغيّر أماكن التوزيع عند الحاجة.",
+        "search_term": "المصائد والافخاخ",
+    },
+    "محطات الطعوم": {
+        "keywords": ["محطات الطعوم", "محطة طعوم"],
+        "title": "محطات الطعوم",
+        "desc": "محطات الطعوم تُستخدم لتنظيم وتثبيت الطعوم وحمايتها في بعض برامج المكافحة.",
+        "damage": "عدم استخدام المحطة المناسبة قد يزيد من سوء الاستخدام أو يقلل فاعلية الطعم.",
+        "control": "تُستخدم مع الطعوم المناسبة للقوارض في المواقع المطلوبة.",
+        "usage": "توضع في أماكن الحركة ومع الالتزام بتعليمات المنتج والبرنامج.",
+        "tips": "تساعد المحطات على تنظيم برنامج المكافحة ورفع الأمان عند الاستخدام الصحيح.",
+        "search_term": "محطات الطعوم",
+    },
+    "مبيدات الحشرات الطائرة": {
+        "keywords": ["مبيدات الحشرات الطائرة", "حشرات طائرة"],
+        "title": "مبيدات الحشرات الطائرة",
+        "desc": "تُستخدم لمكافحة الحشرات الطائرة مثل الذباب والبعوض وبعض الآفات الأخرى حسب المنتج.",
+        "damage": "الحشرات الطائرة تسبب إزعاجًا وتلوثًا وقد ترتبط بمخاطر صحية بحسب النوع.",
+        "control": "تُختار المبيدات المناسبة بحسب نوع الحشرة الطائرة ومكان الاستخدام.",
+        "usage": "قد تكون المعاملة كرذاذ أو رش سطحي أو غيره حسب المنتج.",
+        "tips": "حسن النظافة وأزل مصادر الجذب بجانب استخدام المبيد.",
+        "search_term": "مبيدات الحشرات الطائرة",
+    },
+    "مبيدات الذباب": {
+        "keywords": ["مبيدات الذباب", "ذباب", "ذبابة"],
+        "title": "مبيدات الذباب",
+        "desc": "الذباب من الآفات الطائرة الشائعة، ويكثر قرب مصادر المخلفات والروائح والمواد العضوية.",
+        "damage": "يسبب الإزعاج وقد يلوث الأسطح والأطعمة عند انتقاله بين الأماكن الملوثة والنظيفة.",
+        "control": "تتم المكافحة باستخدام المبيدات المناسبة للذباب مع تحسين مستوى النظافة وتقليل مصادر الجذب.",
+        "usage": "يستخدم المنتج حسب نوعه وتعليماته، سواء كرذاذ أو رش سطحي أو وسائل جذب ومكافحة أخرى.",
+        "tips": "احكم إغلاق النفايات، ونظف أماكن الفضلات والمصارف، ولا تترك الطعام مكشوفًا.",
+        "search_term": "مبيدات الذباب",
+    },
+    "مبيدات البعوض": {
+        "keywords": ["مبيدات البعوض", "بعوض", "بعوضة", "ناموس"],
+        "title": "مبيدات البعوض",
+        "desc": "البعوض من الحشرات الطائرة المزعجة، ويرتبط غالبًا بوجود مياه راكدة أو أماكن رطبة مناسبة للتكاثر.",
+        "damage": "يسبب الإزعاج واللسعات، وبعض الأنواع قد ترتبط بنقل أمراض حسب البيئة والمنطقة.",
+        "control": "تتم المكافحة عادة بالرش المناسب للحشرات الطائرة مع إزالة أو تقليل مصادر التكاثر.",
+        "usage": "يعتمد الاستخدام على نوع المنتج، وقد يكون رشًا سطحيًا أو فراغيًا وفق تعليمات الملصق.",
+        "tips": "تخلص من المياه الراكدة، وركّب شبكًا للنوافذ، وأغلق أوعية الماء المكشوفة.",
+        "search_term": "مبيدات البعوض",
+    },
+    "مبيدات النحل والدبابير": {
+        "keywords": ["مبيدات النحل والدبابير", "الدبابير", "دبور", "نحل", "دبابير"],
+        "title": "مبيدات النحل والدبابير",
+        "desc": "تُستخدم في الحالات التي تستدعي معالجة آفات مثل الدبابير أو بعض الحشرات المشابهة وفق المنتج المناسب.",
+        "damage": "قد تسبب الإزعاج أو اللسعات أو مشاكل في مواقع السكن والعمل.",
+        "control": "تُختار المعاملة المناسبة حسب نوع الآفة ومكان وجودها.",
+        "usage": "اتبع الملصق بعناية خاصة في المواقع الحساسة.",
+        "tips": "تعامل بحذر مع الأعشاش والمواقع المرتبطة باللسع، ولا تتدخل دون احتياط.",
+        "search_term": "مبيدات النحل والدبابير",
+    },
+    "مبيدات الجراد": {
+        "keywords": ["مبيدات الجراد", "جراد"],
+        "title": "مبيدات الجراد",
+        "desc": "تستخدم لمكافحة الجراد في الحالات التي تتطلب ذلك بحسب المنتج والبرنامج المناسب.",
+        "damage": "الجراد قد يسبب خسائر سريعة في الغطاء النباتي والمحاصيل.",
+        "control": "تتم المكافحة بالمبيدات المناسبة حسب البرنامج المعتمد.",
+        "usage": "اتبع تعليمات المنتج والجهة المشرفة عند الحاجة.",
+        "tips": "التحرك المبكر مع الإصابات الجماعية مهم جدًا.",
+        "search_term": "مبيدات الجراد",
+    },
+    "مبيدات الحشرات الزاحفة": {
+        "keywords": ["مبيدات الحشرات الزاحفة", "حشرات زاحفة"],
+        "title": "مبيدات الحشرات الزاحفة",
+        "desc": "تُستخدم لمكافحة الحشرات الزاحفة مثل الصراصير والنمل وبعض الآفات المنزلية الأخرى.",
+        "damage": "الحشرات الزاحفة تسبب إزعاجًا وتلوثًا وبعضها يرتبط بمخاطر صحية أو إنشائية حسب النوع.",
+        "control": "تُختار المنتجات المناسبة حسب نوع الحشرة ومكان الإصابة.",
+        "usage": "يُركز الرش على الشقوق والزوايا ومناطق الاختباء وفق تعليمات المنتج.",
+        "tips": "الجمع بين النظافة وسد الفتحات والرش الصحيح يعطي نتائج أفضل.",
+        "search_term": "مبيدات الحشرات الزاحفة",
+    },
+    "مبيدات بق الفراش": {
+        "keywords": ["مبيدات بق الفراش", "بق الفراش"],
+        "title": "مبيدات بق الفراش",
+        "desc": "بق الفراش من الآفات المنزلية التي تختبئ في الشقوق والمراتب وحواف الأثاث وتظهر غالبًا ليلًا.",
+        "damage": "يسبب الإزعاج واللسعات وقد يصعب التخلص منه إذا انتشر في أكثر من موضع.",
+        "control": "يحتاج إلى معاملة دقيقة وشاملة للأماكن المصابة باستخدام المنتجات المناسبة لهذا النوع من الآفات.",
+        "usage": "تتم المعالجة حسب موضع الإصابة مع الالتزام بتعليمات المنتج وعدم الاستخدام العشوائي.",
+        "tips": "افحص المراتب والزوايا، واهتم بالتنظيف العميق، وعالج الإصابة مبكرًا قبل انتشارها.",
+        "search_term": "مبيدات بق الفراش",
+    },
+    "مبيدات قمل الخشب": {
+        "keywords": ["مبيدات قمل الخشب", "قمل الخشب"],
+        "title": "مبيدات قمل الخشب",
+        "desc": "قمل الخشب من الآفات المرتبطة بالرطوبة العالية والأماكن المظلمة والرطبة.",
+        "damage": "يدل غالبًا على وجود رطوبة أو مشاكل بيئية مساندة داخل المكان.",
+        "control": "تتم المكافحة بمعالجة الرطوبة أولًا واستخدام المنتج المناسب عند الحاجة.",
+        "usage": "يراعى الرش في أماكن الاختباء ومصادر الرطوبة حسب تعليمات المنتج.",
+        "tips": "خفض الرطوبة والتهوية الجيدة من أهم خطوات النجاح في المكافحة.",
+        "search_term": "مبيدات قمل الخشب",
+    },
+    "مبيدات قمل الكتب": {
+        "keywords": ["مبيدات قمل الكتب", "قمل الكتب"],
+        "title": "مبيدات قمل الكتب",
+        "desc": "قمل الكتب من الآفات الصغيرة المرتبطة غالبًا بالرطوبة والمخزون الورقي أو الأماكن سيئة التهوية.",
+        "damage": "يسبب إزعاجًا ويدل عادة على بيئة رطبة غير مناسبة.",
+        "control": "تتم المكافحة بخفض الرطوبة وتحسين التهوية واستخدام المنتج المناسب عند الحاجة.",
+        "usage": "تعتمد المعاملة على مكان الإصابة وطبيعة المنتج.",
+        "tips": "علاج الرطوبة أساس مهم جدًا في هذا النوع من المشكلات.",
+        "search_term": "مبيدات قمل الكتب",
+    },
+    "مبيدات أم أربعة وأربعين": {
+        "keywords": ["مبيدات أم أربعة وأربعين", "ام اربعة واربعين", "أم أربعة وأربعين"],
+        "title": "مبيدات أم أربعة وأربعين",
+        "desc": "أم أربعة وأربعين من الآفات الزاحفة التي تفضل الأماكن الرطبة والمظلمة.",
+        "damage": "تسبب الإزعاج وقد تظهر مع سوء النظافة أو ارتفاع الرطوبة.",
+        "control": "تتم المكافحة بالمنتجات المناسبة للحشرات الزاحفة مع معالجة البيئة المحيطة.",
+        "usage": "يراعى التركيز على الشقوق والزوايا ومصادر الرطوبة.",
+        "tips": "تنظيف المكان وخفض الرطوبة يقللان من ظهورها بشكل واضح.",
+        "search_term": "مبيدات أم أربعة وأربعين",
+    },
+    "مبيدات العقارب والعناكب": {
+        "keywords": ["مبيدات العقارب والعناكب", "عقارب", "عقرب", "عناكب", "عنكبوت"],
+        "title": "مبيدات العقارب والعناكب",
+        "desc": "العقارب والعناكب من الآفات الزاحفة التي تظهر غالبًا في الأماكن الهادئة أو المخفية أو الخارجية.",
+        "damage": "قد تسبب الإزعاج، وبعضها يمثل خطرًا عند اللسع أو تكرار الظهور داخل المواقع السكنية.",
+        "control": "تتم المكافحة بالمنتجات المناسبة مع التركيز على الشقوق والزوايا ومحيط المبنى.",
+        "usage": "يُراعى استخدام المنتج حسب الملصق وفي المواقع الموصى بها.",
+        "tips": "قلل الحشرات الأخرى في المكان لأنها قد تكون مصدر جذب للعناكب، وافحص المحيط الخارجي باستمرار.",
+        "search_term": "مبيدات العقارب والعناكب",
+    },
+    "مبيدات السمك الفضي": {
+        "keywords": ["مبيدات السمك الفضي", "السمك الفضي", "سمك فضي"],
+        "title": "مبيدات السمك الفضي",
+        "desc": "السمك الفضي من الآفات المرتبطة غالبًا بالرطوبة والمخازن والمواد الورقية أو النشوية.",
+        "damage": "يسبب إزعاجًا وقد يضر بعض المواد المخزنة أو الورقية.",
+        "control": "تتم المكافحة بخفض الرطوبة واستخدام المنتج المناسب عند الحاجة.",
+        "usage": "تعتمد المعالجة على مكان الإصابة ونوع المنتج.",
+        "tips": "تحسين التهوية وتقليل الرطوبة أساس مهم في الحد من الإصابة.",
+        "search_term": "مبيدات السمك الفضي",
+    },
+    "مبيدات الخنافس والسوس": {
+        "keywords": ["مبيدات الخنافس والسوس", "الخنافس", "السوس", "خنفساء", "سوس"],
+        "title": "مبيدات الخنافس والسوس",
+        "desc": "تشمل هذه الفئة آفات قد تصيب المخزون أو بعض المواد أو البيئات المختلفة حسب النوع.",
+        "damage": "قد تسبب تلفًا في المواد المخزنة أو إزعاجًا داخل المواقع المصابة.",
+        "control": "يتم اختيار المنتج المناسب بحسب نوع الآفة ومكان الإصابة.",
+        "usage": "اتبع تعليمات المنتج بدقة مع الاهتمام بالنظافة والعزل.",
+        "tips": "تحديد نوع السوس أو الخنفساء مهم جدًا لرفع دقة المعالجة.",
+        "search_term": "مبيدات الخنافس والسوس",
+    },
+    "مبيدات البراغيث": {
+        "keywords": ["مبيدات البراغيث", "براغيث", "برغوث"],
+        "title": "مبيدات البراغيث",
+        "desc": "البراغيث آفات صغيرة سريعة الحركة، وقد ترتبط بالحيوانات الأليفة أو المفروشات أو أماكن تراكم الغبار.",
+        "damage": "تسبب لسعات مزعجة وقد تتكاثر بسرعة إذا لم تتم معالجتها بشكل صحيح.",
+        "control": "تتم المكافحة بمعاملة الأماكن المصابة والبيئة المحيطة بالمنتجات المناسبة.",
+        "usage": "تختلف الطريقة حسب المنتج ومكان الإصابة، مع أهمية معالجة البيئة المحيطة أيضًا.",
+        "tips": "نظف المفروشات جيدًا، واهتم بمتابعة مصادر الإصابة في المكان بالكامل.",
+        "search_term": "مبيدات البراغيث",
+    },
+    "مبيدات النمل الأبيض": {
+        "keywords": ["مبيدات النمل الأبيض", "نمل أبيض", "نمل ابيض", "أرضة", "ارضة"],
+        "title": "مبيدات النمل الأبيض",
+        "desc": "النمل الأبيض من الآفات الخطرة على الأخشاب والمباني، وقد يتسبب في تلف الأبواب والأثاث والأجزاء الخشبية مع الوقت.",
+        "damage": "يسبب تآكلًا داخليًا في الأخشاب وقد يؤدي إلى أضرار إنشائية إذا لم تتم معالجته مبكرًا.",
+        "control": "تتم المكافحة عادة عبر معاملة التربة أو الخشب بالمبيدات المخصصة للنمل الأبيض، بحسب طبيعة الإصابة والموقع.",
+        "usage": "تعتمد الطريقة على مكان الإصابة، وقد تشمل معاملة التربة أو الحقن أو الرش الموضعي وفق تعليمات المنتج.",
+        "tips": "خفف الرطوبة حول المنزل، افحص الأخشاب بشكل دوري، ولا تترك مخلفات خشبية أو كراتين ملاصقة للجدران.",
+        "search_term": "مبيدات النمل الأبيض",
+    },
+    "مبيدات النمل": {
+        "keywords": ["مبيدات النمل", "نمل"],
+        "title": "مبيدات النمل",
+        "desc": "النمل من الآفات المنزلية الشائعة، وقد يظهر في المطابخ والجدران ومناطق الغذاء والرطوبة.",
+        "damage": "يسبب الإزعاج وقد ينتقل بين مصادر التلوث والطعام حسب بيئة المكان.",
+        "control": "تتم المكافحة باستخدام المبيدات أو الطعوم المناسبة للنمل حسب طبيعة الإصابة.",
+        "usage": "تُعالج مسارات الحركة ومواقع الدخول وأماكن المستعمرة إن أمكن.",
+        "tips": "تتبع مسار النمل مهم جدًا للوصول إلى مصدر المشكلة وليس فقط الأفراد الظاهرة.",
+        "search_term": "مبيدات النمل",
+    },
+    "مبيدات الصراصير": {
+        "keywords": ["مبيدات الصراصير", "صراصير", "صرصور"],
+        "title": "مبيدات الصراصير",
+        "desc": "الصراصير من الآفات المنزلية الشائعة، وتنتشر غالبًا في المطابخ والحمامات والبواليع والأماكن الرطبة والمظلمة.",
+        "damage": "قد تنقل الميكروبات وتلوث الأسطح والأطعمة، كما أن كثرتها قد ترتبط بوجود رطوبة أو شقوق أو مصادر غذاء مكشوفة.",
+        "control": "يمكن مكافحتها بالمبيدات المناسبة للصراصير، وغالبًا يُفضّل داخل المنازل اختيار مبيد منخفض الرائحة أو بدون رائحة. من المواد الشائعة المستخدمة في هذه الفئة: السايبرمثرين أو الدلتامثرين بحسب المنتج المسجل وتعليمات الملصق.",
+        "usage": "يركز الرش على الشقوق والزوايا وخلف الأجهزة وتحت الأحواض وحول أماكن الاختباء. وفي البواليع أو مناطق الإصابة الشديدة تُختار المعاملة الأنسب بحسب ملصق المنتج وتركيزه وتعليماته.",
+        "tips": "حافظ على نظافة المطبخ، جفف الأماكن الرطبة، لا تترك بقايا طعام مكشوفة، وأغلق الفتحات والشقوق قدر الإمكان.",
+        "search_term": "مبيدات الصراصير",
+    },
+}
+
+# ============================================
+# عبارات ملتبسة
+# ============================================
+AMBIGUOUS_TERMS = {
+    "بق": ["مبيدات بق الفراش", "مبيدات البق الدقيقي"],
+    "البق": ["مبيدات بق الفراش", "مبيدات البق الدقيقي"],
+    "عفن": ["مبيدات أعفان الجذور", "مبيدات أعفان الثمار"],
+    "بياض": ["مبيدات البياض الدقيقي", "مبيدات البياض الزغبي"],
+    "حشائش": ["مبيدات الأعشاب", "مبيدات أعشاب رفيعة الأوراق", "مبيدات أعشاب عريضة الاوراق"],
+}
+
+# ============================================
+# أدوات مساعدة
+# ============================================
+def normalize_text(text: str) -> str:
+    if not text:
+        return ""
+    text = text.strip().lower()
+    replacements = {
+        "أ": "ا",
+        "إ": "ا",
+        "آ": "ا",
+        "ة": "ه",
+        "ى": "ي",
+        "ؤ": "و",
+        "ئ": "ي",
+    }
+    for old, new in replacements.items():
+        text = text.replace(old, new)
+    return text
+
+def build_search_url(keyword: str) -> str:
+    encoded = quote(keyword)
+    return f"https://jothrah.com/ar/search?q={encoded}"
+
+def build_main_buttons(url: str, extra_url: str = None):
+    keyboard = []
+
+    if extra_url:
+        keyboard.append([InlineKeyboardButton("📄 تحميل بطاقة المادة الفعالة", url=extra_url)])
+
+    keyboard.append([InlineKeyboardButton("🛒 عرض المنتجات", url=url)])
+    keyboard.append([InlineKeyboardButton("📞 تواصل واتساب", url=WHATSAPP_URL)])
+
+    return InlineKeyboardMarkup(keyboard)
+
+def build_whatsapp_only_button():
+    keyboard = [
+        [InlineKeyboardButton("📞 تواصل واتساب", url=WHATSAPP_URL)],
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+def is_phone_number(text: str) -> bool:
+    if not text:
+        return False
+    cleaned = re.sub(r"[^\d+]", "", text.strip())
+    return bool(re.fullmatch(r"(\+?9665\d{8}|05\d{8})", cleaned))
+
+def clean_phone(text: str) -> str:
+    cleaned = re.sub(r"[^\d+]", "", text.strip())
+    if cleaned.startswith("+966"):
+        return cleaned
+    if cleaned.startswith("966"):
+        return "+" + cleaned
+    if cleaned.startswith("05"):
+        return "+966" + cleaned[1:]
+    return cleaned
+
+def detect_topic(user_message: str):
+    text = normalize_text(user_message)
+    for topic_name, topic_data in PEST_INFO.items():
+        for keyword in topic_data["keywords"]:
+            if normalize_text(keyword) in text:
+                return topic_name
+    return None
+
+def detect_ambiguous(user_message: str):
+    text = normalize_text(user_message)
+    for term, options in AMBIGUOUS_TERMS.items():
+        if normalize_text(term) == text:
+            return options
+    return None
+
+def find_pesticide(user_text: str):
+    normalized_input = normalize_text(user_text)
+
+    for key, item in PESTICIDE_DATABASE.items():
+        all_names = [key, item.get("name", "")] + item.get("aliases", [])
+        for name in all_names:
+            if normalized_input == normalize_text(name):
+                return item
+
+    return None
+
+def send_lead_to_admin(update, context, phone: str):
+    user = update.effective_user
+    user_id = user.id
+    first_name = user.first_name or ""
+    username = f"@{user.username}" if user.username else "بدون يوزر"
+
+    text_message = (
+        "📥 طلب جديد من البوت\n\n"
+        f"👤 الاسم: {first_name}\n"
+        f"🔗 اليوزر: {username}\n"
+        f"🆔 user_id: {user_id}\n"
+        f"📱 رقم الجوال: {phone}\n"
+    )
+
+    context.bot.send_message(chat_id=ADMIN_CHAT_ID, text=text_message)
+
+    if user_id in user_last_photo:
+        try:
+            context.bot.send_photo(
+                chat_id=ADMIN_CHAT_ID,
+                photo=user_last_photo[user_id],
+                caption=(
+                    f"🖼️ الصورة المرسلة من العميل\n"
+                    f"👤 {first_name}\n"
+                    f"📱 {phone}"
+                )
+            )
+        except Exception as e:
+            print("Error sending photo to admin:", e)
+
+# ============================================
+# الأوامر
+# ============================================
+def start(update, context):
+    keyboard = [
+        [InlineKeyboardButton("🛒 زيارة المتجر", url=STORE_URL)],
+        [InlineKeyboardButton("📞 تواصل واتساب", url=WHATSAPP_URL)],
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    update.message.reply_text(
+        "👋 أهلاً بك في بوت جذرة 🌱\n\n"
+        "متخصص في التشخيص المبدئي للآفات والأمراض النباتية والآفات المنزلية.\n\n"
+        "✍️ اكتب اسم الآفة أو التصنيف أو المادة الفعالة أو المشكلة مثل:\n"
+        "مبيدات المن، صراصير، نمل أبيض، الذبابة البيضاء، البياض الدقيقي، أكلونيفين\n\n"
+        "📸 أو أرسل صورة واضحة\n\n"
+        "⚠️ إذا كانت الحالة تحتاج متابعة أدق، سنطلب رقم جوالك للتواصل عبر واتساب.",
+        reply_markup=reply_markup
+    )
+
+def help_command(update, context):
+    update.message.reply_text(
+        "🧭 طريقة الاستخدام:\n\n"
+        "1) اكتب اسم الآفة أو المرض أو التصنيف أو المادة الفعالة.\n"
+        "2) أو أرسل صورة واضحة.\n"
+        "3) إذا لزم الأمر سيطلب منك البوت رقم الجوال للتواصل معك عبر واتساب.\n\n"
+        "أمثلة:\n"
+        "- مبيدات الصراصير\n"
+        "- صراصير\n"
+        "- مبيدات المن\n"
+        "- من\n"
+        "- بق\n"
+        "- مبيدات البياض الدقيقي\n"
+        "- أكلونيفين"
+    )
+
+def stats_command(update, context):
+    if update.effective_user.id != ADMIN_CHAT_ID:
+        return
+
+    update.message.reply_text(
+        f"👥 عدد المستخدمين: {len(users)}\n"
+        f"📊 عدد الطلبات: {orders_count}"
+    )
+
+
+def users_command(update, context):
+    if update.effective_user.id != ADMIN_CHAT_ID:
+        return
+
+    if not users:
+        update.message.reply_text("لا يوجد مستخدمين بعد")
+        return
+
+    text = "👥 قائمة المستخدمين:\n\n"
+    for user in users:
+        text += f"{user}\n"
+
+    update.message.reply_text(text[:4000])
+    
+def categories_command(update, context):
+    text = "📚 التصنيفات المتاحة داخل البوت:\n\n"
+    for group_name, items in CATEGORY_GROUPS.items():
+        text += f"🔹 {group_name}\n"
+        for item in items:
+            text += f"   - {item}\n"
+        text += "\n"
+    update.message.reply_text(text)
+
+# ============================================
+# الردود
+# ============================================
+def handle_topic_info(update, context, topic: str):
+    info = PEST_INFO[topic]
+    url = build_search_url(info["search_term"])
+    reply_markup = build_main_buttons(url)
+
+    update.message.reply_text(
+        f"✅ تم تحديد: {info['title']}\n\n"
+        f"📌 الوصف:\n{info['desc']}\n\n"
+        f"⚠️ الأضرار:\n{info['damage']}\n\n"
+        f"🧪 المكافحة:\n{info['control']}\n\n"
+        f"💧 طريقة الاستخدام:\n{info['usage']}\n\n"
+        f"💡 نصائح مهمة:\n{info['tips']}\n\n"
+        "📞 إن لم تعثر على حل مناسب لمشكلتك، تواصل معنا عبر الواتساب وسنرشدك للاختيار الصحيح.",
+        reply_markup=reply_markup
+    )
+
+def handle_pesticide_card(update, context, item: dict):
+    search_term = item.get("name") or ""
+    search_url = build_search_url(search_term)
+    extra_url = item.get("url")
+    reply_markup = build_main_buttons(search_url, extra_url=extra_url)
+
+    update.message.reply_text(
+        item["response"],
+        reply_markup=reply_markup
+    )
+
+def handle_photo(update, context):
+    user_id = update.effective_user.id
+    photo = update.message.photo[-1]
+    file_id = photo.file_id
+
+    user_last_photo[user_id] = file_id
+    waiting_for_phone[user_id] = True
+
+    update.message.reply_text(
+        "📷 تم استلام الصورة بنجاح.\n\n"
+        "للحصول على تشخيص أدق، اكتب رقم جوالك وسيتواصل معك المختص عبر واتساب.\n\n"
+        "مثال:\n"
+        "0501211056\n"
+        "أو\n"
+        "+966501211056",
+        reply_markup=build_whatsapp_only_button()
+    )
+
+def handle_phone(update, context):
+    user_id = update.effective_user.id
+    phone = clean_phone(update.message.text)
+
+    send_lead_to_admin(update, context, phone)
+    waiting_for_phone[user_id] = False
+
+    update.message.reply_text(
+        "✅ تم استلام رقمك بنجاح.\n\n"
+        "سيتم التواصل معك عبر واتساب في أقرب وقت لإرشادك إلى الاختيار الصحيح.",
+        reply_markup=build_whatsapp_only_button()
+    )
+
+
+def reply(update, context):
+    global orders_count
+
+    user_message = update.message.text or ""
+    text = user_message.strip().lower()
+
+    # إذا كنا ننتظر رقم الجوال
+    user_id = update.effective_user.id
+    if waiting_for_phone.get(user_id):
+        if is_phone_number(user_message):
+            handle_phone(update, context)
+        else:
+            update.message.reply_text(
+                "📱 فضلًا اكتب رقم جوال صحيح حتى يتم التواصل معك عبر واتساب.\n\n"
+                "مثال:\n0501211056",
+                reply_markup=build_whatsapp_only_button()
+            )
+        return
+
+    # تسجيل الطلب والمستخدم
+    users.add(user_id)
+    orders_count += 1
+    save_data()
+
+    # بحث سريع في قاعدة banned_data.py
+    for key, item in BANNED_DATABASE.items():
+        if (
+            text == str(key).strip().lower()
+            or text == str(item.get("arabic_name", "")).strip().lower()
+            or text == str(item.get("english_name", "")).strip().lower()
+        ):
+            response = f"""🚫 معلومات مادة محظورة
+
+🔢 الرقم: {item['number']}
+🔹 الاسم العربي: {item['arabic_name']}
+🔹 الاسم الإنجليزي: {item['english_name']}
+🔹 الحالة: {item['status']}
+🔹 رقم CAS: {item['cas']}
+📊 التصنيف: {item['classification']}
+📌 الاستخدامات الرئيسية: {item['main_uses']}
+
+ℹ️ تنبيه مهم:
+قد يتم تحديث حالة بعض المواد لاحقًا سواءً بالحظر أو رفع الحظر أو تعديل البيانات. إذا كانت المعلومات قديمة أو احتجت للتأكد من آخر تحديث، يرجى التواصل معنا ليتم تحديث البيانات."""
+            keyboard = InlineKeyboardMarkup([
+                [InlineKeyboardButton("📞 تواصل معنا لتحديث المعلومات", url=WHATSAPP_URL)]
+            ])
+            update.message.reply_text(response, reply_markup=keyboard)
+            return
+
+    # بحث في قائمة 286 مادة محظورة
+    item = find_banned_pesticide(user_message)
+    if item:
+        text_msg, keyboard = format_banned_pesticide(item)
+        update.message.reply_text(text_msg, reply_markup=keyboard)
+        return
+
+    # بحث مباشر في بطاقات المواد/المبيدات
+    pesticide_item = find_pesticide(user_message)
+    if pesticide_item:
+        handle_pesticide_card(update, context, pesticide_item)
+        return
+
+    # التباس مثل "بق"
+    ambiguous = detect_ambiguous(user_message)
+    if ambiguous:
+        update.message.reply_text(
+            "🤔 الكلمة المكتوبة تحتمل أكثر من معنى، ماذا تقصد؟\n\n"
+            + "\n".join([f"- {item}" for item in ambiguous]) +
+            f"\n\n📞 أو تواصل معنا عبر الواتساب:\n{WHATSAPP_URL}"
+        )
+        return
+
+    # موضوع معروف
+    topic = detect_topic(user_message)
+    if topic:
+        handle_topic_info(update, context, topic)
+        return
+
+    # fallback
+    search_url = build_search_url(user_message)
+    reply_markup = build_main_buttons(search_url)
+
+    update.message.reply_text(
+        "🔍 لم يتم التعرف على المشكلة بدقة.\n\n"
+        "يمكنك تجربة البحث داخل متجر جذرة، أو إرسال صورة، أو التواصل معنا عبر واتساب وسنساعدك في اختيار الحل المناسب.",
+        reply_markup=reply_markup
+    )
+
+
+print("Bot started...")
+
+updater = Updater(TOKEN, use_context=True)
+dp = updater.dispatcher
+
+dp.add_handler(CommandHandler("start", start))
+dp.add_handler(CommandHandler("help", help_command))
+dp.add_handler(CommandHandler("stats", stats_command))
+dp.add_handler(CommandHandler("users", users_command))
+dp.add_handler(CommandHandler("categories", categories_command))
+dp.add_handler(MessageHandler(Filters.photo, handle_photo))
+dp.add_handler(MessageHandler(Filters.text & ~Filters.command, reply))
+
+# =========================
+# قائمة المواد الفعالة المحظورة
+# انسخها كاملة قبل:
+# updater.start_polling()
+# updater.idle()
+# =========================
+
+import re
+from telegram.ext import MessageHandler, Filters, DispatcherHandlerStop
+
+BANNED_PESTICIDES = [
+    {"no": "1", "common_name": "1,3-Dichloropropene", "cas_rn": "542-75-6; 10061-02-6 (E isomer); 10061-01-5 (Z isomer)", "main_uses": "FM=I/N/B"},
+    {"no": "2", "common_name": "2,3,4,5-Bistetrahydro-2-furaldehyde (ENT 17596) (Bisbutenylenetetrahydro furfural)", "cas_rn": "126-15-8", "main_uses": "IR"},
+    {"no": "3", "common_name": "2,4,5-T [2,4,5-T-trolamine] [2,4,5-T triethylammonium] [2,4,5-T-isoctyl]", "cas_rn": "93-76-5; 3813-14-7; 2008-46-0; 25168-15-4", "main_uses": "H/PGR"},
+    {"no": "4", "common_name": "2,4,5-TCP (2,4,5-Trichlorophenol)", "cas_rn": "95-95-4", "main_uses": "I/F/H"},
+    {"no": "5", "common_name": "2,4-D ((2,4-dichlorophenoxy) acetic acid)", "cas_rn": "94-75-7", "main_uses": "H"},
+    {"no": "6", "common_name": "Acephate", "cas_rn": "30560-19-1", "main_uses": "I"},
+    {"no": "7", "common_name": "Acifluorfen (sodium salt) [Acifluorfen-sodium]", "cas_rn": "62476-59-9; 50594-66-6", "main_uses": "H [H/Mt]"},
+    {"no": "8", "common_name": "Acetochlor", "cas_rn": "34256-82-1", "main_uses": "H"},
+    {"no": "9", "common_name": "Acrolein", "cas_rn": "107-02-8", "main_uses": "H"},
+    {"no": "10", "common_name": "Acrylonitrile", "cas_rn": "107-13-1", "main_uses": "I/FM"},
+    {"no": "11", "common_name": "Alachlor", "cas_rn": "15972-60-8", "main_uses": "H"},
+    {"no": "12", "common_name": "Aldicarb", "cas_rn": "116-06-3", "main_uses": "N/I/A"},
+    {"no": "13", "common_name": "Aldoxycarb", "cas_rn": "1646-88-4", "main_uses": "N/I/A"},
+    {"no": "14", "common_name": "Aldrin", "cas_rn": "309-00-2", "main_uses": "I"},
+    {"no": "15", "common_name": "Allethrin (bioallethrin)", "cas_rn": "584-79-2", "main_uses": "I"},
+    {"no": "16", "common_name": "Alpha-chlorohydrin", "cas_rn": "96-24-2", "main_uses": "R"},
+    {"no": "17", "common_name": "Alpha-HCH / Alpha Hexachlorocyclohexane / Alpha-BHC / Alpha-HCH", "cas_rn": "319-84-6", "main_uses": "I"},
+    {"no": "18", "common_name": "Amitraz", "cas_rn": "33089-61-1", "main_uses": "A/I"},
+    {"no": "19", "common_name": "Anthraquinone", "cas_rn": "84-65-1", "main_uses": "RP (Bird)"},
+    {"no": "20", "common_name": "Aramite", "cas_rn": "140-57-8", "main_uses": "I/A"},
+    {"no": "21", "common_name": "Arsenic acid (and its compounds) [Arsenic pentoxide] [Cacodylic acid; dimethylarsinic acid] [MSMA] [Sodium arsenate] [Cacodylate; sodium dimethylarsinate] [Chromated copper arsenate; CCA] [Arsenic trioxide] [Calcium arsenate] [Copper arsenate] [Lead arsenate] [Sodium arsenite]", "cas_rn": "7778-39-4; 1303-28-2; 75-60-5; 2163-80-6; 13464-38-5; 124-65-2; 75-60-5; 1327-53-3; 7778-44-1; 10103-61-4; 7784-40-9; 7784-46-5", "main_uses": "H/I/R"},
+    {"no": "22", "common_name": "Atrazine", "cas_rn": "1912-24-9", "main_uses": "H"},
+    {"no": "23", "common_name": "Azamethiphos", "cas_rn": "35575-96-3", "main_uses": "I"},
+    {"no": "24", "common_name": "Azinphos-ethyl", "cas_rn": "2642-71-9", "main_uses": "I/A"},
+    {"no": "25", "common_name": "Azinphos-methyl", "cas_rn": "86-50-0", "main_uses": "I/A"},
+    {"no": "26", "common_name": "Bendiocarb", "cas_rn": "22781-23-3", "main_uses": "I"},
+    {"no": "27", "common_name": "Benomyl (Dustable powder formulation at or above 7 per cent)", "cas_rn": "17804-35-2", "main_uses": "F/Mi"},
+    {"no": "28", "common_name": "Bensulide", "cas_rn": "741-58-2", "main_uses": "H"},
+    {"no": "29", "common_name": "Benthiavalicarb-isopropyl", "cas_rn": "177406-68-7", "main_uses": "F"},
+    {"no": "30", "common_name": "HCH, Benzenehexachloride (Gamma-HCH) [Lindane (gamma-HCH)]", "cas_rn": "608-73-1; 58-89-9", "main_uses": "I"},
+    {"no": "31", "common_name": "beta-HCH; beta-BCH", "cas_rn": "319-85-7", "main_uses": "I"},
+    {"no": "32", "common_name": "Binapacryl", "cas_rn": "485-31-4", "main_uses": "I/A/F"},
+    {"no": "33", "common_name": "Bioallethrin, S-cyclopentenyl isomers (S-Bioallethrin)", "cas_rn": "584-79-2", "main_uses": "I"},
+    {"no": "34", "common_name": "Blasticidin-S", "cas_rn": "2079-00-7", "main_uses": "F"},
+    {"no": "35", "common_name": "Bromophos [Bromophos-ethyl]", "cas_rn": "2104-96-3; 4824-78-6", "main_uses": "I [I/A]"},
+    {"no": "36", "common_name": "Butachlor", "cas_rn": "23184-66-9", "main_uses": "H"},
+    {"no": "37", "common_name": "Butocarboxim", "cas_rn": "34681-10-2", "main_uses": "I"},
+    {"no": "38", "common_name": "Butoxycarboxim", "cas_rn": "34681-23-7", "main_uses": "I/A"},
+    {"no": "39", "common_name": "Cadmium", "cas_rn": "7440-43-9", "main_uses": "-"},
+    {"no": "40", "common_name": "Cadmium Calcium Copper Zinc Chromate Sulphate (Cadmium Compounds)", "cas_rn": "12001-20-6", "main_uses": "F"},
+    {"no": "41", "common_name": "Cadusafos", "cas_rn": "95465-99-9", "main_uses": "N/I"},
+    {"no": "42", "common_name": "Calcium arsenate", "cas_rn": "7778-44-1", "main_uses": "H/I"},
+    {"no": "43", "common_name": "Calcium cyanamide", "cas_rn": "156-62-7", "main_uses": "DF/F/FR/H/I/PGR"},
+    {"no": "44", "common_name": "Camphechlor (Toxaphene)", "cas_rn": "8001-35-2", "main_uses": "I/A"},
+    {"no": "45", "common_name": "Captafol", "cas_rn": "2425-06-1", "main_uses": "F"},
+    {"no": "46", "common_name": "Carbaryl", "cas_rn": "63-25-2", "main_uses": "I/PGR"},
+    {"no": "47", "common_name": "Carbendazim", "cas_rn": "10605-21-7", "main_uses": "F"},
+    {"no": "48", "common_name": "Carbon disulphide (Carbon disulfide)", "cas_rn": "75-15-0", "main_uses": "I/N/FM"},
+    {"no": "49", "common_name": "Carbofuran", "cas_rn": "1563-66-2", "main_uses": "I/A/N"},
+    {"no": "50", "common_name": "Carbon tetrachloride", "cas_rn": "56-23-5", "main_uses": "I/FM"},
+    {"no": "51", "common_name": "Carbophenothion", "cas_rn": "786-19-6", "main_uses": "A/I"},
+    {"no": "52", "common_name": "Carbosulfan", "cas_rn": "55285-14-8", "main_uses": "I/N"},
+    {"no": "53", "common_name": "Cartap [Cartap hydrochloride]", "cas_rn": "15263-53-3; 15263-52-2", "main_uses": "I"},
+    {"no": "54", "common_name": "Chinomethionat (Oxythioquinox)", "cas_rn": "2439-01-2", "main_uses": "I/A/F"},
+    {"no": "55", "common_name": "Chloranil", "cas_rn": "118-75-2", "main_uses": "F/RP"},
+    {"no": "56", "common_name": "Chlordane", "cas_rn": "57-74-9", "main_uses": "I/T"},
+    {"no": "57", "common_name": "Chlordecone (Kepone)", "cas_rn": "143-50-0", "main_uses": "I/F"},
+    {"no": "58", "common_name": "Chlordimeform [Chlordimform hydrochloride]", "cas_rn": "6164-98-3; 19750-95-9", "main_uses": "A/I/Ov"},
+    {"no": "59", "common_name": "Chlorethoxyfos (Chlorethoxyfos)", "cas_rn": "54593-83-8", "main_uses": "I"},
+    {"no": "60", "common_name": "Chlorfenapyr", "cas_rn": "122453-73-0", "main_uses": "A/I"},
+    {"no": "61", "common_name": "Chlorfenvinphos, CVP", "cas_rn": "470-90-6", "main_uses": "A/I"},
+    {"no": "62", "common_name": "Chlormephos", "cas_rn": "24934-91-6", "main_uses": "I"},
+    {"no": "63", "common_name": "Chlorobenzilate", "cas_rn": "510-15-6", "main_uses": "I/A"},
+    {"no": "64", "common_name": "Chloroform", "cas_rn": "67-66-3", "main_uses": "FM"},
+    {"no": "65", "common_name": "Chloropicrin", "cas_rn": "76-06-2", "main_uses": "I/N/R/FM"},
+    {"no": "66", "common_name": "Chloropropylate", "cas_rn": "1437871.00", "main_uses": "A"},
+    {"no": "67", "common_name": "Chlorothalonil", "cas_rn": "1897-45-6", "main_uses": "F"},
+    {"no": "68", "common_name": "Chlorthiophos", "cas_rn": "21923-23-9", "main_uses": "I/A"},
+    {"no": "69", "common_name": "Chlozolinate", "cas_rn": "84332-86-5", "main_uses": "F"},
+    {"no": "70", "common_name": "Climbazole", "cas_rn": "38083-17-9", "main_uses": "F"},
+    {"no": "71", "common_name": "Coumaphos", "cas_rn": "56-72-4", "main_uses": "I/A"},
+    {"no": "72", "common_name": "Creosote", "cas_rn": "8001-58-9", "main_uses": "I/F/R"},
+    {"no": "73", "common_name": "Crimidine", "cas_rn": "535-89-7", "main_uses": "R"},
+    {"no": "74", "common_name": "Cyanamide (Hydrogen cyanamide)", "cas_rn": "420-04-2", "main_uses": "H/PGR"},
+    {"no": "75", "common_name": "Cyanazine", "cas_rn": "21725-46-2", "main_uses": "H"},
+    {"no": "76", "common_name": "Cyanide Compounds / Hydrogen cyanide [Calcium cyanide] [Sodium cyanide]", "cas_rn": "74-90-8; 592-01-8; 143-33-9", "main_uses": "I/R/FM [I/R/FM] [I/R]"},
+    {"no": "77", "common_name": "Cycloheximide", "cas_rn": "66-81-9", "main_uses": "F/PGR"},
+    {"no": "78", "common_name": "Cyflufenamid", "cas_rn": "180409-60-3", "main_uses": "F"},
+    {"no": "79", "common_name": "Cyhalothrin", "cas_rn": "68085-85-8", "main_uses": "I"},
+    {"no": "80", "common_name": "Cyhexatin", "cas_rn": "13121-70-5", "main_uses": "I/A"},
+    {"no": "81", "common_name": "Daminozide", "cas_rn": "1596-84-5", "main_uses": "PGR"},
+    {"no": "82", "common_name": "Dimethoate", "cas_rn": "60-51-5", "main_uses": "I/A"},
+    {"no": "83", "common_name": "DBCP (1,2-dibromo-3-chloropropane) (dibromochloropropane)", "cas_rn": "96-12-8", "main_uses": "I/N/F/FM"},
+    {"no": "84", "common_name": "DDT", "cas_rn": "50-29-3", "main_uses": "I"},
+    {"no": "85", "common_name": "Demeton [Demeton-O] [Demeton-S]", "cas_rn": "8065-48-3; 298-03-3; 126-75-0", "main_uses": "I/A"},
+    {"no": "86", "common_name": "Demeton-S-methyl", "cas_rn": "919-86-8", "main_uses": "I/A"},
+    {"no": "87", "common_name": "Di-allate (Diallate)", "cas_rn": "2303-16-4", "main_uses": "H"},
+    {"no": "88", "common_name": "Diazinon", "cas_rn": "333-41-5", "main_uses": "I/A"},
+    {"no": "89", "common_name": "Dichlobenil", "cas_rn": "1194-65-6", "main_uses": "H"},
+    {"no": "90", "common_name": "Diclofop-methyl", "cas_rn": "51338-27-3", "main_uses": "H"},
+    {"no": "91", "common_name": "Dicofol", "cas_rn": "115-32-2", "main_uses": "A"},
+    {"no": "92", "common_name": "Dicrotophos", "cas_rn": "141-66-2", "main_uses": "I/A"},
+    {"no": "93", "common_name": "Dieldrin", "cas_rn": "60-57-1", "main_uses": "I"},
+    {"no": "94", "common_name": "Dimefox", "cas_rn": "115-26-4", "main_uses": "I/A"},
+    {"no": "95", "common_name": "Dimethenamid", "cas_rn": "87674-68-8", "main_uses": "H"},
+    {"no": "96", "common_name": "Diniconazole-M", "cas_rn": "83657-18-5", "main_uses": "F"},
+    {"no": "97", "common_name": "Dinitramine", "cas_rn": "29091-05-2", "main_uses": "H"},
+    {"no": "98", "common_name": "Dinobuton", "cas_rn": "973-21-7", "main_uses": "A/F"},
+    {"no": "99", "common_name": "Dinoseb acetate (Dinoseb and its salts)", "cas_rn": "2813-95-8", "main_uses": "H"},
+    {"no": "100", "common_name": "Dinoseb and Dinoseb salts", "cas_rn": "88-85-7", "main_uses": "H/I"},
+    {"no": "101", "common_name": "Dinoterb", "cas_rn": "1420-07-1", "main_uses": "H"},
+    {"no": "102", "common_name": "Dioxathion", "cas_rn": "78-34-2", "main_uses": "I/A"},
+    {"no": "103", "common_name": "Dipropyl isocinchomeronate (MGK 326)", "cas_rn": "136-45-8", "main_uses": "IR"},
+    {"no": "104", "common_name": "Disulfoton", "cas_rn": "298-04-4", "main_uses": "I/A"},
+    {"no": "105", "common_name": "Ditalimfos", "cas_rn": "5131-24-8", "main_uses": "F"},
+    {"no": "106", "common_name": "Diuron", "cas_rn": "330-54-1", "main_uses": "H"},
+    {"no": "107", "common_name": "DNOC (Dinitroorthocresol) and its salts [Ammonium salt] [Potassium salt] [Sodium salt]", "cas_rn": "534-52-1; 2980-64-5; 5787-96-2; 2312-76-7", "main_uses": "I/A/H"},
+    {"no": "108", "common_name": "Edifenphos", "cas_rn": "17109-49-8", "main_uses": "F"},
+    {"no": "109", "common_name": "Endosulfan", "cas_rn": "115-29-7", "main_uses": "I/A"},
+    {"no": "110", "common_name": "Endrin", "cas_rn": "72-20-8", "main_uses": "I"},
+    {"no": "111", "common_name": "Epichlorohydrin", "cas_rn": "106-89-8", "main_uses": "-"},
+    {"no": "112", "common_name": "EPN", "cas_rn": "2104-64-5", "main_uses": "I/A"},
+    {"no": "113", "common_name": "Epoxiconazole", "cas_rn": "133855-98-8", "main_uses": "F"},
+    {"no": "114", "common_name": "Erbon", "cas_rn": "136-25-4", "main_uses": "H"},
+    {"no": "115", "common_name": "Ergocalciferol (Vitamin D2)", "cas_rn": "50-14-6", "main_uses": "R"},
+    {"no": "116", "common_name": "Ethiofencarb", "cas_rn": "29973-13-5", "main_uses": "I"},
+    {"no": "117", "common_name": "Ethion", "cas_rn": "563-12-2", "main_uses": "A/I"},
+    {"no": "118", "common_name": "Ethirimol", "cas_rn": "23947-60-6", "main_uses": "F"},
+    {"no": "119", "common_name": "Ethoprop / Ethoprophos", "cas_rn": "13194-48-4", "main_uses": "I/N"},
+    {"no": "120", "common_name": "Ethyl hexanediol (Ethyl hexyleneglycol (6-12))", "cas_rn": "94-96-2", "main_uses": "IR"},
+    {"no": "121", "common_name": "Ethylene dibromide (1,2-Dibromoethane) (EDB)", "cas_rn": "106-93-4", "main_uses": "I/N/FM"},
+    {"no": "122", "common_name": "Ethylene dichloride (EDC)", "cas_rn": "107-06-2", "main_uses": "I/FM"},
+    {"no": "123", "common_name": "Ethylene oxide", "cas_rn": "75-21-8", "main_uses": "FM"},
+    {"no": "124", "common_name": "Ethylene thiourea (ethylenethiourea)", "cas_rn": "96-45-7", "main_uses": "F"},
+    {"no": "125", "common_name": "Etridiazole", "cas_rn": "2593-15-9", "main_uses": "F"},
+    {"no": "126", "common_name": "Etrimfos", "cas_rn": "38260-54-7", "main_uses": "I/A"},
+    {"no": "127", "common_name": "Fenarimol", "cas_rn": "60168-88-9", "main_uses": "F"},
+    {"no": "128", "common_name": "Fenchlorazole-ethyl", "cas_rn": "103112-35-2", "main_uses": "H"},
+    {"no": "129", "common_name": "Fenoprop, Fenoprop-butotyl (Silvex)", "cas_rn": "93-72-1", "main_uses": "H/PGR"},
+    {"no": "130", "common_name": "Fenobucarb", "cas_rn": "3766-81-2", "main_uses": "I"},
+    {"no": "131", "common_name": "Fenothiocarb", "cas_rn": "62850-32-2", "main_uses": "A"},
+    {"no": "132", "common_name": "Fenoxycarb", "cas_rn": "79127-80-3", "main_uses": "I"},
+    {"no": "133", "common_name": "Fensulfothion", "cas_rn": "115-90-2", "main_uses": "I/N"},
+    {"no": "134", "common_name": "Fenthiaprop [Fenthiaprop-ethyl]", "cas_rn": "95721-12-3; 93921-16-5", "main_uses": "H"},
+    {"no": "135", "common_name": "Fenthion", "cas_rn": "55-38-9", "main_uses": "I/Av"},
+    {"no": "136", "common_name": "Fentin [Fentin acetate (Triphenyltin acetate)] [Fentin hydroxide (Triphenyltin hydroxide)]", "cas_rn": "668-34-8; 900-95-8; 76-87-9", "main_uses": "F/AL/Mo"},
+    {"no": "137", "common_name": "Fenuron-TCA (Fenurontrichloroacetate)", "cas_rn": "4482-55-7", "main_uses": "H"},
+    {"no": "138", "common_name": "Fenvalerate", "cas_rn": "51630-58-1", "main_uses": "I/A/TX"},
+    {"no": "139", "common_name": "Ferbam", "cas_rn": "14484-64-1", "main_uses": "F"},
+    {"no": "140", "common_name": "Fluazifop-butyl", "cas_rn": "69806-50-4", "main_uses": "H"},
+    {"no": "141", "common_name": "Fluazolate", "cas_rn": "174514-07-9", "main_uses": "H"},
+    {"no": "142", "common_name": "Flucythrinate", "cas_rn": "70124-77-5", "main_uses": "I"},
+    {"no": "143", "common_name": "Flufenoxuron", "cas_rn": "101463-69-8", "main_uses": "I/A"},
+    {"no": "144", "common_name": "Fluorine compounds [Methanesulfonyl fluoride] [Sodium fluoride] [Sodium hexafluorosilicate / Sodium fluorosilicate]", "cas_rn": "558-25-8; 7681-49-4; 16893-85-9", "main_uses": "I"},
+    {"no": "145", "common_name": "Fluoroacetamide", "cas_rn": "640-19-7", "main_uses": "R"},
+    {"no": "146", "common_name": "Flurenol", "cas_rn": "467-69-6", "main_uses": "H/PGR"},
+    {"no": "147", "common_name": "Flurprimidol", "cas_rn": "56425-91-3", "main_uses": "PGR"},
+    {"no": "148", "common_name": "Flusilazole", "cas_rn": "85509-19-9", "main_uses": "F"},
+    {"no": "149", "common_name": "Fluthiacet-methyl", "cas_rn": "117337-19-6", "main_uses": "H"},
+    {"no": "150", "common_name": "Fluvalinate", "cas_rn": "69409-94-5", "main_uses": "A/I"},
+    {"no": "151", "common_name": "Folpet", "cas_rn": "133-07-3", "main_uses": "F"},
+    {"no": "152", "common_name": "Fonofos", "cas_rn": "944-22-9", "main_uses": "I"},
+    {"no": "153", "common_name": "Formetanate", "cas_rn": "22259-30-9", "main_uses": "I/A"},
+    {"no": "154", "common_name": "Fosthietan", "cas_rn": "21548-32-3", "main_uses": "I/N/FM"},
+    {"no": "155", "common_name": "Furathiocarb", "cas_rn": "65907-30-4", "main_uses": "I"},
+    {"no": "156", "common_name": "Furilazole", "cas_rn": "121776-33-8", "main_uses": "Herbicide safener"},
+    {"no": "157", "common_name": "Haloxyfop [Haloxyfop-etotyl] [Haloxyfop-P-methyl] [Haloxyfop-methyl] (unstated stereochemistry)", "cas_rn": "69806-34-4; 87237-48-7; 72619-32-0; 69806-40-2", "main_uses": "H"},
+    {"no": "158", "common_name": "Heptachlor", "cas_rn": "76-44-8", "main_uses": "I"},
+    {"no": "159", "common_name": "Heptenophos", "cas_rn": "23560-59-0", "main_uses": "I"},
+    {"no": "160", "common_name": "Hexachlorobenzene", "cas_rn": "118-74-1", "main_uses": "F"},
+    {"no": "161", "common_name": "Hexaconazole", "cas_rn": "79983-71-4", "main_uses": "F"},
+    {"no": "162", "common_name": "Hexaethyltetraphosphate (HETP)", "cas_rn": "757-58-4", "main_uses": "I"},
+    {"no": "163", "common_name": "Hexazinone", "cas_rn": "51235-04-2", "main_uses": "H"},
+    {"no": "164", "common_name": "Imazalil", "cas_rn": "35554-44-0", "main_uses": "F"},
+    {"no": "165", "common_name": "Iminoctadine [Iminoctadine triacetate] [Iminoctadinetris (albesilate)]", "cas_rn": "13516-27-3; 39202-40-9; 99257-43-9", "main_uses": "F"},
+    {"no": "166", "common_name": "Iprodione", "cas_rn": "36734-19-7", "main_uses": "F"},
+    {"no": "167", "common_name": "Iprovalicarb", "cas_rn": "140923-17-7", "main_uses": "F"},
+    {"no": "168", "common_name": "Isazophos (Isazofos)", "cas_rn": "42509-80-8", "main_uses": "I/N"},
+    {"no": "169", "common_name": "Isobenzan", "cas_rn": "297-78-9", "main_uses": "I"},
+    {"no": "170", "common_name": "Isodrin (Isomers of eldrin)", "cas_rn": "465-73-6", "main_uses": "I"},
+    {"no": "171", "common_name": "Isofenphos", "cas_rn": "25311-71-1", "main_uses": "I"},
+    {"no": "172", "common_name": "Isopyrazam", "cas_rn": "881685-58-1", "main_uses": "F"},
+    {"no": "173", "common_name": "Isoxaflutole", "cas_rn": "141112-29-0", "main_uses": "H"},
+    {"no": "174", "common_name": "Isoxathion", "cas_rn": "18854-01-8", "main_uses": "I"},
+    {"no": "175", "common_name": "Kelevan", "cas_rn": "4234-79-1", "main_uses": "I"},
+    {"no": "176", "common_name": "Kresoxim-methyl", "cas_rn": "143390-89-0", "main_uses": "F/B"},
+    {"no": "177", "common_name": "Lead compounds [Lead arsenate] [Lead arsenite]", "cas_rn": "7784-40-9; 10031-13-7", "main_uses": "I/A/N/PGR"},
+    {"no": "178", "common_name": "Leptophos", "cas_rn": "21609-90-5", "main_uses": "I"},
+    {"no": "179", "common_name": "Linuron", "cas_rn": "330-55-2", "main_uses": "H"},
+    {"no": "180", "common_name": "Malathion", "cas_rn": "121-75-5", "main_uses": "I/A"},
+    {"no": "181", "common_name": "Maleic hydrazide", "cas_rn": "123-33-1", "main_uses": "H/PGR"},
+    {"no": "182", "common_name": "Mancozeb", "cas_rn": "8018-01-7", "main_uses": "F"},
+    {"no": "183", "common_name": "Maneb", "cas_rn": "12427-38-2", "main_uses": "F"},
+    {"no": "184", "common_name": "MCPA-thioethyl", "cas_rn": "25319-90-8", "main_uses": "H"},
+    {"no": "185", "common_name": "Mecarbam", "cas_rn": "2595-54-2", "main_uses": "I/A"},
+    {"no": "186", "common_name": "Mecoprop (MCPP)", "cas_rn": "7085-19-0; 93-65-2", "main_uses": "H"},
+    {"no": "187", "common_name": "Mercury and its compounds [Chloromethoxypropylmercuric acetate (CPMA)] [Diphenylmercurydodecenylsuccinate (PMDS)] [Mercuric chloride] [Mercuric oxide] [Mercurous chloride] [Methoxyethyl mercury acetate] [Methylmercury acetate] [Methoxyethylmercury silicate] [Methylmercury dicyandiamide] [Phenylmercuric oleate (PMO)] [Phenylmercuric salicylate] [Phenylmercuric acetate (PMA)] [Phenylmercurydimethyldithiocarbamate] [Phenylmercuric nitrate]", "cas_rn": "7439-97-6; 1319-86-4; 27236-65-3; 7487-94-7; 21908-53-2; 7546-30-7; 151-38-2; 108-07-6; 64491-92-5; 502-39-6; 104-68-9; 28086-13-7; 62-38-4; 32407-99-1; 8003-05-2", "main_uses": "F/I/H"},
+    {"no": "188", "common_name": "Mecoprop-P", "cas_rn": "16484-77-8", "main_uses": "H"},
+    {"no": "189", "common_name": "Mepanipyrim", "cas_rn": "110235-47-7", "main_uses": "F"},
+    {"no": "190", "common_name": "Mephospholan (Mephosfolan)", "cas_rn": "950-10-7", "main_uses": "I/A"},
+    {"no": "191", "common_name": "Metam-sodium (Sodium methyldithiocarbamate)", "cas_rn": "137-42-8", "main_uses": "F/N/H/I"},
+    {"no": "192", "common_name": "Methamidophos (soluble liquid formulations of the substance that exceed 600 g active ingredient/l)", "cas_rn": "10265-92-6", "main_uses": "I/A"},
+    {"no": "193", "common_name": "Methidathion", "cas_rn": "950-37-8", "main_uses": "I/A"},
+    {"no": "194", "common_name": "Methomyl", "cas_rn": "16752-77-5", "main_uses": "I/A"},
+    {"no": "195", "common_name": "Methyl bromide", "cas_rn": "74-83-9", "main_uses": "I/N/F/A/R/FM"},
+    {"no": "196", "common_name": "Methyl isothiocyanate", "cas_rn": "556-61-6", "main_uses": "N/F/I/H"},
+    {"no": "197", "common_name": "Metiram", "cas_rn": "9006-42-2", "main_uses": "F"},
+    {"no": "198", "common_name": "Metoxuron", "cas_rn": "19937-59-8", "main_uses": "H"},
+    {"no": "199", "common_name": "Mevinphos", "cas_rn": "26718-65-0", "main_uses": "I/A"},
+    {"no": "200", "common_name": "Mirex", "cas_rn": "2385-85-5", "main_uses": "I"},
+    {"no": "201", "common_name": "Monocrotophos", "cas_rn": "6923-22-4", "main_uses": "I/A"},
+    {"no": "202", "common_name": "Monolinuron", "cas_rn": "1746-81-2", "main_uses": "H"},
+    {"no": "203", "common_name": "Monuron (monuron-TCA)", "cas_rn": "150-68-5", "main_uses": "H"},
+    {"no": "204", "common_name": "Morfamquat (Morfamquat dichloride)", "cas_rn": "4636-83-3", "main_uses": "H"},
+    {"no": "205", "common_name": "Naphthalene", "cas_rn": "91-20-3", "main_uses": "F/I"},
+    {"no": "206", "common_name": "Nicotine", "cas_rn": "54-11-5", "main_uses": "I"},
+    {"no": "207", "common_name": "Nitrobenzene", "cas_rn": "98-95-3", "main_uses": "Pesticide"},
+    {"no": "208", "common_name": "Nitrofen (TOK)", "cas_rn": "1836-75-5", "main_uses": "H"},
+    {"no": "209", "common_name": "Octamethylpyrophosphoramide (OMPA)", "cas_rn": "152-16-9", "main_uses": "I/A"},
+    {"no": "210", "common_name": "Omethoate", "cas_rn": "1113-02-6", "main_uses": "I/A"},
+    {"no": "211", "common_name": "Oryzalin", "cas_rn": "19044-88-3", "main_uses": "H"},
+    {"no": "212", "common_name": "Oxadiazon", "cas_rn": "19666-30-9", "main_uses": "H"},
+    {"no": "213", "common_name": "Oxadixyl", "cas_rn": "77732-09-3", "main_uses": "F"},
+    {"no": "214", "common_name": "Oxydemeton-methyl", "cas_rn": "301-12-2", "main_uses": "I"},
+    {"no": "215", "common_name": "Oxydeprofos", "cas_rn": "2674-91-1", "main_uses": "I"},
+    {"no": "216", "common_name": "Oxyfluorfen", "cas_rn": "42874-03-3", "main_uses": "H"},
+    {"no": "217", "common_name": "Paraquat dichloride [Paraquat]", "cas_rn": "1910-42-5; 4685-14-7", "main_uses": "H"},
+    {"no": "218", "common_name": "Parathion (Parathion-ethyl)", "cas_rn": "56-38-2", "main_uses": "I/A"},
+    {"no": "219", "common_name": "Parathion-methyl (emulsifiable concentrates (EC) at or above 19.5% active ingredient and dusts at or above 1.5% active ingredient)", "cas_rn": "298-00-0", "main_uses": "I"},
+    {"no": "220", "common_name": "Pebulate", "cas_rn": "1114-71-2", "main_uses": "H"},
+    {"no": "221", "common_name": "Pentachlorobenzene (PCB) (except mono- and dichlorinated)", "cas_rn": "608-93-5", "main_uses": "F/H/I/Mt"},
+    {"no": "222", "common_name": "Pentachlorophenol / PCP (Pentachlorophenol) [Pentachlorophenyllaurate] [Sodium pentachlorophenoxide]", "cas_rn": "87-86-5; 3772-94-9; 131-52-2", "main_uses": "F/I/H"},
+    {"no": "223", "common_name": "Phenthoate", "cas_rn": "2597-03-7", "main_uses": "I/A"},
+    {"no": "224", "common_name": "Phorate", "cas_rn": "298-02-2", "main_uses": "I/A/N"},
+    {"no": "225", "common_name": "Phosacetim", "cas_rn": "4104-14-7", "main_uses": "R"},
+    {"no": "226", "common_name": "Phosalone", "cas_rn": "2310-17-0", "main_uses": "I/A"},
+    {"no": "227", "common_name": "Phosphamidon (mixture, (E) & (Z) isomers), (soluble liquid formulations of the substance that exceed 1,000 g active ingredient/l) [E-Phosphamidon] [Z-Phosphamidon]", "cas_rn": "13171-21-6; 297-99-4; 23783-98-4", "main_uses": "I/A"},
+    {"no": "228", "common_name": "Picloram", "cas_rn": "1918-02-1", "main_uses": "H"},
+    {"no": "229", "common_name": "Pirimicarb", "cas_rn": "23103-98-2", "main_uses": "I"},
+    {"no": "230", "common_name": "Pirimiphos-ethyl", "cas_rn": "23505-41-1", "main_uses": "I"},
+    {"no": "231", "common_name": "Polychloroterpenes [Strobane (Terpene polychlorinates)]", "cas_rn": "8001-50-1", "main_uses": "I/A/Mt"},
+    {"no": "232", "common_name": "Procymidon (Procymidone)", "cas_rn": "32809-16-8", "main_uses": "F"},
+    {"no": "233", "common_name": "Profenofos", "cas_rn": "41198-08-7", "main_uses": "I/A"},
+    {"no": "234", "common_name": "Propachlor", "cas_rn": "1918-16-7", "main_uses": "H"},
+    {"no": "235", "common_name": "Propargite", "cas_rn": "2312-35-8", "main_uses": "A"},
+    {"no": "236", "common_name": "Propetamphos", "cas_rn": "31218-83-4", "main_uses": "I/A"},
+    {"no": "237", "common_name": "Propham", "cas_rn": "122-42-9", "main_uses": "H/PGR"},
+    {"no": "238", "common_name": "Propoxur", "cas_rn": "114-26-1", "main_uses": "I"},
+    {"no": "239", "common_name": "Prothoate", "cas_rn": "2275-18-5", "main_uses": "I/A"},
+    {"no": "240", "common_name": "Pymetrozine", "cas_rn": "123312-89-0", "main_uses": "I"},
+    {"no": "241", "common_name": "Pyraflufen-ethyl", "cas_rn": "129630-19-9", "main_uses": "H"},
+    {"no": "242", "common_name": "Pyrazachlor", "cas_rn": "6814-58-0", "main_uses": "PGR"},
+    {"no": "243", "common_name": "Pyrazophos", "cas_rn": "13457-18-6", "main_uses": "F"},
+    {"no": "244", "common_name": "Pyriminil (Pyrinuron)", "cas_rn": "53558-25-1", "main_uses": "R"},
+    {"no": "245", "common_name": "Quintozene (PCNB)", "cas_rn": "82-68-8", "main_uses": "F"},
+    {"no": "246", "common_name": "Resmethrin", "cas_rn": "10453-86-8", "main_uses": "I"},
+    {"no": "247", "common_name": "Rotenone", "cas_rn": "83-79-4", "main_uses": "I/A"},
+    {"no": "248", "common_name": "Safrole", "cas_rn": "94-59-7", "main_uses": "-"},
+    {"no": "249", "common_name": "Schradan", "cas_rn": "152-16-9", "main_uses": "I/A"},
+    {"no": "250", "common_name": "Scilliroside", "cas_rn": "507-60-8", "main_uses": "R"},
+    {"no": "251", "common_name": "Sec-butylamine", "cas_rn": "13952-84-6", "main_uses": "F"},
+    {"no": "252", "common_name": "Sedaxane", "cas_rn": "874967-67-6", "main_uses": "F"},
+    {"no": "253", "common_name": "Siduron", "cas_rn": "1982-49-6", "main_uses": "H"},
+    {"no": "254", "common_name": "Simazine", "cas_rn": "122-34-9", "main_uses": "H"},
+    {"no": "255", "common_name": "Sodium dimethyl dithio carbamate", "cas_rn": "128-04-1", "main_uses": "F"},
+    {"no": "256", "common_name": "Sodium fluoride", "cas_rn": "7681-49-4", "main_uses": "I"},
+    {"no": "257", "common_name": "Sodium fluoroacetate (1080)", "cas_rn": "62-74-8", "main_uses": "I/R"},
+    {"no": "258", "common_name": "Sodium hexafluorosilicate", "cas_rn": "16893-85-9", "main_uses": "I"},
+    {"no": "259", "common_name": "Spirodiclofen", "cas_rn": "148477-71-8", "main_uses": "I/A"},
+    {"no": "260", "common_name": "Sulfaquinoxaline (Sulphaquinoxaline)", "cas_rn": "59-40-5", "main_uses": "R/Synergist"},
+    {"no": "261", "common_name": "Sulfotep", "cas_rn": "3689-24-5", "main_uses": "I/A"},
+    {"no": "262", "common_name": "Sulprofos", "cas_rn": "35400-43-2", "main_uses": "I"},
+    {"no": "263", "common_name": "TCMTB", "cas_rn": "21564-17-0", "main_uses": "F"},
+    {"no": "264", "common_name": "TDE (DDD)", "cas_rn": "72-54-8", "main_uses": "I"},
+    {"no": "265", "common_name": "Tebupirimfos (Tebupirimifos)", "cas_rn": "96182-53-5", "main_uses": "I"},
+    {"no": "266", "common_name": "Tecnazene (Technazene)", "cas_rn": "117-18-0", "main_uses": "F/PGR"},
+    {"no": "267", "common_name": "TEPP (Tetraethyl pyrophosphate)", "cas_rn": "107-49-3", "main_uses": "I/A"},
+    {"no": "268", "common_name": "Terbufos", "cas_rn": "13071-79-9", "main_uses": "I/N"},
+    {"no": "269", "common_name": "Tetrachlorvinphos", "cas_rn": "22248-79-9", "main_uses": "I/A"},
+    {"no": "270", "common_name": "Tetradifon", "cas_rn": "116-29-0", "main_uses": "I/A"},
+    {"no": "271", "common_name": "Thiodicarb", "cas_rn": "59669-26-0", "main_uses": "I/Mo"},
+    {"no": "272", "common_name": "Thiofanox", "cas_rn": "39196-18-4", "main_uses": "I/A"},
+    {"no": "273", "common_name": "Thiometon", "cas_rn": "640-15-3", "main_uses": "I/A"},
+    {"no": "274", "common_name": "Thionazin", "cas_rn": "297-97-2", "main_uses": "I/N"},
+    {"no": "275", "common_name": "Thiacloprid", "cas_rn": "111988-49-9", "main_uses": "I"},
+    {"no": "276", "common_name": "Thiophanate-methyl", "cas_rn": "32564-05-8", "main_uses": "F/WPr"},
+    {"no": "277", "common_name": "Thiram (Tetramethylthiuram disulfide) (in formulations with benomyl and carbofuran)", "cas_rn": "137-26-8", "main_uses": "F/I/N"},
+    {"no": "278", "common_name": "Tolylfluanid", "cas_rn": "731-27-1", "main_uses": "F"},
+    {"no": "279", "common_name": "Triazophos", "cas_rn": "24017-47-8", "main_uses": "I/A/N"},
+    {"no": "280", "common_name": "Trichlorfon", "cas_rn": "52-68-6", "main_uses": "I"},
+    {"no": "281", "common_name": "Tridemorph", "cas_rn": "81412-43-3", "main_uses": "F"},
+    {"no": "282", "common_name": "Trifluralin", "cas_rn": "1582-09-8", "main_uses": "H"},
+    {"no": "283", "common_name": "Triorganostannic compounds, including all Tributyltin compounds [Tributyltin benzoate] [Tributyltin chloride] [Tributyltin fluoride] [Tributyltin linoleate] [Tributyltin methacrylate] [Tributyltin naphthenate] [Tributyltin oxide]", "cas_rn": "56-35-9; 688-73-3; 4342-36-3; 1461-22-9; 1983-10-4; 24124-25-2; 2155-70-6; 85409-17-2; 56-35-9", "main_uses": "F"},
+    {"no": "284", "common_name": "Vamidothion", "cas_rn": "2275-23-2", "main_uses": "I/A"},
+    {"no": "285", "common_name": "Vinclozolin", "cas_rn": "50471-44-8", "main_uses": "F"},
+    {"no": "286", "common_name": "Zineb", "cas_rn": "12122-67-7", "main_uses": "F"},
+]
+
+ARABIC_NAME_OVERRIDES = {
+    "Acephate": "أسيفات",
+    "Acetochlor": "أسيتوكلور",
+    "Acrolein": "أكرولين",
+    "Acrylonitrile": "أكريلونيتريل",
+    "Alachlor": "ألاكلور",
+    "Aldicarb": "ألديكارب",
+    "Aldoxycarb": "ألدوكسيكارب",
+    "Aldrin": "ألدرين",
+    "Amitraz": "أميتراز",
+    "Atrazine": "أترازين",
+    "Azamethiphos": "أزامثيفوس",
+    "Azinphos-ethyl": "أزينفوس إيثيل",
+    "Azinphos-methyl": "أزينفوس ميثيل",
+    "Bendiocarb": "بنديوكارب",
+    "Benomyl (Dustable powder formulation at or above 7 per cent)": "بنوميل",
+    "Bensulide": "بنسوليد",
+    "Binapacryl": "بيناباكريل",
+    "Butachlor": "بيوتاكلور",
+    "Cadusafos": "كادوسافوس",
+    "Captafol": "كابتافول",
+    "Carbaryl": "كاربريل",
+    "Carbendazim": "كاربندازيم",
+    "Carbofuran": "كاربوفوران",
+    "Carbosulfan": "كاربوسلفان",
+    "Chlorfenapyr": "كلورفينابير",
+    "Chlorothalonil": "كلوروثالونيل",
+    "Climbazole": "كليمبازول",
+    "Coumaphos": "كومافوس",
+    "Cyflufenamid": "سيفلوفيناميد",
+    "Cyhalothrin": "سيهالوثرين",
+    "Cyhexatin": "سيهكساتين",
+    "Daminozide": "دامينوزايد",
+    "Diazinon": "ديازينون",
+    "Dicofol": "ديكوفول",
+    "Dieldrin": "دايلدرين",
+    "Dimethoate": "ديميثوات",
+    "Diniconazole-M": "دينيكونازول إم",
+    "Diuron": "ديورون",
+    "Edifenphos": "إديفينفوس",
+    "Endosulfan": "إندوسلفان",
+    "Endrin": "إندرين",
+    "Epoxiconazole": "إيبوكسيكونازول",
+    "Ethion": "إيثيون",
+    "Ethirimol": "إثيريمول",
+    "Etridiazole": "إتريديازول",
+    "Fenarimol": "فيناريمول",
+    "Fenobucarb": "فينوبوكارب",
+    "Fenoxycarb": "فينوكسيكارب",
+    "Fenthion": "فينثيون",
+    "Fenvalerate": "فينفاليرات",
+    "Ferbam": "فيربام",
+    "Fluazifop-butyl": "فلوازيفوب بيوتيل",
+    "Flufenoxuron": "فلوفينوكسورون",
+    "Flusilazole": "فلوسيلازول",
+    "Fluvalinate": "فلوفالينات",
+    "Folpet": "فولبت",
+    "Fonofos": "فونوفوس",
+    "Formetanate": "فورميتانيت",
+    "Heptachlor": "هيبتاكلور",
+    "Hexaconazole": "هكساكونازول",
+    "Hexazinone": "هكزازينون",
+    "Imazalil": "إيمازاليل",
+    "Iprodione": "إيبروديون",
+    "Iprovalicarb": "إيبروفاليكارب",
+    "Isoxaflutole": "إيزوكسافلوتول",
+    "Isoxathion": "إيزوكساثيون",
+    "Kresoxim-methyl": "كريسوكسيم ميثيل",
+    "Linuron": "لينيورون",
+    "Malathion": "مالاثيون",
+    "Maleic hydrazide": "ماليك هيدرازيد",
+    "Mancozeb": "مانكوزيب",
+    "Maneb": "مانيب",
+    "Mecoprop-P": "ميكوبروب بي",
+    "Mepanipyrim": "ميبانيبيريم",
+    "Methidathion": "ميثيداثيون",
+    "Methomyl": "ميثوميل",
+    "Metiram": "ميتيرام",
+    "Mirex": "ميركس",
+    "Monocrotophos": "مونوكروتوفوس",
+    "Naphthalene": "نفثالين",
+    "Nicotine": "نيكوتين",
+    "Nitrobenzene": "نيتروبنزين",
+    "Omethoate": "أوميثوات",
+    "Oryzalin": "أوريزالين",
+    "Oxadiazon": "أوكساديازون",
+    "Oxadixyl": "أوكساديكسيل",
+    "Oxyfluorfen": "أوكسي فلورفين",
+    "Paraquat dichloride [Paraquat]": "باراكوات ثنائي الكلوريد",
+    "Parathion (Parathion-ethyl)": "باراثيون",
+    "Pebulate": "بيبوليت",
+    "Phorate": "فورات",
+    "Phosalone": "فوسالون",
+    "Picloram": "بيكلورام",
+    "Pirimicarb": "بيريميكارب",
+    "Procymidon (Procymidone)": "بروسيميدون",
+    "Profenofos": "بروفينوفوس",
+    "Propargite": "بروبارجيت",
+    "Propoxur": "بروبوكسور",
+    "Pymetrozine": "بيميتروزين",
+    "Pyrazophos": "بيرازوفوس",
+    "Quintozene (PCNB)": "كوينتوزين",
+    "Resmethrin": "ريسمثرين",
+    "Rotenone": "روتينون",
+    "Sedaxane": "سيداكسان",
+    "Simazine": "سيمزين",
+    "Spirodiclofen": "سبيروديكلوفين",
+    "Sulfotep": "سلفوتيب",
+    "Sulprofos": "سلبروفوس",
+    "Terbufos": "تيربوفوس",
+    "Tetrachlorvinphos": "تيتراكلورفينفوس",
+    "Tetradifon": "تيتراديفون",
+    "Thiodicarb": "ثيوديكارب",
+    "Thiofanox": "ثيوفانوكس",
+    "Thiometon": "ثيوميتون",
+    "Thionazin": "ثيونازين",
+    "Thiacloprid": "ثياكلوبريد",
+    "Thiophanate-methyl": "ثيوفانات ميثيل",
+    "Tolylfluanid": "توليـل فلوانيد",
+    "Triazophos": "ترايازوفوس",
+    "Trichlorfon": "ترايكلورفون",
+    "Tridemorph": "ترايديمورف",
+    "Trifluralin": "ترايفلورالين",
+    "Vamidothion": "فاميدوثيون",
+    "Vinclozolin": "فينكلوزولين",
+    "Zineb": "زينب",
+    "DDT": "دي دي تي",
+}
+
+USE_CODE_AR = {
+    "I": "مبيد حشري",
+    "A": "مبيد أكاروسي",
+    "F": "مبيد فطري",
+    "H": "مبيد أعشاب",
+    "N": "مبيد نيماتودي",
+    "B": "مبيد بكتيري",
+    "R": "مبيد قوارض",
+    "PGR": "منظم نمو نباتي",
+    "FM": "مبخر أو مدخن",
+    "IR": "طارد حشرات",
+    "RP": "طارد",
+    "Mt": "مبيد عث",
+    "Mi": "مطهر أو معقم",
+    "FR": "مطهر تربة أو استخدام خاص",
+    "Ov": "مبيد بيوض",
+    "Av": "مبيد طيور",
+    "AL": "مبيد طحالب",
+    "Mo": "مبيد رخويات",
+    "TX": "تصنيف خاص",
+    "Synergist": "مادة مساعدة",
+    "WPr": "معالجة أخشاب",
+    "DF": "مطهر تربة",
+    "T": "استخدام خاص",
+    "Pesticide": "مبيد",
+    "-": "غير محدد",
+    "Herbicide safener": "مادة حماية من مبيدات الأعشاب",
+}
+
+def _normalize_banned_text(text):
+    text = str(text).strip().lower()
+    text = text.replace("أ", "ا").replace("إ", "ا").replace("آ", "ا")
+    text = text.replace("ة", "ه").replace("ى", "ي")
+    text = text.replace("_", " ").replace("-", " ")
+    text = re.sub(r"[^\w\s/().\[\];,+]+", " ", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
+
+def _simple_arabic_fallback(name):
+    return name
+
+def get_arabic_name(common_name):
+    return ARABIC_NAME_OVERRIDES.get(common_name, _simple_arabic_fallback(common_name))
+
+def get_classification_ar(main_uses):
+    value = main_uses.strip()
+    if value in USE_CODE_AR:
+        return USE_CODE_AR[value]
+
+    tokens = re.split(r"[/,;=]+", value.replace("[", "").replace("]", ""))
+    mapped = []
+    seen = set()
+
+    for token in tokens:
+        token = token.strip()
+        if not token:
+            continue
+        mapped_value = USE_CODE_AR.get(token, token)
+        if mapped_value not in seen:
+            mapped.append(mapped_value)
+            seen.add(mapped_value)
+
+    return " / ".join(mapped) if mapped else value
+
+def _build_banned_aliases(item):
+    aliases = set()
+    common_name = item["common_name"]
+    cas_rn = item["cas_rn"]
+
+    aliases.add(_normalize_banned_text(common_name))
+    aliases.add(_normalize_banned_text(cas_rn))
+    aliases.add(_normalize_banned_text(item["no"]))
+    aliases.add(_normalize_banned_text(get_arabic_name(common_name)))
+
+    for part in re.split(r"[\[\]\(\);,/]", common_name):
+        part = part.strip()
+        if part:
+            aliases.add(_normalize_banned_text(part))
+
+    for cas_part in re.split(r"[;\[\]\(\),/]", cas_rn):
+        cas_part = cas_part.strip()
+        if cas_part:
+            aliases.add(_normalize_banned_text(cas_part))
+
+    return {a for a in aliases if a}
+
+def find_banned_pesticide(query):
+    q = _normalize_banned_text(query)
+    if not q:
+        return None
+
+    for item in BANNED_PESTICIDES:
+        if q == _normalize_banned_text(item["no"]):
+            return item
+
+    for item in BANNED_PESTICIDES:
+        aliases = _build_banned_aliases(item)
+
+        if q in aliases:
+            return item
+
+        for alias in aliases:
+            if len(q) >= 3 and q in alias:
+                return item
+            if len(alias) >= 3 and alias in q:
+                return item
+
+    return None
+
+def format_banned_pesticide(item):
+
+    arabic_name = get_arabic_name(item["common_name"])
+    classification_ar = get_classification_ar(item["main_uses"])
+
+    text = (
+        f"🚫 معلومة مادة محظورة\n\n"
+        f"🔢 الرقم: {item['no']}\n"
+        f"🔹 الاسم العربي: {arabic_name}\n"
+        f"🔹English Name: {item['common_name']}\n"
+        f"🔹 الحالة: محظور\n"
+        f"🔹 CAS: {item['cas_rn']}\n"
+        f"📊 التصنيف: {classification_ar}\n"
+        f"📌 Main Uses: {item['main_uses']}\n\n"
+        f"ℹ️ تنبيه مهم:\n"
+        f"قد يتم تحديث حالة بعض المواد لاحقًا سواءً بالحظر أو رفع الحظر أو تعديل البيانات.\n"
+        f"إذا كانت المعلومات قديمة أو احتجت للتأكد من آخر تحديث، يرجى التواصل معنا ليتم تحديث البيانات."
+    )
+
+    keyboard = [
+        [InlineKeyboardButton("📞 تواصل معنا لتحديث المعلومات", url="https://wa.me/966501211056")]
+    ]
+
+    return text, InlineKeyboardMarkup(keyboard)
+
+STATS_FILE = "stats.json"
+
+def save_data():
+    data = {
+        "users": list(users),
+        "requests": orders_count
+    }
+    with open(STATS_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+def load_data():
+    global users, orders_count
+
+    if not os.path.exists(STATS_FILE):
+        users = set()
+        orders_count = 0
+        return
+
+    try:
+        with open(STATS_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        users = set(data.get("users", []))
+        orders_count = int(data.get("requests", 0))
+    except:
+        users = set()
+        orders_count = 0
+
+load_data()
+
+updater.bot.delete_webhook()
+
+updater.start_polling()
+updater.idle()
