@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-// Jothrah Admin Conversations V97 - customer name fix + manual naming
+// Jothrah Admin Conversations V98 - customer name fix + closable customer file drawer
 
 type Conversation = Record<string, any>;
 type ChatMessage = Record<string, any>;
@@ -252,6 +252,26 @@ export default function AdminConversationsClient({ initialData }: Props) {
   useEffect(() => {
     selectedIdRef.current = selectedId;
   }, [selectedId]);
+
+  useEffect(() => {
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+
+      if (detailsOpen) {
+        event.preventDefault();
+        setDetailsOpen(false);
+        return;
+      }
+
+      if (emojiOpen) {
+        event.preventDefault();
+        setEmojiOpen(false);
+      }
+    }
+
+    window.addEventListener("keydown", handleEscape);
+    return () => window.removeEventListener("keydown", handleEscape);
+  }, [detailsOpen, emojiOpen]);
 
   useEffect(() => {
     setNameDraft(cleanDisplayName(selectedConversation?.customer_name));
@@ -920,9 +940,30 @@ export default function AdminConversationsClient({ initialData }: Props) {
           )}
         </section>
 
-        <aside className="details-panel">
+        {detailsOpen ? (
+          <button
+            type="button"
+            className="details-backdrop"
+            aria-label="إغلاق ملف العميل"
+            onClick={() => setDetailsOpen(false)}
+          />
+        ) : null}
+
+        <aside className="details-panel" aria-hidden={!detailsOpen}>
           {selectedConversation ? (
             <>
+              <div className="details-toolbar">
+                <strong>ملف العميل</strong>
+                <button
+                  type="button"
+                  className="close-details"
+                  onClick={() => setDetailsOpen(false)}
+                  title="إغلاق ملف العميل - Esc"
+                >
+                  إغلاق ×
+                </button>
+              </div>
+
               <section className="profile-card hero">
                 <span>ملف العميل</span>
                 <h3>{getCustomerName(selectedConversation)}</h3>
@@ -1014,7 +1055,7 @@ export default function AdminConversationsClient({ initialData }: Props) {
 }
 
 const styles = `
-  /* Jothrah V97: hides generated visitor ids, adds manual customer naming, keeps adaptive canvas */
+  /* Jothrah V98: hides generated visitor ids, adds manual naming, and closeable customer file drawer */
   @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700;800&display=swap');
 
   :root {
@@ -1601,6 +1642,56 @@ const styles = `
     box-shadow: 0 22px 60px rgba(15,36,48,.18);
   }
   .show-details .details-panel { display: flex; }
+  .details-backdrop {
+    position: absolute;
+    inset: 0;
+    z-index: 25;
+    border: 0;
+    padding: 0;
+    margin: 0;
+    background: rgba(15, 36, 48, .025);
+    cursor: default;
+  }
+  .details-toolbar {
+    position: sticky;
+    top: -8px;
+    z-index: 4;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin: -8px -8px 8px;
+    padding: 10px 10px 8px;
+    background: rgba(255,255,255,.92);
+    border-bottom: 1px solid rgba(15,36,48,.08);
+    backdrop-filter: blur(14px) saturate(1.05);
+  }
+  .details-toolbar strong {
+    color: var(--j-ink);
+    font-size: 14px;
+    font-weight: 900;
+    letter-spacing: -.02em;
+  }
+  .close-details {
+    height: 32px;
+    min-width: 86px;
+    border: 1px solid rgba(15,36,48,.12);
+    border-radius: 13px;
+    background: #ffffff;
+    color: var(--j-green);
+    box-shadow: 0 6px 14px rgba(15,36,48,.06);
+    font: inherit;
+    font-size: 12.2px;
+    font-weight: 900;
+    cursor: pointer;
+    transition: transform .14s ease, box-shadow .14s ease, border-color .14s ease;
+  }
+  .close-details:hover {
+    transform: translateY(-1px);
+    border-color: rgba(0,95,93,.26);
+    box-shadow: 0 10px 20px rgba(0,95,93,.10);
+  }
+  .close-details:active { transform: translateY(0); box-shadow: 0 4px 10px rgba(15,36,48,.06); }
   .profile-card { background: rgba(255,255,255,.88); border: 1px solid rgba(15,36,48,.08); border-radius: 18px; padding: 12px; }
   .profile-card.hero { color: #fff; background: linear-gradient(145deg, var(--j-green), #06464b); border: 0; }
   .profile-card span { color: #dff9ef; font-size: 10.8px; font-weight: 800; }
@@ -1703,6 +1794,7 @@ const styles = `
     .inbox-panel { height: 34dvh; min-height: 250px; }
     .chat-panel { height: 66dvh; min-height: 520px; grid-template-rows: auto minmax(0,1fr) 90px; }
     .bubble { max-width: 88%; }
+    .details-backdrop { position: fixed; inset: 0; background: rgba(15,36,48,.12); }
     .details-panel { position: fixed; left: 8px; right: 8px; top: 8px; bottom: 8px; width: auto; }
     .emoji-tray { inset-inline-start: 12px; bottom: 82px; }
   }
