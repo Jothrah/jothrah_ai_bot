@@ -7,6 +7,13 @@ import { jothrahSystemPrompt } from "@/lib/jothrah-system-prompt";
 import { buildWhatsappUrl } from "@/lib/whatsapp";
 import { detectLanguage, matchCategories } from "@/lib/matcher";
 import { needsWhatsapp } from "@/lib/safety";
+import {
+  saveChatAttachment,
+  saveChatEvent,
+  saveChatMessage,
+  uploadChatImage,
+  upsertConversation,
+} from "@/lib/chat-store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -52,20 +59,13 @@ const KNOWLEDGE_RULES: KnowledgeRule[] = [
       "roaches",
       "cockroach",
       "cockroaches",
-      "cockroach control"
-    ]
+      "cockroach control",
+    ],
   },
   {
     id: "mosquitoes",
     file: "public-health/mosquitoes.json",
-    terms: [
-      "بعوض",
-      "ناموس",
-      "الناموس",
-      "البعوض",
-      "mosquito",
-      "mosquitoes"
-    ]
+    terms: ["بعوض", "ناموس", "الناموس", "البعوض", "mosquito", "mosquitoes"],
   },
   {
     id: "flies",
@@ -77,8 +77,8 @@ const KNOWLEDGE_RULES: KnowledgeRule[] = [
       "fly",
       "flies",
       "house fly",
-      "house flies"
-    ]
+      "house flies",
+    ],
   },
   {
     id: "termites",
@@ -90,8 +90,8 @@ const KNOWLEDGE_RULES: KnowledgeRule[] = [
       "الأرضة",
       "termite",
       "termites",
-      "white ants"
-    ]
+      "white ants",
+    ],
   },
   {
     id: "bed-bugs",
@@ -103,18 +103,13 @@ const KNOWLEDGE_RULES: KnowledgeRule[] = [
       "bed bug",
       "bed bugs",
       "bedbug",
-      "bedbugs"
-    ]
+      "bedbugs",
+    ],
   },
   {
     id: "ants",
     file: "public-health/ants.json",
-    terms: [
-      "نمل",
-      "النمل",
-      "ant",
-      "ants"
-    ]
+    terms: ["نمل", "النمل", "ant", "ants"],
   },
   {
     id: "rodents",
@@ -131,8 +126,8 @@ const KNOWLEDGE_RULES: KnowledgeRule[] = [
       "rat",
       "rats",
       "rodent",
-      "rodents"
-    ]
+      "rodents",
+    ],
   },
   {
     id: "red-palm-weevil",
@@ -142,8 +137,8 @@ const KNOWLEDGE_RULES: KnowledgeRule[] = [
       "سوسة النخيل الحمراء",
       "النخيل",
       "red palm weevil",
-      "palm weevil"
-    ]
+      "palm weevil",
+    ],
   },
   {
     id: "whiteflies",
@@ -153,19 +148,13 @@ const KNOWLEDGE_RULES: KnowledgeRule[] = [
       "الذبابة البيضاء",
       "whitefly",
       "whiteflies",
-      "white fly"
-    ]
+      "white fly",
+    ],
   },
   {
     id: "aphids",
     file: "agriculture-pests/aphids.json",
-    terms: [
-      "من",
-      "المن",
-      "حشرة المن",
-      "aphid",
-      "aphids"
-    ]
+    terms: ["من", "المن", "حشرة المن", "aphid", "aphids"],
   },
   {
     id: "mites",
@@ -178,27 +167,18 @@ const KNOWLEDGE_RULES: KnowledgeRule[] = [
       "mites",
       "mite",
       "spider mite",
-      "spider mites"
-    ]
+      "spider mites",
+    ],
   },
   {
     id: "mealybugs",
     file: "agriculture-pests/mealybugs.json",
-    terms: [
-      "بق دقيقي",
-      "البق الدقيقي",
-      "mealybug",
-      "mealybugs"
-    ]
+    terms: ["بق دقيقي", "البق الدقيقي", "mealybug", "mealybugs"],
   },
   {
     id: "powdery-mildew",
     file: "plant-diseases/powdery-mildew.json",
-    terms: [
-      "بياض دقيقي",
-      "البياض الدقيقي",
-      "powdery mildew"
-    ]
+    terms: ["بياض دقيقي", "البياض الدقيقي", "powdery mildew"],
   },
   {
     id: "leaf-spots",
@@ -209,17 +189,13 @@ const KNOWLEDGE_RULES: KnowledgeRule[] = [
       "بقع على الأوراق",
       "بقع ورقية",
       "leaf spot",
-      "leaf spots"
-    ]
+      "leaf spots",
+    ],
   },
   {
     id: "root-rot",
     file: "plant-diseases/root-rot.json",
-    terms: [
-      "عفن جذور",
-      "تعفن الجذور",
-      "root rot"
-    ]
+    terms: ["عفن جذور", "تعفن الجذور", "root rot"],
   },
   {
     id: "yellowing",
@@ -229,18 +205,13 @@ const KNOWLEDGE_RULES: KnowledgeRule[] = [
       "اصفرار الأوراق",
       "اصفرار الورق",
       "yellowing",
-      "yellow leaves"
-    ]
+      "yellow leaves",
+    ],
   },
   {
     id: "iron-deficiency",
     file: "nutrition/iron-deficiency.json",
-    terms: [
-      "نقص الحديد",
-      "حديد",
-      "iron deficiency",
-      "iron"
-    ]
+    terms: ["نقص الحديد", "حديد", "iron deficiency", "iron"],
   },
   {
     id: "npk",
@@ -253,8 +224,8 @@ const KNOWLEDGE_RULES: KnowledgeRule[] = [
       "npk",
       "fertilizer",
       "fertiliser",
-      "fertilizers"
-    ]
+      "fertilizers",
+    ],
   },
   {
     id: "seeds",
@@ -265,14 +236,13 @@ const KNOWLEDGE_RULES: KnowledgeRule[] = [
       "موسم الزراعة",
       "seeds",
       "seed",
-      "planting season"
-    ]
-  }
+      "planting season",
+    ],
+  },
 ];
 
 function corsHeaders(origin?: string | null) {
-  const rawAllowedOrigins =
-    process.env.ALLOWED_ORIGIN || "https://jothrah.com";
+  const rawAllowedOrigins = process.env.ALLOWED_ORIGIN || "https://jothrah.com";
 
   const allowedOrigins = rawAllowedOrigins
     .split(",")
@@ -287,14 +257,14 @@ function corsHeaders(origin?: string | null) {
   return {
     "Access-Control-Allow-Origin": allowedOrigin,
     "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type"
+    "Access-Control-Allow-Headers": "Content-Type",
   };
 }
 
 export async function OPTIONS(req: NextRequest) {
   return NextResponse.json(
     {},
-    { headers: corsHeaders(req.headers.get("origin")) }
+    { headers: corsHeaders(req.headers.get("origin")) },
   );
 }
 
@@ -326,13 +296,10 @@ function normalizeText(value: string) {
 function scoreKnowledgeRule(
   rule: KnowledgeRule,
   message: string,
-  categories: ChatCategory[]
+  categories: ChatCategory[],
 ) {
   const haystack = normalizeText(
-    [
-      message,
-      ...categories.map((category) => category.title || "")
-    ].join(" ")
+    [message, ...categories.map((category) => category.title || "")].join(" "),
   );
 
   let score = 0;
@@ -352,13 +319,12 @@ function scoreKnowledgeRule(
 
 function selectKnowledgeFiles(
   message: string,
-  categories: ChatCategory[]
+  categories: ChatCategory[],
 ): KnowledgeHit[] {
-  return KNOWLEDGE_RULES
-    .map((rule) => ({
-      ...rule,
-      score: scoreKnowledgeRule(rule, message, categories)
-    }))
+  return KNOWLEDGE_RULES.map((rule) => ({
+    ...rule,
+    score: scoreKnowledgeRule(rule, message, categories),
+  }))
     .filter((rule) => rule.score > 0)
     .sort((a, b) => b.score - a.score)
     .slice(0, 2);
@@ -387,9 +353,7 @@ function shouldUseObjectKey(key: string, language: Language) {
 }
 
 function cleanKnowledgeLine(value: string) {
-  return value
-    .replace(/\s+/g, " ")
-    .trim();
+  return value.replace(/\s+/g, " ").trim();
 }
 
 function collectKnowledgeText(
@@ -397,7 +361,7 @@ function collectKnowledgeText(
   language: Language,
   lines: string[],
   keyPath = "",
-  depth = 0
+  depth = 0,
 ) {
   if (lines.length >= 80) return;
   if (depth > 8) return;
@@ -435,13 +399,7 @@ function collectKnowledgeText(
 
       const nextKeyPath = keyPath ? `${keyPath}.${key}` : key;
 
-      collectKnowledgeText(
-        childValue,
-        language,
-        lines,
-        nextKeyPath,
-        depth + 1
-      );
+      collectKnowledgeText(childValue, language, lines, nextKeyPath, depth + 1);
 
       if (lines.length >= 80) break;
     }
@@ -450,14 +408,9 @@ function collectKnowledgeText(
 
 async function readKnowledgeFile(
   relativeFile: string,
-  language: Language
+  language: Language,
 ): Promise<string | null> {
-  const fullPath = path.join(
-    process.cwd(),
-    "data",
-    "knowledge",
-    relativeFile
-  );
+  const fullPath = path.join(process.cwd(), "data", "knowledge", relativeFile);
 
   try {
     const raw = await fs.readFile(fullPath, "utf8");
@@ -481,10 +434,7 @@ async function readKnowledgeFile(
   }
 }
 
-async function buildKnowledgeContext(
-  hits: KnowledgeHit[],
-  language: Language
-) {
+async function buildKnowledgeContext(hits: KnowledgeHit[], language: Language) {
   if (!hits.length) {
     return language === "ar"
       ? "لم يتم العثور على ملف معرفة تفصيلي مطابق. استخدم الإرشادات العامة فقط ولا تخترع تفاصيل."
@@ -492,7 +442,7 @@ async function buildKnowledgeContext(
   }
 
   const loadedFiles = await Promise.all(
-    hits.map((hit) => readKnowledgeFile(hit.file, language))
+    hits.map((hit) => readKnowledgeFile(hit.file, language)),
   );
 
   const context = loadedFiles.filter(Boolean).join("\n\n---\n\n");
@@ -520,11 +470,14 @@ function isAllowedImageType(type: string) {
     "image/jpg",
     "image/png",
     "image/webp",
-    "image/gif"
+    "image/gif",
   ].includes(type.toLowerCase());
 }
 
-function normalizeLanguage(value: unknown, fallback: Language = "ar"): Language {
+function normalizeLanguage(
+  value: unknown,
+  fallback: Language = "ar",
+): Language {
   const text = String(value || "").toLowerCase();
 
   if (text.startsWith("en")) return "en";
@@ -547,7 +500,7 @@ function fallbackVisionAnalysis(language: Language): VisionAnalysis {
     whatsapp_reason:
       language === "ar"
         ? "الصورة غير واضحة أو تحتاج فحص مباشر."
-        : "The image is unclear or needs direct review."
+        : "The image is unclear or needs direct review.",
   };
 }
 
@@ -601,16 +554,16 @@ Return JSON only.
           content: [
             {
               type: "text",
-              text: prompt
+              text: prompt,
             },
             {
               type: "image_url",
               image_url: {
-                url: imageDataUrl
-              }
-            }
-          ] as any
-        }
+                url: imageDataUrl,
+              },
+            },
+          ] as any,
+        },
       ],
       response_format: {
         type: "json_schema",
@@ -622,32 +575,32 @@ Return JSON only.
             additionalProperties: false,
             properties: {
               detected_problem: {
-                type: "string"
+                type: "string",
               },
               possible_category_terms: {
                 type: "array",
                 items: {
-                  type: "string"
+                  type: "string",
                 },
-                maxItems: 6
+                maxItems: 6,
               },
               confidence: {
                 type: "string",
-                enum: ["high", "medium", "low"]
+                enum: ["high", "medium", "low"],
               },
               image_clarity: {
                 type: "string",
-                enum: ["clear", "partial", "unclear"]
+                enum: ["clear", "partial", "unclear"],
               },
               visual_notes: {
-                type: "string"
+                type: "string",
               },
               whatsapp_needed: {
-                type: "boolean"
+                type: "boolean",
               },
               whatsapp_reason: {
-                type: "string"
-              }
+                type: "string",
+              },
             },
             required: [
               "detected_problem",
@@ -656,12 +609,12 @@ Return JSON only.
               "image_clarity",
               "visual_notes",
               "whatsapp_needed",
-              "whatsapp_reason"
-            ]
-          }
-        }
+              "whatsapp_reason",
+            ],
+          },
+        },
       },
-      max_completion_tokens: 500
+      max_completion_tokens: 500,
     });
 
     const raw = completion.choices[0]?.message?.content || "{}";
@@ -677,12 +630,10 @@ Return JSON only.
 function buildVisionContext(
   imageDataUrl: string | null,
   visionAnalysis: VisionAnalysis | null,
-  language: Language
+  language: Language,
 ) {
   if (!imageDataUrl) {
-    return language === "ar"
-      ? "لا توجد صورة مرفقة."
-      : "No image was attached.";
+    return language === "ar" ? "لا توجد صورة مرفقة." : "No image was attached.";
   }
 
   if (!visionAnalysis) {
@@ -729,8 +680,8 @@ function shouldForceWhatsappFromVision(visionAnalysis: VisionAnalysis | null) {
       visionAnalysis.detected_problem,
       visionAnalysis.visual_notes,
       visionAnalysis.whatsapp_reason,
-      ...visionAnalysis.possible_category_terms
-    ].join(" ")
+      ...visionAnalysis.possible_category_terms,
+    ].join(" "),
   );
 
   const sensitiveTerms = [
@@ -747,7 +698,7 @@ function shouldForceWhatsappFromVision(visionAnalysis: VisionAnalysis | null) {
     "rat",
     "mouse",
     "red palm weevil",
-    "unclear"
+    "unclear",
   ];
 
   return sensitiveTerms.some((term) => sensitive.includes(normalizeText(term)));
@@ -762,7 +713,7 @@ const responseSchema = {
       language: { type: "string", enum: ["ar", "en"] },
       analysis_source: {
         type: "string",
-        enum: ["text", "image", "image_and_text"]
+        enum: ["text", "image", "image_and_text"],
       },
       detected_problem: { type: "string" },
       confidence: { type: "string", enum: ["high", "medium", "low"] },
@@ -770,12 +721,12 @@ const responseSchema = {
       advice: {
         type: "array",
         items: { type: "string" },
-        maxItems: 3
+        maxItems: 3,
       },
       questions: {
         type: "array",
         items: { type: "string" },
-        maxItems: 2
+        maxItems: 2,
       },
       categories: {
         type: "array",
@@ -784,11 +735,11 @@ const responseSchema = {
           additionalProperties: false,
           properties: {
             title: { type: "string" },
-            url: { type: "string" }
+            url: { type: "string" },
           },
-          required: ["title", "url"]
+          required: ["title", "url"],
         },
-        maxItems: 3
+        maxItems: 3,
       },
       product_suggestions: {
         type: "array",
@@ -798,14 +749,14 @@ const responseSchema = {
           properties: {
             name: { type: "string" },
             url: { type: "string" },
-            reason: { type: "string" }
+            reason: { type: "string" },
           },
-          required: ["name", "url", "reason"]
+          required: ["name", "url", "reason"],
         },
-        maxItems: 3
+        maxItems: 3,
       },
       whatsapp_needed: { type: "boolean" },
-      whatsapp_message: { type: "string" }
+      whatsapp_message: { type: "string" },
     },
     required: [
       "language",
@@ -818,10 +769,10 @@ const responseSchema = {
       "categories",
       "product_suggestions",
       "whatsapp_needed",
-      "whatsapp_message"
-    ]
+      "whatsapp_message",
+    ],
   },
-  strict: true
+  strict: true,
 } as const;
 
 async function readRequestBody(req: NextRequest) {
@@ -830,12 +781,16 @@ async function readRequestBody(req: NextRequest) {
   let message = "";
   let languageFromClient: Language | null = null;
   let imageDataUrl: string | null = null;
+  let visitorId = "";
+  let pageUrl = "";
 
   if (contentType.includes("multipart/form-data")) {
     const form = await req.formData();
 
     message = String(form.get("message") || "").trim();
     languageFromClient = normalizeLanguage(form.get("language"), "ar");
+    visitorId = String(form.get("visitor_id") || "").trim();
+    pageUrl = String(form.get("page_url") || "").trim();
 
     const image = form.get("image");
 
@@ -855,6 +810,8 @@ async function readRequestBody(req: NextRequest) {
 
     message = String(body.message || "").trim();
     languageFromClient = normalizeLanguage(body.language, "ar");
+    visitorId = String(body.visitor_id || body.visitorId || "").trim();
+    pageUrl = String(body.page_url || body.pageUrl || "").trim();
 
     const rawImage =
       typeof body.image === "string"
@@ -879,7 +836,9 @@ async function readRequestBody(req: NextRequest) {
   return {
     message,
     languageFromClient,
-    imageDataUrl
+    imageDataUrl,
+    visitorId,
+    pageUrl,
   };
 }
 
@@ -887,8 +846,14 @@ export async function POST(req: NextRequest) {
   const origin = req.headers.get("origin");
 
   try {
-    const { message, languageFromClient, imageDataUrl } =
+    const { message, languageFromClient, imageDataUrl, visitorId, pageUrl } =
       await readRequestBody(req);
+
+    const safeVisitorId =
+      visitorId ||
+      `visitor_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+
+    const userAgent = req.headers.get("user-agent") || "";
 
     if (!message && !imageDataUrl) {
       const language = languageFromClient || "ar";
@@ -898,9 +863,9 @@ export async function POST(req: NextRequest) {
           error:
             language === "ar"
               ? "اكتب رسالة أو أرفق صورة."
-              : "Please write a message or attach an image."
+              : "Please write a message or attach an image.",
         },
-        { status: 400, headers: corsHeaders(origin) }
+        { status: 400, headers: corsHeaders(origin) },
       );
     }
 
@@ -913,6 +878,73 @@ export async function POST(req: NextRequest) {
           ? "ar"
           : languageFromClient || "ar";
 
+    const conversation = await upsertConversation({
+      visitorId: safeVisitorId,
+      language,
+      message,
+      pageUrl,
+      userAgent,
+      needsHuman: false,
+    });
+
+    await saveChatEvent({
+      conversationId: conversation.id,
+      visitorId: safeVisitorId,
+      eventName: "chat_request_received",
+      eventData: {
+        hasImage: Boolean(imageDataUrl),
+        pageUrl,
+      },
+    });
+    let storedImageUrl: string | null = null;
+    let uploadedImage: {
+      filePath: string;
+      signedUrl: string | null;
+      mime: string;
+      size: number;
+    } | null = null;
+
+    if (imageDataUrl) {
+      try {
+        uploadedImage = await uploadChatImage({
+          conversationId: conversation.id,
+          imageDataUrl,
+        });
+
+        storedImageUrl = uploadedImage.signedUrl;
+      } catch (error) {
+        console.warn("Failed to upload chat image:", error);
+      }
+    }
+
+    const customerMessageRecord = await saveChatMessage({
+      conversationId: conversation.id,
+      senderType: "customer",
+      message:
+        message ||
+        (imageDataUrl
+          ? language === "ar"
+            ? "صورة مرفقة"
+            : "Attached image"
+          : ""),
+      imageUrl: storedImageUrl,
+      metadata: {
+        hasImage: Boolean(imageDataUrl),
+        pageUrl,
+      },
+    });
+
+    if (uploadedImage?.signedUrl) {
+      await saveChatAttachment({
+        conversationId: conversation.id,
+        messageId: customerMessageRecord.id,
+        fileUrl: uploadedImage.signedUrl,
+        fileType: uploadedImage.mime,
+        fileName: uploadedImage.filePath,
+        fileSize: uploadedImage.size,
+      });
+    }
+
     const client = getOpenAIClient();
 
     const visionAnalysis = imageDataUrl
@@ -920,7 +952,7 @@ export async function POST(req: NextRequest) {
           client,
           imageDataUrl,
           message,
-          language
+          language,
         })
       : null;
 
@@ -928,24 +960,24 @@ export async function POST(req: NextRequest) {
       message,
       visionAnalysis?.detected_problem || "",
       visionAnalysis?.visual_notes || "",
-      ...(visionAnalysis?.possible_category_terms || [])
+      ...(visionAnalysis?.possible_category_terms || []),
     ]
       .filter(Boolean)
       .join(" ");
 
     const matchedCategories = matchCategories(
       matchingText || message,
-      language
+      language,
     ) as ChatCategory[];
 
     const knowledgeHits = selectKnowledgeFiles(
       matchingText || message,
-      matchedCategories
+      matchedCategories,
     );
 
     const knowledgeContext = await buildKnowledgeContext(
       knowledgeHits,
-      language
+      language,
     );
 
     const forceWhatsappByText = needsWhatsapp(message);
@@ -955,7 +987,7 @@ export async function POST(req: NextRequest) {
     const visionContext = buildVisionContext(
       imageDataUrl,
       visionAnalysis,
-      language
+      language,
     );
 
     const analysisSource = imageDataUrl
@@ -984,10 +1016,10 @@ ${JSON.stringify(
   knowledgeHits.map((hit) => ({
     id: hit.id,
     file: hit.file,
-    score: hit.score
+    score: hit.score,
   })),
   null,
-  2
+  2,
 )}
 
 سياق المعرفة:
@@ -1016,10 +1048,10 @@ ${JSON.stringify(
   knowledgeHits.map((hit) => ({
     id: hit.id,
     file: hit.file,
-    score: hit.score
+    score: hit.score,
   })),
   null,
-  2
+  2,
 )}
 
 Knowledge context:
@@ -1036,7 +1068,7 @@ Reply in a short, useful ecommerce chat style.
       messages: [
         {
           role: "system",
-          content: jothrahSystemPrompt
+          content: jothrahSystemPrompt,
         },
         {
           role: "system",
@@ -1052,22 +1084,48 @@ Important Jothrah response rules:
 - Keep advice to maximum 3 items.
 - Keep questions to maximum 2 items.
 - Return only valid JSON matching the schema.
-`
+`,
         },
         {
           role: "user",
-          content: userPrompt
-        }
+          content: userPrompt,
+        },
       ],
       response_format: {
         type: "json_schema",
-        json_schema: responseSchema
+        json_schema: responseSchema,
       },
-      max_completion_tokens: 1000
+      max_completion_tokens: 1000,
     });
 
     const raw = completion.choices[0]?.message?.content || "{}";
     const data = JSON.parse(raw);
+    await saveChatMessage({
+      conversationId: conversation.id,
+      senderType: "ai",
+      message: data.summary || "",
+      aiDetectedProblem: data.detected_problem || null,
+      aiConfidence: data.confidence || null,
+      aiWhatsappNeeded: Boolean(data.whatsapp_needed || forceWhatsapp),
+      metadata: {
+        fullResponse: data,
+        categories: data.categories || matchedCategories,
+        productSuggestions: data.product_suggestions || [],
+        analysisSource,
+      },
+    });
+
+    await saveChatEvent({
+      conversationId: conversation.id,
+      visitorId: safeVisitorId,
+      eventName: "ai_response_created",
+      eventData: {
+        whatsappNeeded: Boolean(data.whatsapp_needed || forceWhatsapp),
+        detectedProblem: data.detected_problem || "",
+        confidence: data.confidence || "",
+        analysisSource,
+      },
+    });
 
     const fallbackWhatsappMessage =
       language === "ar"
@@ -1093,33 +1151,32 @@ Important Jothrah response rules:
             ? data.categories
             : matchedCategories,
         whatsapp_needed: Boolean(data.whatsapp_needed || forceWhatsapp),
-        whatsapp_url: buildWhatsappUrl(whatsappMessage)
+        whatsapp_url: buildWhatsappUrl(whatsappMessage),
       },
-      { headers: corsHeaders(origin) }
+      { headers: corsHeaders(origin) },
     );
   } catch (error) {
     console.error(error);
 
-    const message =
-      error instanceof Error ? error.message : "UNKNOWN_ERROR";
+    const message = error instanceof Error ? error.message : "UNKNOWN_ERROR";
 
     if (message === "INVALID_IMAGE_TYPE") {
       return NextResponse.json(
         { error: "Invalid image type" },
-        { status: 400, headers: corsHeaders(origin) }
+        { status: 400, headers: corsHeaders(origin) },
       );
     }
 
     if (message === "IMAGE_TOO_LARGE") {
       return NextResponse.json(
         { error: "Image is too large. Maximum size is 4MB." },
-        { status: 400, headers: corsHeaders(origin) }
+        { status: 400, headers: corsHeaders(origin) },
       );
     }
 
     return NextResponse.json(
       { error: "Failed to process chat request" },
-      { status: 500, headers: corsHeaders(origin) }
+      { status: 500, headers: corsHeaders(origin) },
     );
   }
 }
