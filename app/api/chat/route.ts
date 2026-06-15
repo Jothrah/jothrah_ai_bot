@@ -5,6 +5,7 @@ import OpenAI from "openai";
 
 import { jothrahSystemPrompt } from "@/lib/jothrah-system-prompt";
 import { buildWhatsappUrl } from "@/lib/whatsapp";
+import { supabaseAdmin } from "@/lib/supabase-admin";
 import { detectLanguage, matchCategories } from "@/lib/matcher";
 import { needsWhatsapp } from "@/lib/safety";
 import {
@@ -775,6 +776,33 @@ const responseSchema = {
   strict: true,
 } as const;
 
+
+function isHumanHandoffStatus(status: unknown) {
+  const value = String(status || "");
+  return value === "needs_human" || value === "human_replied" || value === "closed";
+}
+
+function isHumanRequestMessage(message: string) {
+  const text = normalizeText(message);
+  if (!text) return false;
+
+  const terms = [
+    "تواصل مع مختص",
+    "طلب مختص",
+    "مختص جذره",
+    "مختص جذرة",
+    "موظف",
+    "خدمة العملاء",
+    "انسان",
+    "إنسان",
+    "human support",
+    "specialist",
+    "agent"
+  ];
+
+  return terms.some((term) => text.includes(normalizeText(term)));
+}
+
 async function readRequestBody(req: NextRequest) {
   const contentType = req.headers.get("content-type") || "";
 
@@ -783,6 +811,10 @@ async function readRequestBody(req: NextRequest) {
   let imageDataUrl: string | null = null;
   let visitorId = "";
   let pageUrl = "";
+  let customerName = "";
+  let customerPhone = "";
+  let customerEmail = "";
+  let requestHuman = false;
 
   if (contentType.includes("multipart/form-data")) {
     const form = await req.formData();
@@ -791,6 +823,10 @@ async function readRequestBody(req: NextRequest) {
     languageFromClient = normalizeLanguage(form.get("language"), "ar");
     visitorId = String(form.get("visitor_id") || "").trim();
     pageUrl = String(form.get("page_url") || "").trim();
+    customerName = String(form.get("customer_name") || "").trim();
+    customerPhone = String(form.get("customer_phone") || "").trim();
+    customerEmail = String(form.get("customer_email") || "").trim();
+    requestHuman = String(form.get("request_type") || form.get("action") || "").toLowerCase().includes("human") || String(form.get("needs_human") || "").toLowerCase() === "true";
 
     const image = form.get("image");
 
@@ -812,6 +848,10 @@ async function readRequestBody(req: NextRequest) {
     languageFromClient = normalizeLanguage(body.language, "ar");
     visitorId = String(body.visitor_id || body.visitorId || "").trim();
     pageUrl = String(body.page_url || body.pageUrl || "").trim();
+    customerName = String(body.customer_name || body.customerName || "").trim();
+    customerPhone = String(body.customer_phone || body.customerPhone || "").trim();
+    customerEmail = String(body.customer_email || body.customerEmail || "").trim();
+    requestHuman = Boolean(body.needs_human || body.needsHuman) || String(body.request_type || body.action || "").toLowerCase().includes("human");
 
     const rawImage =
       typeof body.image === "string"
@@ -839,6 +879,10 @@ async function readRequestBody(req: NextRequest) {
     imageDataUrl,
     visitorId,
     pageUrl,
+    customerName,
+    customerPhone,
+    customerEmail,
+    requestHuman,
   };
 }
 
@@ -846,8 +890,17 @@ export async function POST(req: NextRequest) {
   const origin = req.headers.get("origin");
 
   try {
-    const { message, languageFromClient, imageDataUrl, visitorId, pageUrl } =
-      await readRequestBody(req);
+    const {
+      message,
+      languageFromClient,
+      imageDataUrl,
+      visitorId,
+      pageUrl,
+      customerName,
+      customerPhone,
+      customerEmail,
+      requestHuman,
+    } = await readRequestBody(req);
 
     const safeVisitorId =
       visitorId ||
@@ -878,13 +931,21 @@ export async function POST(req: NextRequest) {
           ? "ar"
           : languageFromClient || "ar";
 
+    const shouldRequestHuman = requestHuman || isHumanRequestMessage(message);
+
     const conversation = await upsertConversation({
       visitorId: safeVisitorId,
       language,
       message,
       pageUrl,
       userAgent,
-      needsHuman: false,
+      needsHuman: shouldRequestHuman,
+      customerName,
+      customerPhone,
+      customerEmail,
+      metadata: {
+        customerNameSource: customerName ? "client" : "unknown",
+      },
     });
 
     await saveChatEvent({
@@ -943,6 +1004,50 @@ export async function POST(req: NextRequest) {
         fileName: uploadedImage.filePath,
         fileSize: uploadedImage.size,
       });
+    }
+
+    const currentStatus = String(conversation.status || "ai");
+
+    if (shouldRequestHuman || isHumanHandoffStatus(currentStatus)) {
+      if (shouldRequestHuman && currentStatus !== "needs_human") {
+        await supabaseAdmin
+          .from("chat_conversations")
+          .update({
+            status: "needs_human",
+            needs_human: true,
+            human_requested_at: new Date().toISOString(),
+          })
+          .eq("id", conversation.id);
+      }
+
+      await saveChatEvent({
+        conversationId: conversation.id,
+        visitorId: safeVisitorId,
+        eventName: shouldRequestHuman ? "human_support_requested" : "human_mode_message_saved",
+        eventData: {
+          status: shouldRequestHuman ? "needs_human" : currentStatus,
+          hasImage: Boolean(imageDataUrl),
+        },
+      });
+
+      return NextResponse.json(
+        {
+          mode: currentStatus === "closed" ? "closed" : "human_waiting",
+          status: shouldRequestHuman ? "needs_human" : currentStatus,
+          conversation_id: conversation.id,
+          saved: true,
+          language,
+          summary:
+            currentStatus === "closed"
+              ? language === "ar"
+                ? "تم إنهاء هذه المحادثة. افتح محادثة جديدة إذا احتجت مساعدة إضافية."
+                : "This conversation is closed. Start a new chat if you need more help."
+              : language === "ar"
+                ? "تم استلام رسالتك، وسيقوم مختص جذرة بالرد عليك داخل هذه الدردشة."
+                : "Your message was received. A Jothrah specialist will reply inside this chat.",
+        },
+        { headers: corsHeaders(origin) },
+      );
     }
 
     const client = getOpenAIClient();

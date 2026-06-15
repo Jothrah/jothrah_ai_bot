@@ -1,12 +1,18 @@
 import { supabaseAdmin, CHAT_ATTACHMENTS_BUCKET } from "@/lib/supabase-admin";
 
+type Language = "ar" | "en";
+
 type UpsertConversationInput = {
   visitorId: string;
-  language: "ar" | "en";
+  language: Language;
   message?: string;
   pageUrl?: string;
   userAgent?: string;
   needsHuman?: boolean;
+  customerName?: string;
+  customerPhone?: string;
+  customerEmail?: string;
+  metadata?: Record<string, unknown>;
 };
 
 type SaveMessageInput = {
@@ -14,11 +20,20 @@ type SaveMessageInput = {
   senderType: "customer" | "ai" | "human" | "system";
   message?: string;
   imageUrl?: string | null;
-  aiDetectedProblem?: string;
-  aiConfidence?: string;
+  aiDetectedProblem?: string | null;
+  aiConfidence?: string | null;
   aiWhatsappNeeded?: boolean;
+  visibleToCustomer?: boolean;
   metadata?: Record<string, unknown>;
 };
+
+function cleanText(value?: string | null, max = 250) {
+  return String(value || "")
+    .replace(/[<>]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, max);
+}
 
 function safeFileExt(mime: string) {
   if (mime.includes("png")) return "png";
@@ -86,8 +101,17 @@ export async function upsertConversation(input: UpsertConversationInput) {
     message,
     pageUrl,
     userAgent,
-    needsHuman = false
+    needsHuman = false,
+    customerName,
+    customerPhone,
+    customerEmail,
+    metadata
   } = input;
+
+  const cleanName = cleanText(customerName, 80);
+  const cleanPhone = cleanText(customerPhone, 40);
+  const cleanEmail = cleanText(customerEmail, 120);
+  const now = new Date().toISOString();
 
   const existing = await supabaseAdmin
     .from("chat_conversations")
@@ -97,17 +121,35 @@ export async function upsertConversation(input: UpsertConversationInput) {
     .limit(1)
     .maybeSingle();
 
-  if (existing.data?.id) {
+  if (existing.data?.id && existing.data.status !== "closed") {
+    const nextStatus = needsHuman
+      ? "needs_human"
+      : existing.data.status || "ai";
+
     const { data, error } = await supabaseAdmin
       .from("chat_conversations")
       .update({
         language,
+        customer_name: cleanName || existing.data.customer_name,
+        customer_phone: cleanPhone || existing.data.customer_phone,
+        customer_email: cleanEmail || existing.data.customer_email,
         last_message: message || existing.data.last_message,
-        last_message_at: new Date().toISOString(),
+        last_message_at: now,
+        last_customer_message_at: message ? now : existing.data.last_customer_message_at,
         page_url: pageUrl || existing.data.page_url,
         user_agent: userAgent || existing.data.user_agent,
-        needs_human: existing.data.needs_human || needsHuman,
-        status: needsHuman ? "needs_human" : existing.data.status
+        needs_human: Boolean(existing.data.needs_human || needsHuman || nextStatus === "needs_human"),
+        human_requested_at:
+          needsHuman && !existing.data.human_requested_at
+            ? now
+            : existing.data.human_requested_at,
+        status: nextStatus,
+        unread_admin_count:
+          (Number(existing.data.unread_admin_count || 0) || 0) + (message ? 1 : 0),
+        metadata: {
+          ...(existing.data.metadata || {}),
+          ...(metadata || {})
+        }
       })
       .eq("id", existing.data.id)
       .select("*")
@@ -121,15 +163,21 @@ export async function upsertConversation(input: UpsertConversationInput) {
     .from("chat_conversations")
     .insert({
       visitor_id: visitorId,
+      customer_name: cleanName || null,
+      customer_phone: cleanPhone || null,
+      customer_email: cleanEmail || null,
       language,
       status: needsHuman ? "needs_human" : "ai",
       source: "salla",
       needs_human: needsHuman,
-      human_requested_at: needsHuman ? new Date().toISOString() : null,
+      human_requested_at: needsHuman ? now : null,
       last_message: message || "",
-      last_message_at: new Date().toISOString(),
+      last_message_at: now,
+      last_customer_message_at: message ? now : null,
+      unread_admin_count: message ? 1 : 0,
       page_url: pageUrl || null,
-      user_agent: userAgent || null
+      user_agent: userAgent || null,
+      metadata: metadata || {}
     })
     .select("*")
     .single();
@@ -147,6 +195,7 @@ export async function saveChatMessage(input: SaveMessageInput) {
     aiDetectedProblem,
     aiConfidence,
     aiWhatsappNeeded,
+    visibleToCustomer = true,
     metadata
   } = input;
 
@@ -160,6 +209,7 @@ export async function saveChatMessage(input: SaveMessageInput) {
       ai_detected_problem: aiDetectedProblem || null,
       ai_confidence: aiConfidence || null,
       ai_whatsapp_needed: Boolean(aiWhatsappNeeded),
+      visible_to_customer: visibleToCustomer,
       metadata: metadata || {}
     })
     .select("*")
@@ -206,4 +256,49 @@ export async function saveChatEvent(params: {
     event_name: params.eventName,
     event_data: params.eventData || {}
   });
+}
+
+export async function getLatestConversationByVisitor(visitorId: string) {
+  const { data, error } = await supabaseAdmin
+    .from("chat_conversations")
+    .select("*")
+    .eq("visitor_id", visitorId)
+    .order("last_message_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data || null;
+}
+
+export async function markConversationHumanRequested(conversationId: string) {
+  const now = new Date().toISOString();
+
+  const { data, error } = await supabaseAdmin
+    .from("chat_conversations")
+    .update({
+      status: "needs_human",
+      needs_human: true,
+      human_requested_at: now,
+      last_message_at: now
+    })
+    .eq("id", conversationId)
+    .select("*")
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteConversationForever(conversationId: string) {
+  await supabaseAdmin.from("chat_attachments").delete().eq("conversation_id", conversationId);
+  await supabaseAdmin.from("chat_events").delete().eq("conversation_id", conversationId);
+  await supabaseAdmin.from("chat_messages").delete().eq("conversation_id", conversationId);
+
+  const { error } = await supabaseAdmin
+    .from("chat_conversations")
+    .delete()
+    .eq("id", conversationId);
+
+  if (error) throw error;
 }
