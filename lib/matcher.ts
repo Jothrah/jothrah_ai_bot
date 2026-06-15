@@ -27,6 +27,21 @@ export type MatchedCategory = {
 
 const categories = categoriesData as Category[];
 
+const weakContextWords = [
+  "مطبخ",
+  "حمام",
+  "زوايا",
+  "شقوق",
+  "حوش",
+  "حديقة",
+  "kitchen",
+  "bathroom",
+  "corners",
+  "cracks",
+  "yard",
+  "garden"
+];
+
 export function detectLanguage(message: string): BotLanguage {
   return /[\u0600-\u06FF]/.test(message) ? "ar" : "en";
 }
@@ -35,17 +50,26 @@ function normalizeText(text: string) {
   return text.toLowerCase().trim();
 }
 
+function keywordScore(keyword: string) {
+  const normalized = normalizeText(keyword);
+  return weakContextWords.includes(normalized) ? 1 : 5;
+}
+
 export function matchCategories(
   message: string,
   language: BotLanguage = detectLanguage(message)
 ): MatchedCategory[] {
   const text = normalizeText(message);
 
-  return categories
+  const scored = categories
     .map((category) => {
       const keywords = category.keywords[language] || [];
+
       const score = keywords.reduce((total, keyword) => {
-        return text.includes(normalizeText(keyword)) ? total + 1 : total;
+        const normalizedKeyword = normalizeText(keyword);
+        return text.includes(normalizedKeyword)
+          ? total + keywordScore(normalizedKeyword)
+          : total;
       }, 0);
 
       return {
@@ -56,6 +80,13 @@ export function matchCategories(
       };
     })
     .filter((category) => category.score > 0)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 3);
+    .sort((a, b) => b.score - a.score);
+
+  const bestScore = scored[0]?.score || 0;
+
+  if (bestScore >= 5) {
+    return scored.filter((category) => category.score >= 5).slice(0, 3);
+  }
+
+  return scored.slice(0, 3);
 }
