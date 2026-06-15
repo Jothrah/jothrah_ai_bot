@@ -181,7 +181,7 @@ export default function AdminConversationsClient({ initialData }: Props) {
   );
   const [reply, setReply] = useState("");
   const [loading, setLoading] = useState(false);
-  const [soundEnabled, setSoundEnabled] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(true);
   const [emojiOpen, setEmojiOpen] = useState(false);
   const [filter, setFilter] = useState<"all" | "waiting" | "open" | "closed">(
     "all",
@@ -469,7 +469,6 @@ export default function AdminConversationsClient({ initialData }: Props) {
           <span className="brand-logo">ج</span>
           <div>
             <b>محادثات جذرة</b>
-            <small>Client Care Suite</small>
           </div>
         </div>
 
@@ -493,12 +492,17 @@ export default function AdminConversationsClient({ initialData }: Props) {
             type="button"
             className={soundEnabled ? "top-btn sound on" : "top-btn sound"}
             onClick={() => {
-              setSoundEnabled(true);
-              playLuxuryNotify();
-              flashToast("تم تفعيل صوت التنبيهات ✅");
+              const next = !soundEnabled;
+              setSoundEnabled(next);
+              if (next) {
+                playLuxuryNotify();
+                flashToast("الصوت مفعّل 🔔");
+              } else {
+                flashToast("تم كتم الصوت 🔕");
+              }
             }}
           >
-            🔔 {soundEnabled ? "الصوت مفعل" : "تفعيل الصوت"}
+            {soundEnabled ? "🔔 كتم الصوت" : "🔕 تفعيل الصوت"}
           </button>
           <button type="button" className="top-btn" onClick={() => refresh()}>
             تحديث
@@ -702,18 +706,6 @@ export default function AdminConversationsClient({ initialData }: Props) {
               </div>
 
               <footer className="composer">
-                <div className="quick-row">
-                  {QUICK_REPLIES.map((item) => (
-                    <button
-                      type="button"
-                      key={item}
-                      onClick={() => setReply(item)}
-                    >
-                      {item}
-                    </button>
-                  ))}
-                </div>
-
                 <div className="composer-row">
                   <button
                     type="button"
@@ -850,6 +842,7 @@ const styles = `
 
   :root {
     color-scheme: light;
+    font-size: 14px;
     --j-bg: #f5f1e8;
     --j-surface: rgba(255,255,255,.82);
     --j-surface-solid: #ffffff;
@@ -875,6 +868,8 @@ const styles = `
     height: 100% !important;
     overflow: hidden !important;
     background: var(--j-bg) !important;
+    display: flex;
+    justify-content: center;
   }
 
   * { box-sizing: border-box; }
@@ -883,7 +878,9 @@ const styles = `
 
   .jth-desk {
     position: relative;
-    width: 100vw;
+    width: 100%;
+    max-width: 1520px;
+    margin: 0 auto;
     height: 100dvh;
     max-height: 100dvh;
     overflow: hidden;
@@ -920,7 +917,7 @@ const styles = `
   .desk-top {
     min-height: 0;
     display: grid;
-    grid-template-columns: 235px minmax(260px, 1fr) auto;
+    grid-template-columns: 380px minmax(260px, 1fr) auto;
     align-items: stretch;
     gap: 7px;
   }
@@ -947,13 +944,7 @@ const styles = `
   }
 
   .brand-mini::after {
-    content: "MAJESTIC DESK";
-    margin-inline-start: auto;
-    color: rgba(201,154,58,.85);
-    font-size: 8px;
-    font-weight: 800;
-    letter-spacing: .11em;
-    white-space: nowrap;
+    display: none;
   }
 
   .brand-logo,
@@ -1055,11 +1046,11 @@ const styles = `
     min-height: 0;
     height: 100%;
     display: grid;
-    grid-template-columns: 315px minmax(0, 1fr) 0;
+    grid-template-columns: 380px minmax(0, 1fr) 0;
     gap: 7px;
     overflow: hidden;
   }
-  .desk-grid.show-details { grid-template-columns: 315px minmax(0, 1fr) 275px; }
+  .desk-grid.show-details { grid-template-columns: 380px minmax(0, 1fr) 255px; }
 
   .inbox-panel,
   .chat-panel,
@@ -1082,7 +1073,7 @@ const styles = `
     justify-content: space-between;
     padding: 0 3px;
   }
-  .panel-head strong { font-size: 13px; font-weight: 800; letter-spacing: -.01em; }
+  .panel-head strong { font-size: 15px; font-weight: 800; letter-spacing: -.01em; }
   .panel-head strong::after {
     content: "  ·  مركز العناية";
     color: var(--j-muted);
@@ -1120,8 +1111,9 @@ const styles = `
     outline: 0;
     background: transparent;
     color: var(--j-ink);
-    font-size: 12px;
+    font-size: 14px;
     font-weight: 600;
+    font-family: inherit;
   }
 
   .filters { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
@@ -1130,7 +1122,7 @@ const styles = `
     border-radius: 13px;
     background: rgba(255,255,255,.62);
     color: var(--j-muted);
-    font-size: 10.5px;
+    font-size: 13px;
     font-weight: 800;
     cursor: pointer;
     transition: .15s ease;
@@ -1201,24 +1193,24 @@ const styles = `
   .avatar.lg { width: 34px; height: 34px; border-radius: 13px; font-size: 15px; }
   .conversation-content { min-width: 0; display: grid; gap: 3px; }
   .conversation-title { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
-  .conversation-title strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12.5px; font-weight: 800; }
-  .conversation-title time { color: var(--j-muted); font-size: 9.5px; font-weight: 700; white-space: nowrap; }
-  .conversation-preview { color: #435459; font-size: 11px; font-weight: 600; line-height: 1.32; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .conversation-title strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; font-weight: 800; }
+  .conversation-title time { color: var(--j-muted); font-size: 11px; font-weight: 700; white-space: nowrap; }
+  .conversation-preview { color: #435459; font-size: 13px; font-weight: 600; line-height: 1.38; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .conversation-meta { display: flex; align-items: center; gap: 5px; justify-content: space-between; }
-  .conversation-meta small:last-child { color: var(--j-muted); font-size: 9px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .conversation-meta small:last-child { color: var(--j-muted); font-size: 11px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
   .mini-pill {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    height: 19px;
+    height: 22px;
     border-radius: 999px;
-    padding: 0 7px;
-    font-size: 9px;
+    padding: 0 9px;
+    font-size: 11px;
     font-weight: 800;
     white-space: nowrap;
   }
-  .mini-pill.large { height: 23px; font-size: 10px; }
+  .mini-pill.large { height: 26px; font-size: 12px; }
   .mini-pill.danger { color: #941b21; background: #fff1f1; border: 1px solid rgba(196,51,58,.18); }
   .mini-pill.success { color: #08744e; background: #e9fbf2; border: 1px solid rgba(17,163,111,.18); }
   .mini-pill.ai { color: #075985; background: #edf8ff; border: 1px solid rgba(42,117,170,.16); }
@@ -1237,7 +1229,7 @@ const styles = `
 
   .chat-panel {
     display: grid;
-    grid-template-rows: 48px minmax(0, 1fr) 80px;
+    grid-template-rows: 48px minmax(0, 1fr) 66px;
     background: rgba(255,255,255,.84);
   }
   .chat-panel::before {
@@ -1297,7 +1289,7 @@ const styles = `
     z-index: 1;
     min-height: 0;
     overflow: auto;
-    padding: 11px;
+    padding: 11px 14px;
     background:
       linear-gradient(180deg, rgba(255,255,255,.45), rgba(255,255,255,.18)),
       radial-gradient(circle at 50% 12%, rgba(201,154,58,.035), transparent 27%);
@@ -1328,12 +1320,12 @@ const styles = `
     font-size: 9.5px;
     font-weight: 800;
   }
-  .message-row { display: flex; margin-bottom: 8px; }
+  .message-row { display: flex; margin-bottom: 6px; }
   .message-row.customer { justify-content: flex-start; }
   .message-row.ai, .message-row.human, .message-row.system { justify-content: flex-end; }
   .bubble {
-    max-width: min(650px, 70%);
-    padding: 9px 11px;
+    max-width: min(480px, 62%);
+    padding: 10px 13px;
     border-radius: 18px;
     border: 1px solid rgba(255,255,255,.72);
     box-shadow: 0 10px 22px rgba(26,45,51,.07);
@@ -1342,10 +1334,10 @@ const styles = `
   .message-row.human .bubble { color: #fff; background: linear-gradient(145deg, #277e8a, #1b6075); border-bottom-left-radius: 7px; }
   .message-row.ai .bubble { color: var(--j-ink); background: #fff; border-color: rgba(0,95,93,.09); border-bottom-left-radius: 7px; }
   .message-row.system .bubble { color: #745718; background: #fff8e7; }
-  .bubble header { display: flex; align-items: center; gap: 5px; opacity: .72; margin-bottom: 4px; font-size: 10px; font-weight: 800; }
-  .bubble p { margin: 0; white-space: pre-wrap; line-height: 1.56; font-size: 13px; font-weight: 600; }
-  .bubble small, .bubble time { display: block; margin-top: 5px; color: currentColor; opacity: .62; font-size: 9.5px; font-weight: 700; }
-  .image-link { display: inline-block; margin-top: 6px; color: var(--j-green); font-size: 11px; font-weight: 800; }
+  .bubble header { display: flex; align-items: center; gap: 5px; opacity: .72; margin-bottom: 5px; font-size: 12px; font-weight: 800; }
+  .bubble p { margin: 0; white-space: pre-wrap; line-height: 1.7; font-size: 16px; font-weight: 600; }
+  .bubble small, .bubble time { display: block; margin-top: 6px; color: currentColor; opacity: .62; font-size: 11px; font-weight: 700; }
+  .image-link { display: inline-block; margin-top: 6px; color: var(--j-green); font-size: 12px; font-weight: 800; }
   .message-row.customer .image-link, .message-row.human .image-link { color: #fff4bd; }
 
   .composer {
@@ -1353,45 +1345,29 @@ const styles = `
     z-index: 2;
     min-height: 0;
     border-top: 1px solid var(--j-line);
-    padding: 6px 7px;
+    padding: 8px 10px;
     background: rgba(255,255,255,.89);
-    display: grid;
-    grid-template-rows: 25px 38px;
-    gap: 5px;
+    display: flex;
+    align-items: center;
   }
-  .quick-row { display: flex; gap: 5px; overflow: auto; min-width: 0; padding-bottom: 1px; }
-  .quick-row button {
-    flex: 0 0 auto;
-    max-width: 330px;
-    border: 1px solid rgba(0,95,93,.10);
-    background: #fff;
-    color: var(--j-ink);
-    border-radius: 999px;
-    padding: 0 10px;
-    font-size: 10px;
-    font-weight: 700;
-    cursor: pointer;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .composer-row { display: grid; grid-template-columns: 38px minmax(0, 1fr) 68px; gap: 6px; }
+  .composer-row { display: grid; grid-template-columns: 44px minmax(0, 1fr) 78px; gap: 8px; width: 100%; }
   .composer-row textarea {
-    width: 100%; height: 38px; min-height: 38px; max-height: 74px;
+    width: 100%; height: 46px; min-height: 46px; max-height: 90px;
     resize: none; overflow: auto;
     border: 1px solid rgba(0,95,93,.14);
-    border-radius: 15px;
+    border-radius: 16px;
     background: #fff;
     color: var(--j-ink);
     outline: 0;
-    padding: 8px 11px;
-    font-size: 12.5px;
+    padding: 11px 14px;
+    font-size: 15px;
     font-weight: 600;
-    line-height: 1.42;
+    line-height: 1.45;
+    font-family: inherit;
   }
   .composer-row textarea:focus { border-color: rgba(201,154,58,.60); box-shadow: 0 0 0 4px rgba(201,154,58,.10); }
-  .emoji-btn, .send-btn { height: 38px; border: 0; border-radius: 15px; font-size: 12.5px; font-weight: 800; cursor: pointer; }
-  .emoji-btn { background: #fff; border: 1px solid rgba(0,95,93,.12); }
+  .emoji-btn, .send-btn { height: 46px; border: 0; border-radius: 16px; font-size: 15px; font-weight: 800; cursor: pointer; font-family: inherit; }
+  .emoji-btn { background: #fff; border: 1px solid rgba(0,95,93,.12); font-size: 18px; }
   .send-btn { color: #fff; background: linear-gradient(135deg, var(--j-green), var(--j-green2)); }
   .send-btn:disabled { opacity: .48; cursor: not-allowed; }
   .emoji-tray {
@@ -1427,7 +1403,8 @@ const styles = `
   ::-webkit-scrollbar-thumb { background: rgba(0,95,93,.34); border-radius: 999px; border: 2px solid rgba(255,255,255,.62); }
 
   @media (max-width: 1380px) {
-    .desk-grid, .desk-grid.show-details { grid-template-columns: 300px minmax(0, 1fr); }
+    .desk-grid, .desk-grid.show-details { grid-template-columns: 340px minmax(0, 1fr); }
+    .desk-top { grid-template-columns: 340px minmax(260px, 1fr) auto; }
     .details-panel { display: none !important; }
     .chat-user h2 { max-width: 28vw; }
     .brand-mini::after { display: none; }
