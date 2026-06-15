@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-// Jothrah Admin Conversations V98 - customer name fix + closable customer file drawer
+// Jothrah Admin Conversations V99 - real customer name labels + clean specialist request previews
 
 type Conversation = Record<string, any>;
 type ChatMessage = Record<string, any>;
@@ -107,6 +107,63 @@ function getCustomerSessionCode(conversation?: Conversation | null) {
   return code.length > 16 ? `${code.slice(0, 8)}…${code.slice(-6)}` : code;
 }
 
+function getCleanCustomerNameOrVisitor(conversation?: Conversation | null) {
+  const name = getCustomerName(conversation);
+  return name === "زائر بدون اسم" ? "زائر" : name;
+}
+
+function cleanMessageText(value?: unknown) {
+  let text = String(value || "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!text) return "";
+
+  const prefixes = [
+    /^رسالة\s+إضافية\s+لطلب\s+مختص\s*[:：\-–—]\s*/i,
+    /^رساله\s+اضافيه\s+لطلب\s+مختص\s*[:：\-–—]\s*/i,
+    /^طلب\s+تواصل\s+بشري\s*[:：\-–—]\s*/i,
+    /^طلب\s+مختص\s*[:：\-–—]\s*/i,
+  ];
+
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const prefix of prefixes) {
+      const next = text.replace(prefix, "").trim();
+      if (next !== text) {
+        text = next;
+        changed = true;
+      }
+    }
+  }
+
+  return text;
+}
+
+function displayMessageText(message: ChatMessage, conversation?: Conversation | null) {
+  let text = cleanMessageText(message.message);
+  const name = getCleanCustomerNameOrVisitor(conversation);
+
+  if (name !== "زائر") {
+    text = text
+      .replace(/^العميل\s+ينتظر/, `${name} ينتظر`)
+      .replace(/^العميل\s+طلب/, `${name} طلب`)
+      .replace(/^رسالة\s+من\s+العميل\s*[:：\-–—]\s*/i, "");
+  } else {
+    text = text
+      .replace(/^العميل\s+ينتظر/, "الزائر ينتظر")
+      .replace(/^العميل\s+طلب/, "الزائر طلب")
+      .replace(/^رسالة\s+من\s+العميل\s*[:：\-–—]\s*/i, "");
+  }
+
+  return text.trim();
+}
+
+function typingLabel(conversation?: Conversation | null) {
+  return `${getCleanCustomerNameOrVisitor(conversation)} يكتب الآن…`;
+}
+
 function statusLabel(conversation?: Conversation | null) {
   const status = conversation?.status;
 
@@ -126,8 +183,8 @@ function statusTone(conversation?: Conversation | null) {
   return "ai";
 }
 
-function senderLabel(message: ChatMessage) {
-  if (message.sender_type === "customer") return "العميل";
+function senderLabel(message: ChatMessage, conversation?: Conversation | null) {
+  if (message.sender_type === "customer") return getCleanCustomerNameOrVisitor(conversation);
   if (message.sender_type === "human") return "مختص جذرة";
   if (message.sender_type === "ai") return "مساعد جذرة";
   return "النظام";
@@ -744,8 +801,8 @@ export default function AdminConversationsClient({ initialData }: Props) {
                       </span>
                       <span className="conversation-preview">
                         {conversation.id === typingConversationId && Date.now() < typingUntil
-                          ? "العميل يكتب الآن…"
-                          : conversation.last_message || "بدون رسالة"}
+                          ? typingLabel(conversation)
+                          : cleanMessageText(conversation.last_message) || "بدون رسالة"}
                       </span>
                       <span className="conversation-meta">
                         <small className={`mini-pill ${tone}`}>
@@ -838,9 +895,11 @@ export default function AdminConversationsClient({ initialData }: Props) {
                           <article className="bubble">
                             <header>
                               <span>{senderIcon(message)}</span>
-                              <b>{senderLabel(message)}</b>
+                              <b>{senderLabel(message, selectedConversation)}</b>
                             </header>
-                            {message.message ? <p>{message.message}</p> : null}
+                            {displayMessageText(message, selectedConversation) ? (
+                              <p>{displayMessageText(message, selectedConversation)}</p>
+                            ) : null}
                             {message.image_url ? (
                               <a
                                 href={message.image_url}
@@ -868,7 +927,7 @@ export default function AdminConversationsClient({ initialData }: Props) {
                     <span />
                     <span />
                     <span />
-                    <b>العميل يكتب الآن…</b>
+                    <b>{typingLabel(selectedConversation)}</b>
                   </div>
                 ) : null}
                 <div ref={messagesEndRef} />
