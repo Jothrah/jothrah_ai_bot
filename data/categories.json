@@ -1,0 +1,107 @@
+[
+  {
+    "key": "cockroach",
+    "title": {
+      "ar": "مبيدات الصراصير",
+      "en": "Cockroach Control"
+    },
+    "keywords": {
+      "ar": ["صراصير", "صرصور", "جل صراصير", "حشرات زاحفة", "مطبخ", "حمام"],
+      "en": ["cockroaches", "roaches", "cockroach gel", "crawling insects", "kitchen", "bathroom"]
+    },
+    "url": {
+      "ar": "https://jothrah.com/ar/Cockroach/c1234017296",
+      "en": "https://jothrah.com/ar/Cockroach/c1234017296"
+    }
+  },
+  {
+    "key": "mosquito_fly",
+    "title": {
+      "ar": "البعوض والذباب",
+      "en": "Mosquitoes and Flies"
+    },
+    "keywords": {
+      "ar": ["بعوض", "ناموس", "ذباب", "حشرات طائرة", "حوش", "حديقة"],
+      "en": ["mosquitoes", "flies", "flying insects", "yard", "garden"]
+    },
+    "url": {
+      "ar": "https://jothrah.com/",
+      "en": "https://jothrah.com/"
+    }
+  },
+  {
+    "key": "ants",
+    "title": {
+      "ar": "النمل والحشرات الزاحفة",
+      "en": "Ants and Crawling Insects"
+    },
+    "keywords": {
+      "ar": ["نمل", "حشرات زاحفة", "زوايا", "شقوق", "مطبخ"],
+      "en": ["ants", "crawling insects", "corners", "cracks", "kitchen"]
+    },
+    "url": {
+      "ar": "https://jothrah.com/",
+      "en": "https://jothrah.com/"
+    }
+  },
+  {
+    "key": "plant_disease",
+    "title": {
+      "ar": "المبيدات الفطرية وأمراض النبات",
+      "en": "Fungicides and Plant Diseases"
+    },
+    "keywords": {
+      "ar": ["فطريات", "بقع", "تبقع", "عفن", "بياض دقيقي", "مرض نبات"],
+      "en": ["fungus", "fungal disease", "leaf spots", "mildew", "rot", "plant disease"]
+    },
+    "url": {
+      "ar": "https://jothrah.com/",
+      "en": "https://jothrah.com/"
+    }
+  },
+  {
+    "key": "agri_insects",
+    "title": {
+      "ar": "المبيدات الزراعية للحشرات",
+      "en": "Agricultural Insecticides"
+    },
+    "keywords": {
+      "ar": ["من", "ذبابة بيضاء", "تربس", "أكاروس", "حشرات نبات"],
+      "en": ["aphids", "whiteflies", "thrips", "mites", "plant insects"]
+    },
+    "url": {
+      "ar": "https://jothrah.com/",
+      "en": "https://jothrah.com/"
+    }
+  },
+  {
+    "key": "fertilizers",
+    "title": {
+      "ar": "الأسمدة والتربة",
+      "en": "Fertilizers and Soil"
+    },
+    "keywords": {
+      "ar": ["سماد", "اصفرار", "ضعف نمو", "تربة", "نقص عناصر", "ري"],
+      "en": ["fertilizer", "yellowing", "weak growth", "soil", "nutrient deficiency", "watering"]
+    },
+    "url": {
+      "ar": "https://jothrah.com/",
+      "en": "https://jothrah.com/"
+    }
+  },
+  {
+    "key": "seeds",
+    "title": {
+      "ar": "البذور ومستلزمات الزراعة",
+      "en": "Seeds and Growing Supplies"
+    },
+    "keywords": {
+      "ar": ["بذور", "زراعة", "شتلات", "موسم زراعة", "تربة زراعية"],
+      "en": ["seeds", "planting", "seedlings", "growing season", "potting soil"]
+    },
+    "url": {
+      "ar": "https://jothrah.com/",
+      "en": "https://jothrah.com/"
+    }
+  }
+]

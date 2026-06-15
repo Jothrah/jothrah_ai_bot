@@ -1,0 +1,100 @@
+﻿{
+  "key": "",
+  "domain": "",
+  "group": {
+    "ar": "",
+    "en": ""
+  },
+  "name": {
+    "ar": "",
+    "en": ""
+  },
+  "scientific_notes": {
+    "type": {
+      "ar": "",
+      "en": ""
+    },
+    "risk_level": {
+      "ar": "",
+      "en": ""
+    },
+    "activity_pattern": {
+      "ar": "",
+      "en": ""
+    },
+    "seasonality_saudi": {
+      "ar": [],
+      "en": []
+    }
+  },
+  "aliases": {
+    "ar": [],
+    "en": []
+  },
+  "customer_keywords": {
+    "ar": [],
+    "en": []
+  },
+  "quick_summary": {
+    "ar": "",
+    "en": ""
+  },
+  "common_places": {
+    "ar": [],
+    "en": []
+  },
+  "signs": {
+    "ar": [],
+    "en": []
+  },
+  "likely_causes": {
+    "ar": [],
+    "en": []
+  },
+  "spread_factors": {
+    "ar": [],
+    "en": []
+  },
+  "diagnostic_questions": {
+    "ar": [],
+    "en": []
+  },
+  "inspection_steps": {
+    "ar": [],
+    "en": []
+  },
+  "prevention": {
+    "ar": [],
+    "en": []
+  },
+  "short_advice": {
+    "ar": [],
+    "en": []
+  },
+  "solution_logic": {
+    "ar": [],
+    "en": []
+  },
+  "when_to_escalate": {
+    "ar": [],
+    "en": []
+  },
+  "safety_notes": {
+    "ar": [],
+    "en": []
+  },
+  "wrong_practices_to_avoid": {
+    "ar": [],
+    "en": []
+  },
+  "related_categories": [],
+  "related_products_later": [],
+  "response_policy": {
+    "max_advice_points": 3,
+    "max_questions": 2,
+    "ask_questions_only_when_needed": true,
+    "avoid_long_explanations": true,
+    "do_not_recommend_product_yet": true,
+    "always_include_safety_when_pesticide": true
+  }
+}

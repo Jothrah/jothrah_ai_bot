@@ -1,0 +1,100 @@
+{
+  "key": "cockroaches",
+  "domain": "public_health",
+  "group": {
+    "ar": "آفات الصحة العامة",
+    "en": "Public Health Pests"
+  },
+  "name": {
+    "ar": "الصراصير",
+    "en": "Cockroaches"
+  },
+  "scientific_notes": {
+    "type": {
+      "ar": "حشرة زاحفة ليلية ترتبط غالبًا بالرطوبة وبقايا الطعام ومناطق الاختباء الضيقة.",
+      "en": "A nocturnal crawling insect commonly associated with moisture, food residues, and tight hiding areas."
+    },
+    "risk_level": {
+      "ar": "متوسط إلى مرتفع حسب شدة الإصابة ومكانها، خصوصًا في المطابخ ومناطق تحضير الطعام.",
+      "en": "Moderate to high depending on infestation level and location, especially in kitchens and food-preparation areas."
+    },
+    "activity_pattern": {
+      "ar": "تنشط غالبًا ليلًا، وظهورها نهارًا قد يدل على إصابة أعلى أو ازدحام في أماكن الاختباء.",
+      "en": "Mostly active at night; daytime sightings may indicate higher infestation pressure or overcrowded hiding sites."
+    },
+    "seasonality_saudi": {
+      "ar": ["تزداد مع الحرارة والرطوبة", "تنشط غالبًا من الربيع إلى الخريف", "تبلغ ذروتها في أشهر الصيف"],
+      "en": ["Increases with heat and humidity", "Commonly active from spring to autumn", "Often peaks during summer months"]
+    }
+  },
+  "aliases": {
+    "ar": ["صرصور", "صراصير", "صراصير المطبخ", "صراصير الحمام", "حشرات زاحفة"],
+    "en": ["cockroach", "roaches", "kitchen roaches", "bathroom roaches", "crawling insects"]
+  },
+  "customer_keywords": {
+    "ar": ["صراصير", "صرصور", "مطبخ", "حمام", "فتحات الصرف", "حشرات تطلع بالليل", "صراصير صغيرة", "جل صراصير", "رائحة صراصير"],
+    "en": ["cockroaches", "roaches", "kitchen", "bathroom", "drains", "night insects", "small cockroaches", "cockroach gel", "roach smell"]
+  },
+  "quick_summary": {
+    "ar": "الصراصير تظهر غالبًا في الأماكن الدافئة والرطبة مثل المطابخ والحمامات وفتحات الصرف. وجود صراصير صغيرة قد يدل على تكاثر داخل المكان، وليس مجرد دخول حشرة عابرة.",
+    "en": "Cockroaches are commonly found in warm, moist areas such as kitchens, bathrooms, and drains. Seeing small roaches may indicate indoor breeding rather than a single occasional insect."
+  },
+  "common_places": {
+    "ar": ["المطابخ", "الحمامات", "فتحات الصرف", "خلف الثلاجة", "تحت الأحواض", "خلف الدواليب", "داخل الشقوق والزوايا الرطبة", "أماكن تخزين الكراتين"],
+    "en": ["Kitchens", "Bathrooms", "Drains", "Behind refrigerators", "Under sinks", "Behind cabinets", "Cracks and moist corners", "Cardboard storage areas"]
+  },
+  "signs": {
+    "ar": ["ظهور الصراصير ليلًا", "وجود صراصير صغيرة", "وجود فضلات صغيرة داكنة", "رائحة مزعجة في الأماكن المغلقة", "ظهور الصراصير قرب فتحات الصرف", "مشاهدة صراصير خلف الأجهزة"],
+    "en": ["Nighttime sightings", "Small roaches present", "Small dark droppings", "Unpleasant odor in closed areas", "Roaches near drains", "Roaches behind appliances"]
+  },
+  "likely_causes": {
+    "ar": ["بقايا الطعام المكشوفة", "الرطوبة", "فتحات الصرف غير المحكمة", "الشقوق الصغيرة", "تراكم الكراتين أو المخلفات", "ضعف التنظيف خلف الأجهزة", "تسربات ماء بسيطة"],
+    "en": ["Exposed food residues", "Moisture", "Unsealed drains", "Small cracks", "Cardboard or waste accumulation", "Poor cleaning behind appliances", "Minor water leaks"]
+  },
+  "spread_factors": {
+    "ar": ["توفر الطعام والماء", "كثرة أماكن الاختباء", "الحرارة", "الرطوبة", "عدم سد الشقوق", "تراكم الكراتين"],
+    "en": ["Food and water availability", "Many hiding places", "Heat", "Humidity", "Unsealed cracks", "Cardboard accumulation"]
+  },
+  "diagnostic_questions": {
+    "ar": ["هل تظهر الصراصير في المطبخ أو الحمام؟", "هل تظهر ليلًا أكثر من النهار؟", "هل تشاهد صراصير صغيرة؟", "هل الإصابة في مكان واحد أو أكثر من مكان؟", "هل يوجد أطفال أو حيوانات أليفة في المكان؟"],
+    "en": ["Are the roaches appearing in the kitchen or bathroom?", "Are they more visible at night?", "Do you see small roaches?", "Is the issue in one area or multiple areas?", "Are there children or pets in the area?"]
+  },
+  "inspection_steps": {
+    "ar": ["افحص خلف الثلاجة والفرن", "افحص تحت الحوض وحول السيفون", "افحص فتحات الصرف", "افحص الزوايا الرطبة", "افحص الكراتين القديمة وأماكن التخزين"],
+    "en": ["Inspect behind the refrigerator and oven", "Check under sinks and around plumbing", "Inspect drains", "Check moist corners", "Inspect old cardboard and storage areas"]
+  },
+  "prevention": {
+    "ar": ["تنظيف بقايا الطعام يوميًا", "تجفيف المناطق الرطبة", "إغلاق الشقوق الصغيرة", "إحكام فتحات الصرف", "التخلص من الكراتين القديمة", "تنظيف خلف الأجهزة بشكل دوري"],
+    "en": ["Clean food residues daily", "Dry moist areas", "Seal small cracks", "Secure drain openings", "Remove old cardboard", "Clean behind appliances regularly"]
+  },
+  "short_advice": {
+    "ar": ["نظّف الزوايا والمناطق الرطبة.", "لا تترك بقايا الطعام مكشوفة.", "أغلق فتحات الصرف والشقوق الصغيرة."],
+    "en": ["Clean corners and moist areas.", "Do not leave food residues exposed.", "Seal drains and small cracks."]
+  },
+  "solution_logic": {
+    "ar": ["إذا كانت الإصابة محدودة داخل المطبخ أو الحمام، يمكن توجيه العميل إلى تصنيف مبيدات الصراصير.", "إذا كانت الإصابة منتشرة في أكثر من مكان، اطلب تفاصيل إضافية قبل الترشيح.", "إذا ذكر العميل أطفالًا أو حيوانات أو حساسية أو رائحة قوية، يتم التحويل إلى واتساب.", "لا يتم إعطاء نسب خلط أو جرعات إلا إذا كانت مكتوبة في بيانات منتج محدد."],
+    "en": ["If the issue is limited to a kitchen or bathroom, guide the customer to the cockroach-control category.", "If the infestation is spread across multiple areas, ask for more details before recommending.", "If the customer mentions children, pets, allergy, or strong odor, route to WhatsApp.", "Do not provide mixing rates or doses unless they are explicitly listed in a specific product record."]
+  },
+  "when_to_escalate": {
+    "ar": ["وجود أطفال أو حيوانات أليفة", "وجود حساسية أو ربو", "انتشار الصراصير في أكثر من غرفة", "ظهور صراصير كثيرة نهارًا", "وجود رائحة قوية أو رش سابق غير واضح"],
+    "en": ["Children or pets are present", "Allergy or asthma is mentioned", "Roaches are spread across multiple rooms", "Many roaches are seen during daytime", "Strong odor or unclear previous spraying is mentioned"]
+  },
+  "safety_notes": {
+    "ar": ["اقرأ ملصق العبوة جيدًا قبل استخدام أي مبيد.", "لا تستخدم المبيد قرب الطعام أو أدوات الطبخ.", "أبعد الأطفال والحيوانات أثناء الاستخدام.", "هوِّ المكان حسب تعليمات المنتج.", "احفظ المبيدات بعيدًا عن متناول الأطفال."],
+    "en": ["Read the product label carefully before using any pesticide.", "Do not apply pesticides near food or kitchen utensils.", "Keep children and pets away during application.", "Ventilate the area according to product instructions.", "Store pesticides out of children’s reach."]
+  },
+  "wrong_practices_to_avoid": {
+    "ar": ["رش عشوائي بدون تحديد أماكن النشاط", "خلط أكثر من مبيد بدون إرشاد", "الرش فوق الطعام أو أدوات الطبخ", "استخدام جرعة أعلى من المكتوبة", "ترك الرطوبة وبقايا الطعام بعد المكافحة"],
+    "en": ["Random spraying without identifying active areas", "Mixing multiple pesticides without guidance", "Spraying over food or utensils", "Using a higher dose than stated", "Leaving moisture and food residues after treatment"]
+  },
+  "related_categories": ["cockroach", "public_health"],
+  "related_products_later": [],
+  "response_policy": {
+    "max_advice_points": 3,
+    "max_questions": 2,
+    "ask_questions_only_when_needed": true,
+    "avoid_long_explanations": true,
+    "do_not_recommend_product_yet": true,
+    "always_include_safety_when_pesticide": true
+  }
+}

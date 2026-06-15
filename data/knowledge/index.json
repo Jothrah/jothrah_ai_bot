@@ -1,0 +1,55 @@
+{
+  "version": "1.0.0",
+  "default_language": "ar",
+  "supported_languages": ["ar", "en"],
+  "knowledge_groups": [
+    {
+      "key": "public_health",
+      "title": {
+        "ar": "آفات الصحة العامة",
+        "en": "Public Health Pests"
+      },
+      "path": "data/knowledge/public-health"
+    },
+    {
+      "key": "agriculture_pests",
+      "title": {
+        "ar": "الآفات الزراعية",
+        "en": "Agricultural Pests"
+      },
+      "path": "data/knowledge/agriculture-pests"
+    },
+    {
+      "key": "plant_diseases",
+      "title": {
+        "ar": "أمراض النبات",
+        "en": "Plant Diseases"
+      },
+      "path": "data/knowledge/plant-diseases"
+    },
+    {
+      "key": "nutrition",
+      "title": {
+        "ar": "التغذية والتربة",
+        "en": "Nutrition and Soil"
+      },
+      "path": "data/knowledge/nutrition"
+    },
+    {
+      "key": "safety",
+      "title": {
+        "ar": "السلامة واستخدام المبيدات",
+        "en": "Pesticide Safety"
+      },
+      "path": "data/knowledge/safety"
+    },
+    {
+      "key": "seasonal",
+      "title": {
+        "ar": "الدليل الموسمي في السعودية",
+        "en": "Saudi Seasonal Guide"
+      },
+      "path": "data/knowledge/seasonal"
+    }
+  ]
+}
