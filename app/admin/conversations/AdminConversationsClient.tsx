@@ -23,7 +23,7 @@ const QUICK_REPLIES = [
   "تم استلام رسالتك، أراجع التفاصيل وأرد عليك الآن.",
   "وش نوع النبات؟ وكم عمر المشكلة تقريبًا؟",
   "هل المشكلة داخل البيت أو في الحوش/المزرعة؟",
-  "اتبع تعليمات ملصق المنتج دائمًا ولا تستخدم أي مبيد قرب الأطفال أو الحيوانات أو الطعام.",
+  "اتبع تعليمات ملصق المنتج دائمًا ولا تستخدم أي مبيد قرب الأطفال أو الحيوانات أو الطعام."
 ];
 
 function formatDateTime(value?: string) {
@@ -33,7 +33,7 @@ function formatDateTime(value?: string) {
     return new Intl.DateTimeFormat("ar-SA", {
       dateStyle: "medium",
       timeStyle: "short",
-      timeZone: "Asia/Riyadh",
+      timeZone: "Asia/Riyadh"
     }).format(new Date(value));
   } catch {
     return value;
@@ -47,7 +47,7 @@ function formatTime(value?: string) {
     return new Intl.DateTimeFormat("ar-SA", {
       hour: "numeric",
       minute: "2-digit",
-      timeZone: "Asia/Riyadh",
+      timeZone: "Asia/Riyadh"
     }).format(new Date(value));
   } catch {
     return value;
@@ -60,7 +60,7 @@ function formatDay(value?: string) {
   try {
     return new Intl.DateTimeFormat("ar-SA", {
       dateStyle: "full",
-      timeZone: "Asia/Riyadh",
+      timeZone: "Asia/Riyadh"
     }).format(new Date(value));
   } catch {
     return value.slice(0, 10);
@@ -80,8 +80,7 @@ function getCustomerName(conversation?: Conversation | null) {
 function statusLabel(conversation?: Conversation | null) {
   const status = conversation?.status;
 
-  if (status === "needs_human" || conversation?.needs_human)
-    return "بانتظار مختص";
+  if (status === "needs_human" || conversation?.needs_human) return "بانتظار مختص";
   if (status === "human_replied") return "تم الرد";
   if (status === "closed") return "مغلقة";
   return "ذكاء صناعي";
@@ -125,7 +124,7 @@ function conversationMatches(conversation: Conversation, query: string) {
     conversation.visitor_id,
     conversation.last_message,
     conversation.status,
-    conversation.language,
+    conversation.language
   ]
     .filter(Boolean)
     .join(" ")
@@ -136,66 +135,64 @@ function conversationMatches(conversation: Conversation, query: string) {
 
 function playLuxuryNotify() {
   try {
-    const AudioContextCtor =
-      window.AudioContext || (window as any).webkitAudioContext;
+    const AudioContextCtor = window.AudioContext || (window as any).webkitAudioContext;
     if (!AudioContextCtor) return;
 
     const ctx = new AudioContextCtor();
     const gain = ctx.createGain();
     const o1 = ctx.createOscillator();
     const o2 = ctx.createOscillator();
+    const o3 = ctx.createOscillator();
 
     o1.type = "sine";
     o2.type = "triangle";
-    o1.frequency.setValueAtTime(659, ctx.currentTime);
-    o2.frequency.setValueAtTime(880, ctx.currentTime + 0.07);
+    o3.type = "sine";
+
+    o1.frequency.setValueAtTime(587, ctx.currentTime);
+    o2.frequency.setValueAtTime(784, ctx.currentTime + 0.055);
+    o3.frequency.setValueAtTime(1046, ctx.currentTime + 0.11);
 
     gain.gain.setValueAtTime(0.0001, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.09, ctx.currentTime + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.3);
+    gain.gain.exponentialRampToValueAtTime(0.105, ctx.currentTime + 0.024);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.34);
 
     o1.connect(gain);
     o2.connect(gain);
+    o3.connect(gain);
     gain.connect(ctx.destination);
 
     o1.start(ctx.currentTime);
-    o1.stop(ctx.currentTime + 0.14);
-    o2.start(ctx.currentTime + 0.08);
-    o2.stop(ctx.currentTime + 0.3);
+    o1.stop(ctx.currentTime + 0.13);
+    o2.start(ctx.currentTime + 0.07);
+    o2.stop(ctx.currentTime + 0.22);
+    o3.start(ctx.currentTime + 0.14);
+    o3.stop(ctx.currentTime + 0.34);
 
-    setTimeout(() => ctx.close?.(), 480);
+    setTimeout(() => ctx.close?.(), 520);
   } catch {}
 }
 
 export default function AdminConversationsClient({ initialData }: Props) {
-  const [conversations, setConversations] = useState<Conversation[]>(
-    initialData.conversations || [],
-  );
-  const [selectedId, setSelectedId] = useState<string | null>(
-    initialData.selectedId || null,
-  );
-  const [selectedConversation, setSelectedConversation] =
-    useState<Conversation | null>(initialData.selectedConversation || null);
-  const [messages, setMessages] = useState<ChatMessage[]>(
-    initialData.messages || [],
-  );
+  const [conversations, setConversations] = useState<Conversation[]>(initialData.conversations || []);
+  const [selectedId, setSelectedId] = useState<string | null>(initialData.selectedId || null);
+  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(initialData.selectedConversation || null);
+  const [messages, setMessages] = useState<ChatMessage[]>(initialData.messages || []);
   const [reply, setReply] = useState("");
   const [loading, setLoading] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(false);
   const [emojiOpen, setEmojiOpen] = useState(false);
-  const [filter, setFilter] = useState<"all" | "waiting" | "open" | "closed">(
-    "all",
-  );
+  const [filter, setFilter] = useState<"all" | "waiting" | "open" | "closed">("all");
   const [query, setQuery] = useState("");
   const [toast, setToast] = useState("");
-  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [toastType, setToastType] = useState<"info" | "success" | "error">("info");
+  const [detailsOpen, setDetailsOpen] = useState(true);
+  const [newMsgIds, setNewMsgIds] = useState<Set<string>>(new Set());
+  const [animatedStats, setAnimatedStats] = useState({ total: 0, waiting: 0, unread: 0, closed: 0 });
+  const prevStatsRef = useRef({ total: 0, waiting: 0, unread: 0, closed: 0 });
 
   const lastSeenCustomerMessageId = useRef<string | null>(null);
   const lastTotalUnreadRef = useRef<number>(
-    (initialData.conversations || []).reduce(
-      (sum, item) => sum + (Number(item.unread_admin_count || 0) || 0),
-      0,
-    ),
+    (initialData.conversations || []).reduce((sum, item) => sum + (Number(item.unread_admin_count || 0) || 0), 0)
   );
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const selectedIdRef = useRef<string | null>(selectedId);
@@ -205,51 +202,68 @@ export default function AdminConversationsClient({ initialData }: Props) {
   }, [selectedId]);
 
   const stats = useMemo(() => {
-    const waiting = conversations.filter(
-      (item) => item.status === "needs_human" || item.needs_human,
-    ).length;
-    const unread = conversations.reduce(
-      (sum, item) => sum + (Number(item.unread_admin_count || 0) || 0),
-      0,
-    );
-    const closed = conversations.filter(
-      (item) => item.status === "closed",
-    ).length;
-    const open = conversations.filter(
-      (item) => item.status !== "closed",
-    ).length;
+    const waiting = conversations.filter((item) => item.status === "needs_human" || item.needs_human).length;
+    const unread = conversations.reduce((sum, item) => sum + (Number(item.unread_admin_count || 0) || 0), 0);
+    const closed = conversations.filter((item) => item.status === "closed").length;
+    const open = conversations.filter((item) => item.status !== "closed").length;
 
     return { waiting, unread, closed, open, total: conversations.length };
   }, [conversations]);
 
+  // Animate stat counters when values change
+  useEffect(() => {
+    const targets = { total: stats.total, waiting: stats.waiting, unread: stats.unread, closed: stats.closed };
+    const prev = prevStatsRef.current;
+    const keys = Object.keys(targets) as Array<keyof typeof targets>;
+    const changed = keys.some(k => targets[k] !== prev[k]);
+    if (!changed) return;
+
+    const start = { ...animatedStats };
+    const duration = 380;
+    const startTime = performance.now();
+
+    function step(now: number) {
+      const progress = Math.min((now - startTime) / duration, 1);
+      const ease = 1 - Math.pow(1 - progress, 3);
+      setAnimatedStats({
+        total: Math.round(start.total + (targets.total - start.total) * ease),
+        waiting: Math.round(start.waiting + (targets.waiting - start.waiting) * ease),
+        unread: Math.round(start.unread + (targets.unread - start.unread) * ease),
+        closed: Math.round(start.closed + (targets.closed - start.closed) * ease),
+      });
+      if (progress < 1) requestAnimationFrame(step);
+    }
+
+    requestAnimationFrame(step);
+    prevStatsRef.current = targets;
+  }, [stats]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const filteredConversations = useMemo(() => {
     let items = conversations;
 
-    if (filter === "waiting")
-      items = items.filter(
-        (item) => item.status === "needs_human" || item.needs_human,
-      );
-    if (filter === "open")
+    if (filter === "waiting") {
+      items = items.filter((item) => item.status === "needs_human" || item.needs_human);
+    }
+
+    if (filter === "open") {
       items = items.filter((item) => item.status !== "closed");
-    if (filter === "closed")
+    }
+
+    if (filter === "closed") {
       items = items.filter((item) => item.status === "closed");
-    if (query.trim())
-      items = items.filter((conversation) =>
-        conversationMatches(conversation, query),
-      );
+    }
+
+    if (query.trim()) {
+      items = items.filter((conversation) => conversationMatches(conversation, query));
+    }
 
     return items;
   }, [conversations, filter, query]);
 
   const scrollToBottom = useCallback(() => {
-    setTimeout(
-      () => messagesEndRef.current?.scrollIntoView({ block: "end" }),
-      25,
-    );
-    setTimeout(
-      () => messagesEndRef.current?.scrollIntoView({ block: "end" }),
-      130,
-    );
+    setTimeout(() => messagesEndRef.current?.scrollIntoView({ block: "end" }), 40);
+    setTimeout(() => messagesEndRef.current?.scrollIntoView({ block: "end" }), 160);
+    setTimeout(() => messagesEndRef.current?.scrollIntoView({ block: "end" }), 360);
   }, []);
 
   useEffect(() => {
@@ -257,73 +271,73 @@ export default function AdminConversationsClient({ initialData }: Props) {
   }, [messages, selectedId, scrollToBottom]);
 
   useEffect(() => {
-    document.title =
-      stats.waiting > 0 ? `(${stats.waiting}) محادثات جذرة` : "محادثات جذرة";
+    document.title = stats.waiting > 0 ? `(${stats.waiting}) محادثات جذرة` : "محادثات جذرة";
   }, [stats.waiting]);
 
-  const flashToast = useCallback((message: string) => {
+  const flashToast = useCallback((message: string, type: "info" | "success" | "error" = "info") => {
     setToast(message);
-    setTimeout(() => setToast(""), 2800);
+    setToastType(type);
+    setTimeout(() => setToast(""), 3200);
   }, []);
 
-  const refresh = useCallback(
-    async (options?: { silent?: boolean }) => {
-      const id = selectedIdRef.current;
-      const url = id
-        ? `/api/admin/conversations?id=${encodeURIComponent(id)}`
-        : "/api/admin/conversations";
+  const refresh = useCallback(async (options?: { silent?: boolean }) => {
+    const id = selectedIdRef.current;
+    const url = id ? `/api/admin/conversations?id=${encodeURIComponent(id)}` : "/api/admin/conversations";
 
-      try {
-        const res = await fetch(url, { cache: "no-store" });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data?.error || "تعذر تحديث المحادثات");
+    try {
+      const res = await fetch(url, { cache: "no-store" });
+      const data = await res.json();
 
-        const nextConversations = data.conversations || [];
-        const nextMessages = data.messages || [];
-        const nextSelected = data.selectedConversation || null;
-        const nextTotalUnread = nextConversations.reduce(
-          (sum: number, item: Conversation) =>
-            sum + (Number(item.unread_admin_count || 0) || 0),
-          0,
-        );
-        const newestCustomer = [...nextMessages]
-          .reverse()
-          .find((msg) => msg.sender_type === "customer");
-        const selectedHasNewCustomer =
-          Boolean(newestCustomer?.id) &&
-          Boolean(lastSeenCustomerMessageId.current) &&
-          newestCustomer.id !== lastSeenCustomerMessageId.current;
-        const hasNewUnread = nextTotalUnread > lastTotalUnreadRef.current;
+      if (!res.ok) throw new Error(data?.error || "تعذر تحديث المحادثات");
 
-        if (soundEnabled && (selectedHasNewCustomer || hasNewUnread)) {
-          playLuxuryNotify();
-          flashToast("رسالة جديدة وصلت ✨");
-        }
+      const nextConversations = data.conversations || [];
+      const nextMessages = data.messages || [];
+      const nextSelected = data.selectedConversation || null;
+      const nextTotalUnread = nextConversations.reduce(
+        (sum: number, item: Conversation) => sum + (Number(item.unread_admin_count || 0) || 0),
+        0
+      );
+      const newestCustomer = [...nextMessages].reverse().find((msg) => msg.sender_type === "customer");
+      const selectedHasNewCustomer =
+        Boolean(newestCustomer?.id) &&
+        Boolean(lastSeenCustomerMessageId.current) &&
+        newestCustomer.id !== lastSeenCustomerMessageId.current;
+      const hasNewUnread = nextTotalUnread > lastTotalUnreadRef.current;
 
-        if (newestCustomer?.id)
-          lastSeenCustomerMessageId.current = newestCustomer.id;
-        lastTotalUnreadRef.current = nextTotalUnread;
-
-        setConversations(nextConversations);
-        setSelectedConversation(nextSelected);
-        setMessages(nextMessages);
-        scrollToBottom();
-      } catch (error) {
-        if (!options?.silent)
-          flashToast(
-            error instanceof Error ? error.message : "حدث خطأ أثناء التحديث",
-          );
+      if (soundEnabled && (selectedHasNewCustomer || hasNewUnread)) {
+        playLuxuryNotify();
+        flashToast("وصلت رسالة جديدة من عميل ✨", "success");
       }
-    },
-    [flashToast, scrollToBottom, soundEnabled],
-  );
+
+      if (newestCustomer?.id) {
+        lastSeenCustomerMessageId.current = newestCustomer.id;
+      }
+      lastTotalUnreadRef.current = nextTotalUnread;
+
+      setConversations(nextConversations);
+      setSelectedConversation(nextSelected);
+      // Track new messages for entrance animation
+      setMessages(prev => {
+        const prevIds = new Set(prev.map((m: ChatMessage) => String(m.id)));
+        const incoming = nextMessages.filter((m: ChatMessage) => !prevIds.has(String(m.id)));
+        if (incoming.length > 0) {
+          const newIds = new Set<string>(incoming.map((m: ChatMessage) => String(m.id)));
+          setNewMsgIds(newIds);
+          setTimeout(() => setNewMsgIds(new Set<string>()), 700);
+        }
+        return nextMessages;
+      });
+      scrollToBottom();
+    } catch (error) {
+      if (!options?.silent) {
+        flashToast(error instanceof Error ? error.message : "حدث خطأ أثناء التحديث", "error");
+      }
+    }
+  }, [flashToast, scrollToBottom, soundEnabled]);
 
   useEffect(() => {
-    const newestCustomer = [...messages]
-      .reverse()
-      .find((msg) => msg.sender_type === "customer");
-    if (newestCustomer?.id)
-      lastSeenCustomerMessageId.current = newestCustomer.id;
+    const newestCustomer = [...messages].reverse().find((msg) => msg.sender_type === "customer");
+    if (newestCustomer?.id) lastSeenCustomerMessageId.current = newestCustomer.id;
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -336,24 +350,17 @@ export default function AdminConversationsClient({ initialData }: Props) {
     window.history.replaceState(null, "", `/admin/conversations?id=${id}`);
 
     try {
-      const res = await fetch(
-        `/api/admin/conversations?id=${encodeURIComponent(id)}`,
-        { cache: "no-store" },
-      );
+      const res = await fetch(`/api/admin/conversations?id=${encodeURIComponent(id)}`, { cache: "no-store" });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "تعذر فتح المحادثة");
       setConversations(data.conversations || []);
       setSelectedConversation(data.selectedConversation || null);
       setMessages(data.messages || []);
-      const newestCustomer = [...(data.messages || [])]
-        .reverse()
-        .find((msg: ChatMessage) => msg.sender_type === "customer");
-      if (newestCustomer?.id)
-        lastSeenCustomerMessageId.current = newestCustomer.id;
+      const newestCustomer = [...(data.messages || [])].reverse().find((msg: ChatMessage) => msg.sender_type === "customer");
+      if (newestCustomer?.id) lastSeenCustomerMessageId.current = newestCustomer.id;
       lastTotalUnreadRef.current = (data.conversations || []).reduce(
-        (sum: number, item: Conversation) =>
-          sum + (Number(item.unread_admin_count || 0) || 0),
-        0,
+        (sum: number, item: Conversation) => sum + (Number(item.unread_admin_count || 0) || 0),
+        0
       );
       scrollToBottom();
     } catch (error) {
@@ -366,20 +373,22 @@ export default function AdminConversationsClient({ initialData }: Props) {
     if (!selectedId || !message || loading) return;
 
     setLoading(true);
+
     try {
       const res = await fetch(`/api/admin/conversations/${selectedId}/reply`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message }),
+        body: JSON.stringify({ message })
       });
       const data = await res.json().catch(() => ({}));
+
       if (!res.ok) throw new Error(data?.error || "تعذر إرسال الرد");
 
       setReply("");
       setEmojiOpen(false);
       await refresh({ silent: true });
     } catch (error) {
-      flashToast(error instanceof Error ? error.message : "تعذر إرسال الرد");
+      flashToast(error instanceof Error ? error.message : "تعذر إرسال الرد", "error");
     } finally {
       setLoading(false);
     }
@@ -390,20 +399,19 @@ export default function AdminConversationsClient({ initialData }: Props) {
     if (!confirm("إنهاء المحادثة؟ سيظهر للعميل طلب تقييم الخدمة.")) return;
 
     setLoading(true);
+
     try {
       const res = await fetch(`/api/admin/conversations/${selectedId}/close`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
+        body: JSON.stringify({})
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "تعذر إنهاء المحادثة");
-      flashToast("تم إنهاء المحادثة وإرسال التقييم للعميل ✅");
+      flashToast("تم إنهاء المحادثة وإرسال التقييم للعميل ✅", "success");
       await refresh({ silent: true });
     } catch (error) {
-      flashToast(
-        error instanceof Error ? error.message : "تعذر إنهاء المحادثة",
-      );
+      flashToast(error instanceof Error ? error.message : "تعذر إنهاء المحادثة", "error");
     } finally {
       setLoading(false);
     }
@@ -412,22 +420,20 @@ export default function AdminConversationsClient({ initialData }: Props) {
   async function deleteConversation() {
     if (!selectedId || loading) return;
     const name = getCustomerName(selectedConversation);
-    if (!confirm(`حذف ${name} نهائيًا من قاعدة البيانات؟ لا يمكن التراجع.`))
-      return;
+    if (!confirm(`حذف ${name} نهائيًا من قاعدة البيانات؟ لا يمكن التراجع.`)) return;
 
     setLoading(true);
+
     try {
-      const res = await fetch(`/api/admin/conversations/${selectedId}/delete`, {
-        method: "DELETE",
-      });
+      const res = await fetch(`/api/admin/conversations/${selectedId}/delete`, { method: "DELETE" });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "تعذر حذف المحادثة");
-      flashToast("تم حذف المحادثة نهائيًا 🗑️");
+      flashToast("تم حذف المحادثة نهائيًا 🗑️", "error");
       setSelectedId(null);
       window.history.replaceState(null, "", "/admin/conversations");
       await refresh({ silent: true });
     } catch (error) {
-      flashToast(error instanceof Error ? error.message : "تعذر حذف المحادثة");
+      flashToast(error instanceof Error ? error.message : "تعذر حذف المحادثة", "error");
     } finally {
       setLoading(false);
     }
@@ -446,154 +452,115 @@ export default function AdminConversationsClient({ initialData }: Props) {
       `الهاتف: ${selectedConversation.customer_phone || "غير متوفر"}`,
       `الإيميل: ${selectedConversation.customer_email || "غير متوفر"}`,
       `الرابط: ${selectedConversation.page_url || "غير متوفر"}`,
-      `آخر رسالة: ${formatDateTime(selectedConversation.last_message_at)}`,
+      `آخر رسالة: ${formatDateTime(selectedConversation.last_message_at)}`
     ].join("\n");
 
     navigator.clipboard?.writeText(text).then(
-      () => flashToast("تم نسخ بيانات المحادثة ✨"),
-      () => flashToast("تعذر النسخ من المتصفح"),
+      () => flashToast("تم نسخ بيانات المحادثة ✨", "success"),
+      () => flashToast("تعذر النسخ من المتصفح", "error")
     );
   }
 
   let lastDay = "";
 
   return (
-    <main className="jth-desk" dir="rtl">
-      <style jsx global>
-        {styles}
-      </style>
-      {toast ? <div className="jth-toast">{toast}</div> : null}
+    <main className="jth-admin-shell" dir="rtl">
+      <style jsx global>{styles}</style>
 
-      <header className="desk-top">
-        <div className="brand-mini">
-          <span className="brand-logo">ج</span>
+      {toast ? <div className={`jth-toast jth-toast--${toastType}`}>{toast}</div> : null}
+
+      <header className="jth-topbar">
+        <div className="jth-brand-card">
+          <div className="jth-brand-mark">ج</div>
           <div>
-            <b>محادثات جذرة</b>
-            <small>Client Care Suite</small>
+            <div className="jth-kicker">Jothrah Client Care Suite</div>
+            <h1>محادثات جذرة</h1>
+            <p>لوحة ناعمة لإدارة محادثات العملاء، الردود، الإنهاء، التقييم والتنبيهات.</p>
           </div>
         </div>
 
-        <div className="metric-strip" aria-label="إحصائيات المحادثات">
-          <span>
-            <b>{stats.total}</b> الكل
-          </span>
-          <span className={stats.waiting ? "warn" : ""}>
-            <b>{stats.waiting}</b> ينتظر
-          </span>
-          <span className={stats.unread ? "hot" : ""}>
-            <b>{stats.unread}</b> جديد
-          </span>
-          <span>
-            <b>{stats.closed}</b> مغلق
-          </span>
-        </div>
-
-        <div className="top-actions">
+        <div className="jth-actions-top">
           <button
             type="button"
-            className={soundEnabled ? "top-btn sound on" : "top-btn sound"}
+            className={soundEnabled ? "jth-sound is-on" : "jth-sound"}
             onClick={() => {
               setSoundEnabled(true);
               playLuxuryNotify();
-              flashToast("تم تفعيل صوت التنبيهات ✅");
+              flashToast("تم تفعيل صوت تنبيهات المحادثات ✅");
             }}
           >
-            🔔 {soundEnabled ? "الصوت مفعل" : "تفعيل الصوت"}
+            <span>🔔</span>
+            {soundEnabled ? "الصوت مفعل" : "تفعيل الصوت"}
           </button>
-          <button type="button" className="top-btn" onClick={() => refresh()}>
-            تحديث
+          <button type="button" className="jth-refresh" onClick={() => refresh()}>
+            تحديث الآن
           </button>
         </div>
       </header>
 
-      <section className={detailsOpen ? "desk-grid show-details" : "desk-grid"}>
-        <aside className="inbox-panel">
-          <div className="panel-head">
-            <strong>صندوق المحادثات</strong>
-            {stats.waiting > 0 ? <em>{stats.waiting}</em> : null}
+      <section className="jth-stats-grid">
+        <div className="stat-card pearl"><strong>{animatedStats.total || stats.total}</strong><span>كل المحادثات</span></div>
+        <div className="stat-card hot"><strong>{animatedStats.waiting || stats.waiting}</strong><span>بانتظار الرد</span></div>
+        <div className="stat-card jade"><strong>{animatedStats.unread || stats.unread}</strong><span>رسائل جديدة</span></div>
+        <div className="stat-card mist"><strong>{animatedStats.closed || stats.closed}</strong><span>مغلقة</span></div>
+      </section>
+
+      <section className={detailsOpen ? "jth-layout" : "jth-layout details-collapsed"}>
+        <aside className="jth-sidebar">
+          <div className="jth-sidebar-head">
+            <div>
+              <strong>صندوق المحادثات</strong>
+              <span>{stats.open} محادثة نشطة</span>
+            </div>
+            {stats.waiting > 0 ? <b className="jth-wait-badge">{stats.waiting}</b> : null}
           </div>
 
-          <label className="search-line">
+          <div className="jth-search-box">
             <span>⌕</span>
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="بحث بالاسم أو آخر رسالة"
+              placeholder="ابحث بالاسم، الرقم، آخر رسالة…"
             />
-          </label>
+          </div>
 
-          <nav className="filters">
-            <button
-              className={filter === "all" ? "active" : ""}
-              onClick={() => setFilter("all")}
-            >
-              الكل
-            </button>
-            <button
-              className={filter === "waiting" ? "active" : ""}
-              onClick={() => setFilter("waiting")}
-            >
-              ينتظر
-            </button>
-            <button
-              className={filter === "open" ? "active" : ""}
-              onClick={() => setFilter("open")}
-            >
-              نشط
-            </button>
-            <button
-              className={filter === "closed" ? "active" : ""}
-              onClick={() => setFilter("closed")}
-            >
-              مغلق
-            </button>
-          </nav>
+          <div className="jth-tabs">
+            <button className={filter === "all" ? "active" : ""} onClick={() => setFilter("all")}>الكل</button>
+            <button className={filter === "waiting" ? "active" : ""} onClick={() => setFilter("waiting")}>تحتاج رد</button>
+            <button className={filter === "open" ? "active" : ""} onClick={() => setFilter("open")}>نشطة</button>
+            <button className={filter === "closed" ? "active" : ""} onClick={() => setFilter("closed")}>مغلقة</button>
+          </div>
 
-          <div className="conversation-list">
+          <div className="jth-conv-list">
             {filteredConversations.length === 0 ? (
-              <div className="empty small">لا توجد محادثات هنا.</div>
+              <div className="jth-empty compact">لا توجد محادثات في هذا التصنيف.</div>
             ) : (
               filteredConversations.map((conversation) => {
                 const active = conversation.id === selectedId;
                 const tone = statusTone(conversation);
-                const unread =
-                  Number(conversation.unread_admin_count || 0) || 0;
+                const unread = Number(conversation.unread_admin_count || 0) || 0;
 
                 return (
                   <button
                     type="button"
                     key={conversation.id}
-                    className={
-                      active ? "conversation-card active" : "conversation-card"
-                    }
+                    className={active ? "jth-conv active" : "jth-conv"}
                     onClick={() => selectConversation(conversation.id)}
                   >
-                    <span className={`status-dot ${tone}`} />
-                    <span className="avatar">
-                      {String(getCustomerName(conversation)).slice(0, 1)}
-                    </span>
-                    <span className="conversation-content">
-                      <span className="conversation-title">
+                    <span className={`jth-conv-glow ${tone}`} />
+                    <div className="jth-conv-head">
+                      <div className="jth-avatar">{String(getCustomerName(conversation)).slice(0, 1)}</div>
+                      <div className="jth-conv-main">
                         <strong>{getCustomerName(conversation)}</strong>
-                        <time>
-                          {formatTime(conversation.last_message_at) || "—"}
-                        </time>
-                      </span>
-                      <span className="conversation-preview">
-                        {conversation.last_message || "بدون رسالة"}
-                      </span>
-                      <span className="conversation-meta">
-                        <small className={`mini-pill ${tone}`}>
-                          {statusLabel(conversation)}
-                        </small>
-                        <small>
-                          {formatDateTime(conversation.last_message_at)}
-                        </small>
-                      </span>
-                    </span>
-                    {unread > 0 ? (
-                      <b className="unread">{unread > 9 ? "9+" : unread}</b>
-                    ) : null}
+                        <small>{formatTime(conversation.last_message_at) || "—"}</small>
+                      </div>
+                      <span className={`pill ${tone}`}>{statusLabel(conversation)}</span>
+                    </div>
+                    <p>{conversation.last_message || "بدون رسالة"}</p>
+                    <div className="jth-conv-foot">
+                      <small>{formatDateTime(conversation.last_message_at)}</small>
+                      {unread > 0 ? <b>{unread > 9 ? "9+" : unread}</b> : null}
+                    </div>
                   </button>
                 );
               })
@@ -601,63 +568,39 @@ export default function AdminConversationsClient({ initialData }: Props) {
           </div>
         </aside>
 
-        <section className="chat-panel">
+        <section className="jth-chat-card">
           {selectedConversation ? (
             <>
-              <div className="chat-head">
-                <div className="chat-user">
-                  <span className="avatar lg">
-                    {String(getCustomerName(selectedConversation)).slice(0, 1)}
-                  </span>
-                  <div>
-                    <h2>{getCustomerName(selectedConversation)}</h2>
-                    <p>
-                      {selectedConversation.language || "ar"} ·{" "}
-                      {formatDateTime(selectedConversation.last_message_at) ||
-                        "آخر نشاط غير متوفر"}
-                    </p>
+              <div className="jth-chat-head">
+                <div className="jth-chat-title-area">
+                  <div className="jth-customer-line">
+                    <div className="jth-avatar large">{String(getCustomerName(selectedConversation)).slice(0, 1)}</div>
+                    <div>
+                      <h2>{getCustomerName(selectedConversation)}</h2>
+                      <p>
+                        اللغة: {selectedConversation.language || "ar"} · آخر نشاط: {formatDateTime(selectedConversation.last_message_at)}
+                      </p>
+                    </div>
+                    <span className={`pill big ${statusTone(selectedConversation)}`}>{statusLabel(selectedConversation)}</span>
                   </div>
-                  <span
-                    className={`mini-pill large ${statusTone(selectedConversation)}`}
-                  >
-                    {statusLabel(selectedConversation)}
-                  </span>
                 </div>
 
-                <div className="chat-actions">
-                  <button
-                    type="button"
-                    className="ghost"
-                    onClick={() => setDetailsOpen((value) => !value)}
-                  >
-                    {detailsOpen ? "إخفاء الملف" : "ملف العميل"}
+                <div className="jth-chat-buttons">
+                  <button type="button" className="soft" onClick={() => setDetailsOpen((value) => !value)}>
+                    {detailsOpen ? "إخفاء التفاصيل" : "إظهار التفاصيل"}
                   </button>
-                  <button
-                    type="button"
-                    className="finish"
-                    onClick={closeConversation}
-                    disabled={
-                      loading || selectedConversation.status === "closed"
-                    }
-                  >
-                    إنهاء
+                  <button type="button" className="close" onClick={closeConversation} disabled={loading || selectedConversation.status === "closed"}>
+                    إنهاء المحادثة
                   </button>
-                  <button
-                    type="button"
-                    className="danger"
-                    onClick={deleteConversation}
-                    disabled={loading}
-                  >
-                    حذف
+                  <button type="button" className="delete" onClick={deleteConversation} disabled={loading}>
+                    حذف نهائي
                   </button>
                 </div>
               </div>
 
-              <div className="messages-panel">
+              <div className="jth-messages">
                 {messages.length === 0 ? (
-                  <div className="empty center">
-                    لا توجد رسائل داخل هذه المحادثة.
-                  </div>
+                  <div className="jth-empty center">لا توجد رسائل داخل هذه المحادثة.</div>
                 ) : (
                   messages.map((message) => {
                     const day = formatDay(message.created_at);
@@ -666,33 +609,22 @@ export default function AdminConversationsClient({ initialData }: Props) {
 
                     return (
                       <div key={message.id}>
-                        {showDay ? (
-                          <div className="day-separator">{day}</div>
-                        ) : null}
-                        <div className={`message-row ${messageClass(message)}`}>
-                          <article className="bubble">
-                            <header>
+                        {showDay ? <div className="jth-day-separator">{day}</div> : null}
+                        <div className={`jth-message-row ${messageClass(message)}${newMsgIds.has(String(message.id)) ? " jth-msg-new" : ""}`}>
+                          <div className="jth-bubble">
+                            <div className="jth-sender">
                               <span>{senderIcon(message)}</span>
-                              <b>{senderLabel(message)}</b>
-                            </header>
+                              {senderLabel(message)}
+                            </div>
                             {message.message ? <p>{message.message}</p> : null}
                             {message.image_url ? (
-                              <a
-                                href={message.image_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="image-link"
-                              >
+                              <a href={message.image_url} target="_blank" rel="noopener noreferrer" className="jth-image-link">
                                 فتح الصورة المرفقة 📷
                               </a>
                             ) : null}
-                            {message.ai_detected_problem ? (
-                              <small>
-                                التشخيص: {message.ai_detected_problem}
-                              </small>
-                            ) : null}
+                            {message.ai_detected_problem ? <small>التشخيص: {message.ai_detected_problem}</small> : null}
                             <time>{formatDateTime(message.created_at)}</time>
-                          </article>
+                          </div>
                         </div>
                       </div>
                     );
@@ -701,859 +633,851 @@ export default function AdminConversationsClient({ initialData }: Props) {
                 <div ref={messagesEndRef} />
               </div>
 
-              <footer className="composer">
-                <div className="quick-row">
+              <div className="jth-reply-panel">
+                <div className="jth-quick-replies">
                   {QUICK_REPLIES.map((item) => (
-                    <button
-                      type="button"
-                      key={item}
-                      onClick={() => setReply(item)}
-                    >
+                    <button type="button" key={item} onClick={() => setReply(item)}>
                       {item}
                     </button>
                   ))}
                 </div>
 
-                <div className="composer-row">
+                <div className="jth-reply-row">
+                  <button type="button" className="emoji" onClick={() => setEmojiOpen((value) => !value)}>🙂</button>
+                  <div className="jth-textarea-wrap">
+                    <textarea
+                      value={reply}
+                      onChange={(event) => setReply(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" && !event.shiftKey) {
+                          event.preventDefault();
+                          sendReply();
+                        }
+                      }}
+                      placeholder="اكتب ردك هنا… Enter للإرسال و Shift+Enter لسطر جديد"
+                      disabled={loading || selectedConversation.status === "closed"}
+                    />
+                    {reply.length > 0 ? (
+                      <span className={`jth-char-count${reply.length > 400 ? " warn" : ""}${reply.length > 550 ? " danger" : ""}`}>
+                        {reply.length}
+                      </span>
+                    ) : null}
+                  </div>
                   <button
                     type="button"
-                    className="emoji-btn"
-                    onClick={() => setEmojiOpen((value) => !value)}
-                  >
-                    🙂
-                  </button>
-                  <textarea
-                    value={reply}
-                    onChange={(event) => setReply(event.target.value)}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter" && !event.shiftKey) {
-                        event.preventDefault();
-                        sendReply();
-                      }
-                    }}
-                    placeholder="اكتب الرد هنا… Enter للإرسال"
-                    disabled={
-                      loading || selectedConversation.status === "closed"
-                    }
-                  />
-                  <button
-                    type="button"
-                    className="send-btn"
+                    className={`send${loading ? " is-loading" : ""}`}
                     onClick={sendReply}
-                    disabled={
-                      loading ||
-                      !reply.trim() ||
-                      selectedConversation.status === "closed"
-                    }
+                    disabled={loading || !reply.trim() || selectedConversation.status === "closed"}
                   >
-                    إرسال
+                    {loading ? <span className="send-dots"><span /><span /><span /></span> : "إرسال"}
                   </button>
                 </div>
 
                 {emojiOpen ? (
-                  <div className="emoji-tray">
+                  <div className="jth-emoji-bar">
                     {QUICK_EMOJIS.map((emoji) => (
-                      <button
-                        type="button"
-                        key={emoji}
-                        onClick={() => appendToReply(emoji)}
-                      >
-                        {emoji}
-                      </button>
+                      <button type="button" key={emoji} onClick={() => appendToReply(emoji)}>{emoji}</button>
                     ))}
                   </div>
                 ) : null}
-              </footer>
+              </div>
             </>
           ) : (
-            <div className="empty center">اختر محادثة من القائمة.</div>
+            <div className="jth-empty center">اختر محادثة من القائمة.</div>
           )}
         </section>
 
-        <aside className="details-panel">
+        <aside className="jth-details-panel">
           {selectedConversation ? (
             <>
-              <section className="profile-card hero">
-                <span>ملف العميل</span>
+              <div className="jth-detail-card signature">
+                <span className="mini-label">ملف العميل</span>
                 <h3>{getCustomerName(selectedConversation)}</h3>
-                <p>
-                  {statusLabel(selectedConversation)} ·{" "}
-                  {selectedConversation.language || "ar"}
-                </p>
-              </section>
+                <p>{statusLabel(selectedConversation)} · {selectedConversation.language || "ar"}</p>
+              </div>
 
-              <section className="profile-card">
+              <div className="jth-detail-card">
                 <h4>بيانات التواصل</h4>
                 <dl>
-                  <div>
-                    <dt>الجوال</dt>
-                    <dd>
-                      {selectedConversation.customer_phone || "غير متوفر"}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>الإيميل</dt>
-                    <dd>
-                      {selectedConversation.customer_email || "غير متوفر"}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>آخر نشاط</dt>
-                    <dd>
-                      {formatDateTime(selectedConversation.last_message_at) ||
-                        "—"}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>البداية</dt>
-                    <dd>
-                      {formatDateTime(selectedConversation.created_at) || "—"}
-                    </dd>
-                  </div>
+                  <div><dt>الجوال</dt><dd>{selectedConversation.customer_phone || "غير متوفر"}</dd></div>
+                  <div><dt>الإيميل</dt><dd>{selectedConversation.customer_email || "غير متوفر"}</dd></div>
+                  <div><dt>آخر نشاط</dt><dd>{formatDateTime(selectedConversation.last_message_at) || "—"}</dd></div>
+                  <div><dt>بداية المحادثة</dt><dd>{formatDateTime(selectedConversation.created_at) || "—"}</dd></div>
                 </dl>
-                <button
-                  type="button"
-                  className="copy"
-                  onClick={copyConversationInfo}
-                >
-                  نسخ البيانات
-                </button>
-              </section>
+                <button type="button" className="copy-btn" onClick={copyConversationInfo}>نسخ بيانات المحادثة</button>
+              </div>
 
-              <section className="profile-card team">
+              <div className="jth-detail-card team-card">
                 <h4>إسناد الفريق لاحقًا</h4>
-                <p>
-                  جاهزة لاحقًا لتوزيع المحادثات على أكثر من مختص ومتابعة الأداء.
-                </p>
-                <div>
+                <p>جاهزة مستقبلًا لإسناد المحادثات لأكثر من مختص، متابعة أداء الفريق، وحالة كل تذكرة.</p>
+                <div className="team-strip">
                   <span>المسند إليه</span>
-                  <b>{selectedConversation.assigned_to || "غير مسند"}</b>
+                  <strong>{selectedConversation.assigned_to || "غير مسند"}</strong>
                 </div>
-              </section>
+              </div>
 
-              <section className="profile-card">
+              <div className="jth-detail-card">
                 <h4>رابط الصفحة</h4>
-                <p className="breakable">
-                  {selectedConversation.page_url || "غير متوفر"}
-                </p>
-              </section>
+                <p className="breakable">{selectedConversation.page_url || "غير متوفر"}</p>
+              </div>
             </>
-          ) : null}
+          ) : (
+            <div className="jth-detail-card signature"><h3>لا توجد محادثة محددة</h3></div>
+          )}
         </aside>
       </section>
     </main>
   );
 }
 
-const styles = `
-  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700;800&display=swap');
 
+const styles = `
   :root {
     color-scheme: light;
-    --bg: #f7f3ea;
-    --paper: #ffffff;
-    --paper-soft: #fbfaf6;
-    --ink: #17343a;
-    --muted: #6f7f83;
-    --line: rgba(23, 52, 58, .10);
-    --green: #006a67;
-    --green-2: #0d8274;
-    --mint: #e9f7f1;
-    --gold: #bd9341;
-    --gold-soft: #fff6df;
-    --red: #cf3d3d;
-    --blue: #2f73a8;
-    --shadow: 0 12px 32px rgba(31, 54, 61, .08);
+    --jth-bg: #faf7f0;
+    --jth-card: rgba(255,255,255,.88);
+    --jth-solid: #fff;
+    --jth-ink: #12313a;
+    --jth-muted: #6d7b80;
+    --jth-line: rgba(18,49,58,.10);
+    --jth-emerald: #00666a;
+    --jth-emerald-2: #00806d;
+    --jth-jade: #18b978;
+    --jth-gold: #c7a04a;
+    --jth-danger: #d43b3b;
+    --jth-radius: 14px;
+    --jth-shadow: 0 10px 28px rgba(20, 45, 52, .08);
   }
 
-  html,
-  body {
+  html, body {
     margin: 0;
     width: 100%;
     height: 100%;
     overflow: hidden !important;
-    background: var(--bg) !important;
+    background: var(--jth-bg) !important;
   }
 
-  * { box-sizing: border-box; }
   button, input, textarea { font-family: inherit; }
   button { -webkit-tap-highlight-color: transparent; }
 
-  .jth-desk {
-    width: 100vw;
+  .jth-admin-shell {
     height: 100dvh;
     overflow: hidden;
-    direction: rtl;
-    color: var(--ink);
-    font-family: 'IBM Plex Sans Arabic', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    padding: 6px;
+    box-sizing: border-box;
+    color: var(--jth-ink);
     background:
-      radial-gradient(circle at 88% 4%, rgba(0, 106, 103, .13), transparent 28%),
-      radial-gradient(circle at 11% 2%, rgba(189, 147, 65, .18), transparent 24%),
-      linear-gradient(135deg, #fbf7ef 0%, #f7fbf8 56%, #fffaf0 100%);
-    display: grid;
-    grid-template-rows: 52px minmax(0, 1fr);
-    gap: 8px;
-    padding: 8px;
-  }
-
-  .desk-top {
-    min-height: 0;
-    display: grid;
-    grid-template-columns: 260px minmax(280px, 1fr) auto;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .brand-mini,
-  .metric-strip,
-  .top-actions,
-  .inbox-panel,
-  .chat-panel,
-  .details-panel {
-    position: relative;
-    border: 1px solid rgba(255,255,255,.76);
-    background: rgba(255,255,255,.78);
-    box-shadow: var(--shadow);
-    backdrop-filter: blur(16px);
-  }
-
-  .brand-mini {
-    height: 52px;
-    border-radius: 18px;
+      radial-gradient(circle at 9% 0%, rgba(239, 209, 121, .25), transparent 22%),
+      radial-gradient(circle at 84% 0%, rgba(24, 185, 120, .12), transparent 28%),
+      linear-gradient(135deg, #fbf8f0 0%, #f7fbf9 52%, #fffaf1 100%);
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 8px 10px;
-  }
-
-  .brand-logo,
-  .avatar {
-    display: grid;
-    place-items: center;
-    color: #fff;
-    background: linear-gradient(145deg, var(--green), #034f50);
-    box-shadow: inset 0 0 0 1px rgba(255,255,255,.18);
-  }
-
-  .brand-logo {
-    width: 34px;
-    height: 34px;
-    border-radius: 12px;
-    font-size: 19px;
-    font-weight: 800;
-  }
-
-  .brand-mini b {
-    display: block;
-    font-size: 16px;
-    line-height: 1.1;
-    letter-spacing: -.02em;
-  }
-
-  .brand-mini small {
-    display: block;
-    margin-top: 2px;
-    color: var(--gold);
-    font-size: 10px;
-    font-weight: 800;
-    letter-spacing: .08em;
-    text-transform: uppercase;
-  }
-
-  .metric-strip {
-    height: 52px;
-    border-radius: 18px;
-    display: grid;
-    grid-template-columns: repeat(4, minmax(90px, 1fr));
-    gap: 1px;
-    overflow: hidden;
-  }
-
-  .metric-strip span {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    color: var(--muted);
-    font-size: 12px;
-    font-weight: 700;
-    background: rgba(255,255,255,.34);
-  }
-
-  .metric-strip b {
-    color: var(--ink);
-    font-size: 18px;
-    font-weight: 800;
-  }
-
-  .metric-strip .warn b { color: var(--red); }
-  .metric-strip .hot b { color: var(--green); }
-
-  .top-actions {
-    height: 52px;
-    border-radius: 18px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 7px;
-  }
-
-  .top-btn {
-    height: 36px;
-    border: 1px solid var(--line);
-    border-radius: 13px;
-    background: var(--paper);
-    color: var(--ink);
-    padding: 0 12px;
-    font-size: 12px;
-    font-weight: 800;
-    cursor: pointer;
-    white-space: nowrap;
-  }
-
-  .top-btn.on {
-    color: #fff;
-    border-color: transparent;
-    background: linear-gradient(135deg, var(--green), var(--green-2));
-  }
-
-  .desk-grid {
-    min-height: 0;
-    display: grid;
-    grid-template-columns: 300px minmax(0, 1fr) 0;
-    gap: 8px;
-    overflow: hidden;
-  }
-
-  .desk-grid.show-details {
-    grid-template-columns: 300px minmax(0, 1fr) 270px;
-  }
-
-  .inbox-panel,
-  .chat-panel,
-  .details-panel {
-    min-height: 0;
-    border-radius: 22px;
-    overflow: hidden;
-  }
-
-  .inbox-panel {
-    display: grid;
-    grid-template-rows: 42px 42px 42px minmax(0, 1fr);
-    padding: 8px;
-    gap: 7px;
-  }
-
-  .panel-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 4px;
-  }
-
-  .panel-head strong { font-size: 14px; font-weight: 800; }
-  .panel-head em {
-    min-width: 24px;
-    height: 24px;
-    display: grid;
-    place-items: center;
-    border-radius: 10px;
-    color: #fff;
-    background: var(--red);
-    font-size: 12px;
-    font-style: normal;
-    font-weight: 800;
-  }
-
-  .search-line {
-    height: 42px;
-    border: 1px solid var(--line);
-    border-radius: 16px;
-    background: rgba(255,255,255,.72);
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    padding: 0 10px;
-  }
-
-  .search-line span { color: var(--gold); font-weight: 800; font-size: 16px; }
-  .search-line input {
-    min-width: 0;
-    flex: 1;
-    border: 0;
-    outline: 0;
-    background: transparent;
-    color: var(--ink);
-    font-size: 12px;
-    font-weight: 600;
-  }
-
-  .filters {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    flex-direction: column;
     gap: 5px;
   }
 
-  .filters button {
-    border: 1px solid var(--line);
-    border-radius: 14px;
-    background: rgba(255,255,255,.66);
-    color: var(--muted);
-    font-size: 11px;
-    font-weight: 800;
-    cursor: pointer;
-  }
-
-  .filters button.active {
-    color: #fff;
-    border-color: transparent;
-    background: linear-gradient(135deg, var(--green), var(--green-2));
-  }
-
-  .conversation-list {
-    min-height: 0;
-    overflow: auto;
-    padding-inline-end: 2px;
-  }
-
-  .conversation-card {
-    position: relative;
-    width: 100%;
-    display: grid;
-    grid-template-columns: 32px minmax(0, 1fr) auto;
-    gap: 8px;
-    align-items: start;
-    border: 1px solid rgba(23, 52, 58, .08);
-    border-radius: 18px;
-    background: rgba(255,255,255,.70);
-    padding: 9px;
-    margin-bottom: 7px;
-    color: var(--ink);
-    cursor: pointer;
-    text-align: right;
-  }
-
-  .conversation-card.active {
-    background: var(--paper);
-    border-color: rgba(189,147,65,.46);
-    box-shadow: 0 9px 22px rgba(31,54,61,.06);
-  }
-
-  .conversation-card.active::before {
+  .jth-admin-shell::before {
     content: "";
-    position: absolute;
-    inset-inline-end: 0;
-    top: 14px;
-    bottom: 14px;
-    width: 3px;
-    border-radius: 999px;
-    background: linear-gradient(180deg, var(--gold), var(--green));
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background-image:
+      linear-gradient(rgba(0, 102, 106, .018) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 102, 106, .018) 1px, transparent 1px);
+    background-size: 32px 32px;
   }
-
-  .status-dot {
-    position: absolute;
-    top: 9px;
-    inset-inline-start: 9px;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: #a8b3b6;
-  }
-  .status-dot.danger { background: var(--red); box-shadow: 0 0 0 4px rgba(207,61,61,.10); }
-  .status-dot.success { background: #22b36b; box-shadow: 0 0 0 4px rgba(34,179,107,.10); }
-  .status-dot.ai { background: var(--blue); box-shadow: 0 0 0 4px rgba(47,115,168,.10); }
-
-  .avatar {
-    width: 32px;
-    height: 32px;
-    border-radius: 13px;
-    font-size: 13px;
-    font-weight: 800;
-    flex: 0 0 auto;
-  }
-
-  .avatar.lg { width: 36px; height: 36px; border-radius: 14px; font-size: 15px; }
-
-  .conversation-content { min-width: 0; display: grid; gap: 4px; }
-  .conversation-title { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
-  .conversation-title strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12.5px; font-weight: 800; }
-  .conversation-title time { color: var(--muted); font-size: 10px; font-weight: 700; white-space: nowrap; }
-  .conversation-preview { color: #435459; font-size: 11px; font-weight: 600; line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .conversation-meta { display: flex; align-items: center; gap: 5px; justify-content: space-between; }
-  .conversation-meta small:last-child { color: var(--muted); font-size: 9px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-  .mini-pill {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    height: 20px;
-    border-radius: 999px;
-    padding: 0 8px;
-    font-size: 9.5px;
-    font-weight: 800;
-    white-space: nowrap;
-  }
-  .mini-pill.large { height: 24px; font-size: 10.5px; }
-  .mini-pill.danger { color: #9b1b1b; background: #fff0f0; border: 1px solid rgba(207,61,61,.18); }
-  .mini-pill.success { color: #087b4b; background: #eafaf1; border: 1px solid rgba(34,179,107,.18); }
-  .mini-pill.ai { color: #075985; background: #eef8ff; border: 1px solid rgba(47,115,168,.16); }
-  .mini-pill.muted { color: #66737a; background: #f2f4f4; border: 1px solid rgba(148,163,184,.18); }
-
-  .unread {
-    min-width: 22px;
-    height: 22px;
-    display: grid;
-    place-items: center;
-    color: #fff;
-    background: var(--red);
-    border-radius: 999px;
-    font-size: 10px;
-    font-weight: 800;
-  }
-
-  .chat-panel {
-    display: grid;
-    grid-template-rows: 54px minmax(0, 1fr) 92px;
-    background: rgba(255,255,255,.82);
-  }
-
-  .chat-head {
-    min-height: 0;
-    border-bottom: 1px solid var(--line);
-    padding: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    background: rgba(255,255,255,.70);
-  }
-
-  .chat-user {
-    min-width: 0;
-    display: flex;
-    align-items: center;
-    gap: 9px;
-  }
-
-  .chat-user h2 {
-    margin: 0;
-    max-width: 34vw;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-size: 16px;
-    font-weight: 800;
-    line-height: 1.15;
-  }
-
-  .chat-user p {
-    margin: 2px 0 0;
-    color: var(--muted);
-    font-size: 10.5px;
-    font-weight: 600;
-    white-space: nowrap;
-  }
-
-  .chat-actions {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    flex: 0 0 auto;
-  }
-
-  .chat-actions button {
-    height: 34px;
-    border: 0;
-    border-radius: 13px;
-    padding: 0 10px;
-    font-size: 11px;
-    font-weight: 800;
-    cursor: pointer;
-    white-space: nowrap;
-  }
-
-  .chat-actions .ghost { color: var(--ink); background: #fff; border: 1px solid var(--line); }
-  .chat-actions .finish { color: #fff; background: linear-gradient(135deg, var(--green), var(--green-2)); }
-  .chat-actions .danger { color: #fff; background: linear-gradient(135deg, #a71f1f, #ef4444); }
-  .chat-actions button:disabled { opacity: .45; cursor: not-allowed; }
-
-  .messages-panel {
-    min-height: 0;
-    overflow: auto;
-    padding: 12px;
-    background:
-      linear-gradient(180deg, rgba(255,255,255,.72), rgba(255,255,255,.35)),
-      radial-gradient(circle at 50% 8%, rgba(189,147,65,.05), transparent 28%);
-  }
-
-  .day-separator {
-    width: max-content;
-    max-width: 92%;
-    margin: 4px auto 10px;
-    color: #715b20;
-    background: var(--gold-soft);
-    border: 1px solid rgba(189,147,65,.22);
-    border-radius: 999px;
-    padding: 4px 10px;
-    font-size: 10px;
-    font-weight: 800;
-  }
-
-  .message-row { display: flex; margin-bottom: 8px; }
-  .message-row.customer { justify-content: flex-start; }
-  .message-row.ai,
-  .message-row.human,
-  .message-row.system { justify-content: flex-end; }
-
-  .bubble {
-    max-width: min(640px, 70%);
-    padding: 9px 11px;
-    border-radius: 18px;
-    border: 1px solid rgba(255,255,255,.75);
-    box-shadow: 0 10px 22px rgba(31,54,61,.07);
-  }
-
-  .message-row.customer .bubble { color: #fff; background: linear-gradient(145deg, var(--green), #064b4d); border-bottom-right-radius: 6px; }
-  .message-row.human .bubble { color: #fff; background: linear-gradient(145deg, #2e8190, #1e5c72); border-bottom-left-radius: 6px; }
-  .message-row.ai .bubble { color: var(--ink); background: #fff; border-color: rgba(0,106,103,.09); border-bottom-left-radius: 6px; }
-  .message-row.system .bubble { color: #76591a; background: #fff8e7; }
-
-  .bubble header { display: flex; align-items: center; gap: 5px; opacity: .72; margin-bottom: 4px; font-size: 10px; font-weight: 800; }
-  .bubble p { margin: 0; white-space: pre-wrap; line-height: 1.55; font-size: 13px; font-weight: 600; }
-  .bubble small,
-  .bubble time { display: block; margin-top: 5px; color: currentColor; opacity: .62; font-size: 9.5px; font-weight: 700; }
-  .image-link { display: inline-block; margin-top: 6px; color: var(--green); font-size: 11px; font-weight: 800; }
-  .message-row.customer .image-link,
-  .message-row.human .image-link { color: #fff4bd; }
-
-  .composer {
-    min-height: 0;
-    border-top: 1px solid var(--line);
-    padding: 7px 8px;
-    background: rgba(255,255,255,.84);
-    display: grid;
-    grid-template-rows: 28px 42px;
-    gap: 6px;
-  }
-
-  .quick-row {
-    display: flex;
-    gap: 6px;
-    overflow: auto;
-    min-width: 0;
-  }
-
-  .quick-row button {
-    flex: 0 0 auto;
-    max-width: 340px;
-    border: 1px solid rgba(0,106,103,.10);
-    background: #fff;
-    color: var(--ink);
-    border-radius: 999px;
-    padding: 0 10px;
-    font-size: 10.5px;
-    font-weight: 700;
-    cursor: pointer;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .composer-row {
-    display: grid;
-    grid-template-columns: 42px minmax(0, 1fr) 72px;
-    gap: 7px;
-  }
-
-  .composer-row textarea {
-    width: 100%;
-    height: 42px;
-    min-height: 42px;
-    max-height: 84px;
-    resize: none;
-    overflow: auto;
-    border: 1px solid rgba(0,106,103,.14);
-    border-radius: 16px;
-    background: #fff;
-    color: var(--ink);
-    outline: 0;
-    padding: 9px 12px;
-    font-size: 13px;
-    font-weight: 600;
-    line-height: 1.45;
-  }
-
-  .composer-row textarea:focus {
-    border-color: rgba(189,147,65,.62);
-    box-shadow: 0 0 0 4px rgba(189,147,65,.10);
-  }
-
-  .emoji-btn,
-  .send-btn {
-    height: 42px;
-    border: 0;
-    border-radius: 16px;
-    font-size: 13px;
-    font-weight: 800;
-    cursor: pointer;
-  }
-
-  .emoji-btn { background: #fff; border: 1px solid rgba(0,106,103,.12); }
-  .send-btn { color: #fff; background: linear-gradient(135deg, var(--green), var(--green-2)); }
-  .send-btn:disabled { opacity: .48; cursor: not-allowed; }
-
-  .emoji-tray {
-    position: absolute;
-    bottom: 62px;
-    inset-inline-start: 320px;
-    display: flex;
-    gap: 6px;
-    padding: 7px;
-    border-radius: 16px;
-    background: #fff;
-    border: 1px solid var(--line);
-    box-shadow: var(--shadow);
-  }
-
-  .emoji-tray button {
-    border: 1px solid rgba(0,106,103,.10);
-    background: #fff;
-    border-radius: 12px;
-    width: 32px;
-    height: 32px;
-    cursor: pointer;
-  }
-
-  .details-panel {
-    display: none;
-    padding: 8px;
-    overflow: auto;
-    gap: 8px;
-    flex-direction: column;
-  }
-
-  .show-details .details-panel { display: flex; }
-
-  .profile-card {
-    background: rgba(255,255,255,.72);
-    border: 1px solid rgba(23,52,58,.08);
-    border-radius: 18px;
-    padding: 10px;
-  }
-
-  .profile-card.hero { color: #fff; background: linear-gradient(145deg, var(--green), #064b4d); border: 0; }
-  .profile-card span { color: #fff1b9; font-size: 10px; font-weight: 800; }
-  .profile-card h3,
-  .profile-card h4 { margin: 0 0 6px; font-size: 13px; font-weight: 800; }
-  .profile-card p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.55; font-weight: 600; }
-  .profile-card.hero p { color: rgba(255,255,255,.78); }
-  .profile-card dl { margin: 0; display: grid; gap: 6px; }
-  .profile-card dl div { display: flex; justify-content: space-between; gap: 8px; border-bottom: 1px dashed rgba(0,106,103,.11); padding-bottom: 5px; }
-  .profile-card dt { color: var(--muted); font-size: 10px; font-weight: 700; }
-  .profile-card dd { margin: 0; color: var(--ink); text-align: left; word-break: break-word; font-size: 10.5px; font-weight: 700; }
-  .profile-card .copy,
-  .copy {
-    width: 100%;
-    height: 34px;
-    margin-top: 8px;
-    border: 1px solid rgba(189,147,65,.28);
-    background: var(--gold-soft);
-    color: #75591a;
-    border-radius: 14px;
-    font-size: 11px;
-    font-weight: 800;
-    cursor: pointer;
-  }
-  .profile-card.team { background: linear-gradient(135deg, #fff, #f1fbf6); }
-  .profile-card.team div { margin-top: 8px; display: flex; justify-content: space-between; gap: 8px; background: var(--mint); color: var(--green); border-radius: 13px; padding: 8px; font-size: 11px; font-weight: 800; }
-  .breakable { word-break: break-word; }
-
-  .empty { color: var(--muted); padding: 14px; font-size: 12px; font-weight: 700; }
-  .empty.small { text-align: center; }
-  .empty.center { margin: auto; text-align: center; }
 
   .jth-toast {
     position: fixed;
     z-index: 9999;
-    left: 12px;
-    bottom: 12px;
-    background: rgba(0,106,103,.98);
+    left: 10px;
+    bottom: 10px;
+    background: rgba(0,102,106,.96);
     color: #fff;
-    border-radius: 16px;
-    padding: 10px 13px;
-    box-shadow: 0 16px 34px rgba(0,106,103,.18);
+    border-radius: 14px;
+    padding: 10px 14px 10px 12px;
+    box-shadow: 0 14px 34px rgba(0,102,106,.18);
+    font-weight: 900;
     font-size: 12px;
-    font-weight: 800;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    animation: jth-toast-in .22s cubic-bezier(.34,1.56,.64,1) both;
+  }
+  .jth-toast--success { background: linear-gradient(135deg, #065f46, #047857); box-shadow: 0 14px 34px rgba(4,120,87,.22); }
+  .jth-toast--error   { background: linear-gradient(135deg, #7f1d1d, #b91c1c); box-shadow: 0 14px 34px rgba(185,28,28,.22); }
+  .jth-toast--info    { background: rgba(0,102,106,.96); }
+  @keyframes jth-toast-in {
+    from { transform: translateY(12px) scale(.94); opacity: 0; }
+    to   { transform: translateY(0) scale(1); opacity: 1; }
   }
 
-  ::-webkit-scrollbar { width: 7px; height: 7px; }
-  ::-webkit-scrollbar-track { background: rgba(0,106,103,.045); border-radius: 999px; }
-  ::-webkit-scrollbar-thumb { background: rgba(0,106,103,.34); border-radius: 999px; border: 2px solid rgba(255,255,255,.62); }
+  .jth-topbar {
+    position: relative;
+    z-index: 2;
+    min-height: 42px;
+    flex: 0 0 42px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
 
-  @media (max-width: 1380px) {
-    .desk-grid,
-    .desk-grid.show-details { grid-template-columns: 290px minmax(0, 1fr); }
-    .details-panel { display: none !important; }
-    .chat-user h2 { max-width: 28vw; }
+  .jth-brand-card {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .jth-brand-mark {
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+    color: #fff;
+    display: grid;
+    place-items: center;
+    font-weight: 950;
+    font-size: 20px;
+    background: linear-gradient(145deg, var(--jth-emerald), #003e42);
+    box-shadow: 0 8px 18px rgba(0,102,106,.18), inset 0 0 0 1px rgba(255,255,255,.22);
+    flex: 0 0 auto;
+  }
+
+  .jth-kicker {
+    color: var(--jth-gold);
+    font-size: 8.5px;
+    letter-spacing: .11em;
+    text-transform: uppercase;
+    font-weight: 950;
+    line-height: 1;
+  }
+
+  h1 {
+    margin: 1px 0 0;
+    font-size: 20px;
+    letter-spacing: -.03em;
+    line-height: 1;
+  }
+
+  .jth-topbar p { display: none; }
+
+  .jth-actions-top {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 0 0 auto;
+  }
+
+  .jth-sound,
+  .jth-refresh {
+    min-height: 32px;
+    border: 1px solid rgba(0,102,106,.12);
+    border-radius: 11px;
+    padding: 7px 10px;
+    background: rgba(255,255,255,.90);
+    color: var(--jth-ink);
+    font-weight: 900;
+    font-size: 11px;
+    cursor: pointer;
+    box-shadow: 0 6px 14px rgba(26,47,54,.045);
+  }
+
+  .jth-sound {
+    display: inline-flex;
+    gap: 5px;
+    align-items: center;
+  }
+
+  .jth-sound.is-on {
+    color: #fff;
+    border-color: transparent;
+    background: linear-gradient(135deg, var(--jth-emerald), var(--jth-jade));
+  }
+
+  .jth-stats-grid {
+    position: relative;
+    z-index: 2;
+    flex: 0 0 34px;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0,1fr));
+    gap: 5px;
+  }
+
+  .stat-card {
+    position: relative;
+    min-height: 34px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,.72);
+    background: rgba(255,255,255,.78);
+    box-shadow: 0 7px 18px rgba(26,47,54,.045);
+    padding: 6px 9px;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+
+  .stat-card::before { display: none !important; }
+  .stat-card::after {
+    content: "";
+    position: absolute;
+    inset-inline-start: 9px;
+    bottom: 5px;
+    width: 24px;
+    height: 2px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--jth-gold), transparent);
+  }
+
+  .stat-card strong {
+    display: inline-block;
+    font-size: 16px;
+    line-height: 1;
+    margin-inline-end: 6px;
+  }
+
+  .stat-card span {
+    display: inline-block;
+    color: var(--jth-muted);
+    font-size: 10px;
+    font-weight: 850;
+    line-height: 1;
+  }
+
+  .jth-layout {
+    position: relative;
+    z-index: 2;
+    flex: 1 1 auto;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: 260px minmax(0, 1fr) 220px;
+    gap: 6px;
+    overflow: hidden;
+  }
+
+  .jth-layout.details-collapsed {
+    grid-template-columns: 260px minmax(0, 1fr) 0;
+  }
+
+  .jth-layout.details-collapsed .jth-details-panel { display: none; }
+
+  .jth-sidebar,
+  .jth-chat-card,
+  .jth-details-panel {
+    min-height: 0;
+    overflow: hidden;
+    border-radius: var(--jth-radius);
+    border: 1px solid rgba(255,255,255,.74);
+    background: var(--jth-card);
+    box-shadow: var(--jth-shadow);
+    backdrop-filter: blur(16px);
+  }
+
+  .jth-sidebar {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .jth-sidebar-head {
+    padding: 8px 9px 5px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex: 0 0 auto;
+  }
+
+  .jth-sidebar-head strong { display: block; font-size: 13px; line-height: 1.1; }
+  .jth-sidebar-head span { display: block; margin-top: 1px; color: var(--jth-muted); font-size: 10px; font-weight: 800; }
+
+  .jth-wait-badge {
+    width: 23px;
+    height: 23px;
+    border-radius: 9px;
+    color: #fff;
+    display: grid;
+    place-items: center;
+    background: linear-gradient(135deg, #ff7474, var(--jth-danger));
+    font-size: 11px;
+    animation: jth-pulse-badge 1.8s ease-in-out infinite;
+  }
+  @keyframes jth-pulse-badge {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(212,59,59,.4); }
+    50%       { box-shadow: 0 0 0 6px rgba(212,59,59,.0); }
+  }
+
+  .jth-search-box {
+    margin: 0 8px 6px;
+    padding: 6px 8px;
+    border-radius: 12px;
+    background: rgba(255,255,255,.75);
+    border: 1px solid var(--jth-line);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex: 0 0 auto;
+  }
+
+  .jth-search-box span { color: var(--jth-gold); font-weight: 950; font-size: 14px; }
+  .jth-search-box input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font-size: 11px; font-weight: 750; color: var(--jth-ink); }
+
+  .jth-tabs {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px;
+    padding: 0 8px 7px;
+    border-bottom: 1px solid var(--jth-line);
+    flex: 0 0 auto;
+  }
+
+  .jth-tabs button {
+    border: 1px solid var(--jth-line);
+    background: rgba(255,255,255,.65);
+    color: var(--jth-muted);
+    border-radius: 10px;
+    padding: 5px 2px;
+    cursor: pointer;
+    font-weight: 900;
+    font-size: 10px;
+  }
+
+  .jth-tabs button.active {
+    color: #fff;
+    border-color: transparent;
+    background: linear-gradient(135deg, var(--jth-emerald), var(--jth-emerald-2));
+  }
+
+  .jth-conv-list {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    padding: 6px;
+  }
+
+  .jth-conv {
+    position: relative;
+    width: 100%;
+    border: 1px solid rgba(0,102,106,.09);
+    background: rgba(255,255,255,.72);
+    border-radius: 13px;
+    padding: 7px;
+    margin-bottom: 6px;
+    text-align: right;
+    color: var(--jth-ink);
+    cursor: pointer;
+    box-shadow: 0 5px 14px rgba(26,47,54,.035);
+  }
+
+  .jth-conv.active {
+    border-color: rgba(201,162,74,.42);
+    background: #fff;
+  }
+
+  .jth-conv.active::after {
+    content: "";
+    position: absolute;
+    inset-inline-end: 0;
+    top: 11px;
+    bottom: 11px;
+    width: 3px;
+    border-radius: 999px;
+    background: linear-gradient(180deg, var(--jth-gold), var(--jth-emerald));
+  }
+
+  .jth-conv-glow {
+    position: absolute;
+    top: 8px;
+    inset-inline-start: 8px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #9aa8ad;
+  }
+  .jth-conv-glow.danger { background: #ef4444; box-shadow: 0 0 0 3px rgba(239,68,68,.10); }
+  .jth-conv-glow.success { background: #22c55e; box-shadow: 0 0 0 3px rgba(34,197,94,.10); }
+  .jth-conv-glow.ai { background: #0ea5e9; box-shadow: 0 0 0 3px rgba(14,165,233,.10); }
+
+  .jth-conv-head,
+  .jth-conv-foot,
+  .jth-customer-line,
+  .jth-chat-buttons,
+  .jth-reply-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    justify-content: space-between;
+  }
+
+  .jth-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    color: #fff;
+    flex: 0 0 auto;
+    font-weight: 950;
+    background: linear-gradient(145deg, var(--jth-emerald), #06464b);
+  }
+
+  .jth-avatar.large { width: 34px; height: 34px; border-radius: 12px; font-size: 15px; }
+
+  .jth-conv-main { min-width: 0; flex: 1; }
+  .jth-conv-main strong { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 12px; line-height: 1.15; }
+  .jth-conv-main small { display: block; color: var(--jth-muted); font-weight: 800; font-size: 10px; line-height: 1.1; }
+
+  .jth-conv p { margin: 5px 0; color: #405057; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 700; font-size: 11px; line-height: 1.2; }
+  .jth-conv-foot small { color: var(--jth-muted); font-size: 9px; font-weight: 800; }
+  .jth-conv-foot b { min-width: 18px; height: 18px; border-radius: 99px; background: var(--jth-danger); color: #fff; display: inline-grid; place-items: center; font-size: 10px; }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    padding: 3px 6px;
+    font-size: 9px;
+    font-weight: 950;
+    white-space: nowrap;
+  }
+  .pill.big { font-size: 10px; padding: 5px 8px; }
+  .pill.danger { color: #9f1717; background: #fff0f0; border: 1px solid rgba(207,59,59,.22); }
+  .pill.success { color: #087b4b; background: #eafaf1; border: 1px solid rgba(34,197,94,.22); }
+  .pill.ai { color: #075985; background: #eef8ff; border: 1px solid rgba(14,165,233,.20); }
+  .pill.muted { color: #66737a; background: #f2f4f4; border: 1px solid rgba(148,163,184,.18); }
+
+  .jth-chat-card {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .jth-chat-head {
+    flex: 0 0 46px;
+    min-height: 46px;
+    padding: 6px 8px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    border-bottom: 1px solid var(--jth-line);
+    background: linear-gradient(135deg, rgba(255,255,255,.94), rgba(255,255,255,.70));
+  }
+
+  .jth-chat-title-area { min-width: 0; flex: 1; }
+  .jth-customer-line { justify-content: flex-start; min-width: 0; }
+  .jth-chat-head h2 { margin: 0; font-size: 15px; line-height: 1.1; max-width: min(32vw, 430px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .jth-chat-head p { margin: 1px 0 0; color: var(--jth-muted); font-size: 10px; font-weight: 750; max-width: min(38vw, 500px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .jth-chat-buttons { flex-wrap: nowrap; flex: 0 0 auto; justify-content: flex-end; }
+  .jth-chat-buttons button {
+    border: 0;
+    border-radius: 10px;
+    padding: 6px 8px;
+    min-height: 30px;
+    color: #fff;
+    font-weight: 900;
+    cursor: pointer;
+    font-size: 10.5px;
+    white-space: nowrap;
+  }
+  .jth-chat-buttons .soft { color: var(--jth-ink); background: #fff; border: 1px solid var(--jth-line); }
+  .jth-chat-buttons .close { background: linear-gradient(135deg, var(--jth-emerald), var(--jth-jade)); }
+  .jth-chat-buttons .delete { background: linear-gradient(135deg, #9f1d1d, #ef4444); }
+  .jth-chat-buttons button:disabled { opacity: .45; cursor: not-allowed; }
+
+  .jth-messages {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    padding: 8px 10px;
+    scroll-behavior: smooth;
+    background: linear-gradient(180deg, rgba(255,255,255,.52), rgba(255,255,255,.20));
+  }
+
+  .jth-day-separator {
+    width: max-content;
+    max-width: 92%;
+    margin: 4px auto 8px;
+    color: #6c6150;
+    background: rgba(255,255,255,.88);
+    border: 1px solid rgba(201,162,74,.25);
+    border-radius: 999px;
+    padding: 4px 8px;
+    font-size: 10px;
+    font-weight: 900;
+  }
+
+  .jth-message-row { display: flex; margin-bottom: 6px; }
+  .jth-message-row.customer { justify-content: flex-start; }
+  .jth-message-row.ai,
+  .jth-message-row.human,
+  .jth-message-row.system { justify-content: flex-end; }
+
+  .jth-bubble {
+    max-width: min(610px, 70%);
+    padding: 7px 9px;
+    border-radius: 14px;
+    border: 1px solid rgba(255,255,255,.66);
+    box-shadow: 0 7px 16px rgba(26,47,54,.065);
+  }
+  .jth-message-row.customer .jth-bubble { color: #fff; background: linear-gradient(145deg, var(--jth-emerald), #07464b); border-bottom-right-radius: 5px; }
+  .jth-message-row.ai .jth-bubble { background: #fff; color: var(--jth-ink); border-color: rgba(0,102,106,.10); border-bottom-left-radius: 5px; }
+  .jth-message-row.human .jth-bubble { color: #fff; background: linear-gradient(145deg, #287e86, #1e5668); border-bottom-left-radius: 5px; }
+  .jth-message-row.system .jth-bubble { background: #fff8e8; color: #715b1d; }
+
+  .jth-sender { display: flex; align-items: center; gap: 5px; opacity: .72; font-size: 10px; font-weight: 900; margin-bottom: 3px; }
+  .jth-bubble p { white-space: pre-wrap; margin: 0; line-height: 1.5; font-weight: 700; font-size: 12px; }
+  .jth-bubble small,
+  .jth-bubble time { display: block; margin-top: 4px; color: currentColor; opacity: .62; font-size: 9px; font-weight: 800; }
+  .jth-image-link { color: var(--jth-emerald); font-weight: 900; display: inline-block; margin-top: 5px; font-size: 11px; }
+  .jth-message-row.customer .jth-image-link,
+  .jth-message-row.human .jth-image-link { color: #fff3bf; }
+
+  .jth-reply-panel {
+    flex: 0 0 auto;
+    border-top: 1px solid var(--jth-line);
+    padding: 5px;
+    background: rgba(255,255,255,.82);
+  }
+
+  .jth-quick-replies {
+    display: flex;
+    gap: 5px;
+    overflow: auto;
+    padding-bottom: 4px;
+    max-height: 28px;
+  }
+
+  .jth-quick-replies button {
+    flex: 0 0 auto;
+    max-width: 310px;
+    border: 1px solid rgba(0,102,106,.10);
+    background: #fff;
+    color: var(--jth-ink);
+    border-radius: 999px;
+    padding: 5px 8px;
+    cursor: pointer;
+    font-weight: 800;
+    font-size: 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .jth-reply-row { gap: 5px; }
+  .jth-textarea-wrap { flex: 1; position: relative; display: flex; }
+  .jth-textarea-wrap textarea {
+    flex: 1;
+    min-height: 36px;
+    height: 36px;
+    max-height: 72px;
+    resize: none;
+    overflow: auto;
+    border: 1px solid rgba(0,102,106,.13);
+    background: #fff;
+    color: var(--jth-ink);
+    border-radius: 12px;
+    padding: 8px 36px 8px 10px;
+    box-sizing: border-box;
+    font-family: inherit;
+    outline: none;
+    font-weight: 750;
+    font-size: 12px;
+    line-height: 1.45;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .jth-textarea-wrap textarea:focus { border-color: rgba(201,162,74,.62); box-shadow: 0 0 0 3px rgba(201,162,74,.10); }
+  .jth-char-count {
+    position: absolute;
+    inset-inline-end: 7px;
+    bottom: 5px;
+    font-size: 9px;
+    font-weight: 900;
+    color: var(--jth-muted);
+    pointer-events: none;
+    opacity: .7;
+  }
+  .jth-char-count.warn   { color: #b45309; opacity: 1; }
+  .jth-char-count.danger { color: var(--jth-danger); opacity: 1; }
+
+  /* New message slide-in */
+  @keyframes jth-msg-slide {
+    from { opacity: 0; transform: translateY(8px) scale(.97); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .jth-msg-new { animation: jth-msg-slide .32s cubic-bezier(.34,1.3,.64,1) both; }
+
+  /* Send button loading dots */
+  .send-dots { display: inline-flex; gap: 3px; align-items: center; }
+  .send-dots span {
+    width: 5px; height: 5px; border-radius: 50%;
+    background: rgba(255,255,255,.9);
+    animation: jth-dot-bounce .72s ease-in-out infinite;
+  }
+  .send-dots span:nth-child(2) { animation-delay: .12s; }
+  .send-dots span:nth-child(3) { animation-delay: .24s; }
+  @keyframes jth-dot-bounce {
+    0%, 80%, 100% { transform: scale(.55); opacity: .5; }
+    40%           { transform: scale(1);   opacity: 1; }
+  }
+
+  /* Stat card subtle shimmer on update */
+  @keyframes jth-stat-flash {
+    0%   { background: rgba(201,162,74,.10); }
+    100% { background: transparent; }
+  }
+  .stat-card strong { transition: color .22s; }
+  .jth-reply-row .send,
+  .jth-reply-row .emoji {
+    height: 36px;
+    border: 0;
+    border-radius: 12px;
+    padding: 0 12px;
+    cursor: pointer;
+    font-weight: 900;
+    font-size: 12px;
+    flex: 0 0 auto;
+  }
+  .jth-reply-row .send { 
+    color: #fff; 
+    background: linear-gradient(135deg, var(--jth-emerald), var(--jth-jade));
+    position: relative;
+    overflow: hidden;
+    transition: transform .1s, box-shadow .15s;
+  }
+  .jth-reply-row .send:not(:disabled):hover { transform: scale(1.03); box-shadow: 0 6px 18px rgba(0,102,106,.28); }
+  .jth-reply-row .send:not(:disabled):active { transform: scale(.97); }
+  .jth-reply-row .send::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,.22) 50%, transparent 60%);
+    transform: translateX(-100%);
+    transition: transform .45s;
+  }
+  .jth-reply-row .send:not(:disabled):hover::after { transform: translateX(100%); }
+  .jth-reply-row .send:disabled { opacity: .48; cursor: not-allowed; }
+  .jth-reply-row .emoji { color: var(--jth-ink); background: #fff; border: 1px solid rgba(0,102,106,.11); transition: background .15s; }
+  .jth-reply-row .emoji:hover { background: #f0fbf9; }
+
+  .jth-emoji-bar { display: flex; gap: 5px; padding-top: 5px; }
+  .jth-emoji-bar button { border: 1px solid rgba(0,102,106,.10); background: #fff; border-radius: 10px; padding: 4px 7px; cursor: pointer; }
+
+  .jth-details-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 6px;
+    overflow: auto;
+  }
+
+  .jth-detail-card {
+    background: rgba(255,255,255,.72);
+    border: 1px solid rgba(0,102,106,.09);
+    border-radius: 13px;
+    padding: 8px;
+    box-shadow: 0 7px 16px rgba(26,47,54,.035);
+  }
+  .jth-detail-card.signature { color: #fff; border: 0; background: linear-gradient(145deg, var(--jth-emerald), #06464b); }
+  .mini-label { display: inline-flex; color: #fff3bf; font-size: 10px; font-weight: 900; }
+  .jth-detail-card h3,
+  .jth-detail-card h4 { margin: 0 0 5px; font-size: 12px; line-height: 1.15; }
+  .jth-detail-card p { margin: 0; color: var(--jth-muted); line-height: 1.45; font-weight: 700; font-size: 10.5px; }
+  .jth-detail-card.signature p { color: rgba(255,255,255,.78); }
+  .jth-detail-card dl { margin: 0; display: grid; gap: 5px; }
+  .jth-detail-card dl div { display: flex; justify-content: space-between; gap: 6px; border-bottom: 1px dashed rgba(0,102,106,.11); padding-bottom: 4px; }
+  .jth-detail-card dt { color: var(--jth-muted); font-size: 10px; font-weight: 850; }
+  .jth-detail-card dd { margin: 0; color: var(--jth-ink); text-align: left; font-weight: 800; word-break: break-word; font-size: 10px; }
+  .copy-btn { width: 100%; margin-top: 6px; border: 1px solid rgba(201,162,74,.28); background: #fffaf0; color: #7a5f18; border-radius: 11px; padding: 6px 8px; cursor: pointer; font-weight: 900; font-size: 11px; }
+  .team-card { background: linear-gradient(135deg, #fff, #f5fbf8); }
+  .team-strip { margin-top: 6px; display: flex; justify-content: space-between; gap: 6px; padding: 6px; border-radius: 10px; background: #edf8f1; color: var(--jth-emerald); font-weight: 850; font-size: 10.5px; }
+  .breakable { word-break: break-word; }
+
+  .jth-empty { color: var(--jth-muted); padding: 10px; font-weight: 800; font-size: 12px; }
+  .jth-empty.compact { padding: 8px; text-align: center; }
+  .jth-empty.center { margin: auto; text-align: center; }
+
+  ::-webkit-scrollbar { width: 7px; height: 7px; }
+  ::-webkit-scrollbar-track { background: rgba(0,102,106,.04); border-radius: 999px; }
+  ::-webkit-scrollbar-thumb { background: linear-gradient(180deg, rgba(201,162,74,.48), rgba(0,102,106,.42)); border-radius: 999px; border: 2px solid rgba(255,255,255,.55); }
+
+  @media (max-width: 1450px) {
+    .jth-layout,
+    .jth-layout.details-collapsed { grid-template-columns: 250px minmax(0, 1fr); }
+    .jth-details-panel { display: none; }
+    .jth-chat-head h2 { max-width: 32vw; }
+    .jth-chat-head p { max-width: 40vw; }
+  }
+
+  @media (max-height: 740px) and (min-width: 981px) {
+    .jth-admin-shell { padding: 5px; gap: 4px; }
+    .jth-topbar { flex: 0 0 36px; min-height: 36px; }
+    .jth-brand-mark { width: 32px; height: 32px; border-radius: 10px; font-size: 18px; }
+    h1 { font-size: 18px; }
+    .jth-kicker { font-size: 8px; }
+    .jth-sound, .jth-refresh { min-height: 28px; padding: 5px 8px; font-size: 10px; }
+    .jth-stats-grid { flex-basis: 28px; gap: 4px; }
+    .stat-card { min-height: 28px; padding: 5px 8px; border-radius: 10px; }
+    .stat-card strong { font-size: 14px; }
+    .stat-card span { font-size: 9px; }
+    .jth-chat-head { flex-basis: 40px; min-height: 40px; padding: 5px 7px; }
+    .jth-chat-buttons button { min-height: 27px; padding: 5px 7px; font-size: 10px; }
+    .jth-messages { padding: 6px 9px; }
+    .jth-bubble { padding: 6px 8px; }
+    .jth-bubble p { font-size: 11.5px; line-height: 1.42; }
+    .jth-reply-panel { padding: 4px; }
+    .jth-quick-replies { max-height: 24px; padding-bottom: 3px; }
+    .jth-quick-replies button { padding: 4px 7px; font-size: 9px; }
+    .jth-reply-row textarea { height: 32px; min-height: 32px; font-size: 11px; padding: 6px 9px; }
+    .jth-reply-row .send, .jth-reply-row .emoji { height: 32px; font-size: 11px; }
+    .jth-textarea-wrap textarea { height: 32px; min-height: 32px; font-size: 11px; padding: 6px 30px 6px 9px; }
   }
 
   @media (max-width: 980px) {
     html, body { overflow: auto !important; }
-    .jth-desk {
-      height: auto;
-      min-height: 100dvh;
-      overflow: visible;
-      grid-template-rows: auto auto;
-      padding: 8px;
-    }
-    .desk-top {
-      grid-template-columns: 1fr;
-      height: auto;
-    }
-    .brand-mini,
-    .metric-strip,
-    .top-actions { height: 46px; }
-    .metric-strip { grid-template-columns: repeat(4, minmax(80px,1fr)); overflow-x: auto; }
-    .desk-grid,
-    .desk-grid.show-details {
-      grid-template-columns: 1fr;
-      overflow: visible;
-      height: auto;
-    }
-    .inbox-panel { height: 32dvh; min-height: 230px; }
-    .chat-panel { height: 66dvh; min-height: 440px; }
-    .chat-head { height: auto; min-height: 54px; }
-    .chat-user h2 { max-width: 42vw; }
-    .bubble { max-width: 88%; }
-    .emoji-tray { inset-inline-start: 12px; bottom: 74px; }
+    .jth-admin-shell { height: auto; min-height: 100dvh; overflow: visible; padding: 6px; }
+    .jth-topbar { flex: 0 0 auto; min-height: 40px; }
+    .jth-layout,
+    .jth-layout.details-collapsed { grid-template-columns: 1fr; height: auto; overflow: visible; }
+    .jth-sidebar { height: 30dvh; min-height: 210px; }
+    .jth-chat-card { height: 66dvh; min-height: 430px; }
+    .jth-details-panel { display: none; }
+    .jth-stats-grid { grid-template-columns: repeat(4, minmax(86px, 1fr)); overflow-x: auto; flex: 0 0 32px; padding-bottom: 1px; }
+    .stat-card { min-width: 86px; }
+    .jth-actions-top { justify-content: stretch; }
+    .jth-actions-top button { flex: 1; }
+    .jth-chat-head { flex-direction: column; align-items: stretch; height: auto; flex-basis: auto; min-height: 0; }
+    .jth-chat-head h2, .jth-chat-head p { max-width: 100%; }
+    .jth-chat-buttons { display: grid; grid-template-columns: repeat(3, 1fr); }
+    .jth-chat-buttons button { width: 100%; }
+    .jth-bubble { max-width: 88%; }
   }
 
   @media (max-width: 640px) {
-    .jth-desk { padding: 6px; gap: 6px; }
-    .brand-mini { border-radius: 16px; }
-    .brand-mini b { font-size: 15px; }
-    .metric-strip span { font-size: 10px; }
-    .metric-strip b { font-size: 15px; }
-    .top-actions { display: grid; grid-template-columns: 1fr 1fr; }
-    .top-btn { width: 100%; padding-inline: 8px; }
-    .inbox-panel { height: 28dvh; min-height: 210px; border-radius: 18px; }
-    .chat-panel {
-      height: 68dvh;
-      min-height: 450px;
-      border-radius: 18px;
-      grid-template-rows: auto minmax(0, 1fr) 94px;
-    }
-    .chat-head { align-items: stretch; flex-direction: column; }
-    .chat-user h2 { max-width: 70vw; }
-    .chat-actions { display: grid; grid-template-columns: 1fr 1fr 1fr; }
-    .chat-actions button { width: 100%; }
-    .messages-panel { padding: 8px; }
-    .bubble { max-width: 94%; padding: 8px 10px; }
-    .bubble p { font-size: 12.5px; }
-    .quick-row button { max-width: 230px; }
-    .composer-row { grid-template-columns: 38px minmax(0, 1fr) 64px; gap: 5px; }
-    .composer-row textarea { font-size: 12px; padding: 9px; }
-    .emoji-btn, .send-btn { height: 40px; border-radius: 14px; }
-    .jth-toast { left: 7px; right: 7px; bottom: 7px; text-align: center; }
+    .jth-admin-shell { padding: 5px; gap: 4px; }
+    .jth-brand-mark { width: 34px; height: 34px; }
+    .jth-kicker { display: none; }
+    h1 { font-size: 18px; }
+    .jth-sound, .jth-refresh { padding: 7px 7px; font-size: 10px; }
+    .jth-stats-grid { gap: 4px; }
+    .stat-card { padding: 5px 7px; border-radius: 11px; }
+    .jth-sidebar { height: 28dvh; min-height: 200px; border-radius: 13px; }
+    .jth-chat-card { height: 67dvh; min-height: 420px; border-radius: 13px; }
+    .jth-tabs { gap: 3px; padding-inline: 6px; }
+    .jth-tabs button { font-size: 9px; padding: 5px 1px; }
+    .jth-conv-list { padding: 5px; }
+    .jth-conv { padding: 6px; border-radius: 12px; }
+    .pill.big { display: none; }
+    .jth-chat-buttons { grid-template-columns: 1fr 1fr; }
+    .jth-chat-buttons .soft { grid-column: 1 / -1; }
+    .jth-messages { padding: 7px; }
+    .jth-bubble { max-width: 93%; padding: 7px 9px; }
+    .jth-bubble p { font-size: 12px; line-height: 1.55; }
+    .jth-quick-replies button { max-width: 230px; }
+    .jth-reply-row { gap: 4px; }
+    .jth-reply-row textarea { min-height: 35px; height: 35px; font-size: 11.5px; border-radius: 11px; }
+    .jth-textarea-wrap textarea { min-height: 35px; height: 35px; font-size: 11.5px; border-radius: 11px; padding: 7px 30px 7px 10px; }
+    .jth-reply-row .send, .jth-reply-row .emoji { height: 35px; border-radius: 11px; padding-inline: 10px; }
+    .jth-toast { left: 6px; right: 6px; bottom: 6px; text-align: center; }
   }
 `;
