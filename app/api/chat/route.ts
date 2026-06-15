@@ -9,6 +9,7 @@ import { detectLanguage, matchCategories } from "@/lib/matcher";
 import { needsWhatsapp } from "@/lib/safety";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 type Language = "ar" | "en";
 
@@ -26,6 +27,18 @@ type KnowledgeRule = {
 type KnowledgeHit = KnowledgeRule & {
   score: number;
 };
+
+type VisionAnalysis = {
+  detected_problem: string;
+  possible_category_terms: string[];
+  confidence: "high" | "medium" | "low";
+  image_clarity: "clear" | "partial" | "unclear";
+  visual_notes: string;
+  whatsapp_needed: boolean;
+  whatsapp_reason: string;
+};
+
+const MAX_IMAGE_SIZE = 4 * 1024 * 1024;
 
 const KNOWLEDGE_RULES: KnowledgeRule[] = [
   {
@@ -295,6 +308,10 @@ function getOpenAIClient() {
   return new OpenAI({ apiKey });
 }
 
+function getModel() {
+  return process.env.OPENAI_MODEL || "gpt-4o-mini";
+}
+
 function normalizeText(value: string) {
   return value
     .toLowerCase()
@@ -489,6 +506,253 @@ async function buildKnowledgeContext(
   return context;
 }
 
+async function imageFileToDataUrl(file: File) {
+  const arrayBuffer = await file.arrayBuffer();
+  const base64 = Buffer.from(arrayBuffer).toString("base64");
+  const mime = file.type || "image/jpeg";
+
+  return `data:${mime};base64,${base64}`;
+}
+
+function isAllowedImageType(type: string) {
+  return [
+    "image/jpeg",
+    "image/jpg",
+    "image/png",
+    "image/webp",
+    "image/gif"
+  ].includes(type.toLowerCase());
+}
+
+function normalizeLanguage(value: unknown, fallback: Language = "ar"): Language {
+  const text = String(value || "").toLowerCase();
+
+  if (text.startsWith("en")) return "en";
+  if (text.startsWith("ar")) return "ar";
+
+  return fallback;
+}
+
+function fallbackVisionAnalysis(language: Language): VisionAnalysis {
+  return {
+    detected_problem: language === "ar" ? "غير واضح" : "Unclear",
+    possible_category_terms: [],
+    confidence: "low",
+    image_clarity: "unclear",
+    visual_notes:
+      language === "ar"
+        ? "لم أتمكن من تحليل الصورة بشكل كافٍ."
+        : "The image could not be analyzed clearly.",
+    whatsapp_needed: true,
+    whatsapp_reason:
+      language === "ar"
+        ? "الصورة غير واضحة أو تحتاج فحص مباشر."
+        : "The image is unclear or needs direct review."
+  };
+}
+
+async function analyzeImageFirst(params: {
+  client: OpenAI;
+  imageDataUrl: string;
+  message: string;
+  language: Language;
+}): Promise<VisionAnalysis> {
+  const { client, imageDataUrl, message, language } = params;
+
+  const prompt =
+    language === "ar"
+      ? `
+حلل الصورة كخبير مبدئي في آفات الصحة العامة والزراعة لمتجر جذرة.
+
+المطلوب:
+- حدد ما الذي يظهر بالصورة إن أمكن.
+- هل هي حشرة منزلية؟ آفة نباتية؟ مرض نبات؟ أثر قارض؟ أم غير واضح؟
+- لا تجزم إذا الصورة غير واضحة.
+- لا تعطي جرعات مبيدات.
+- إذا كانت الصورة غير واضحة أو الحالة خطرة أو تحتاج تشخيص مباشر، اجعل whatsapp_needed = true.
+
+رسالة العميل:
+${message || "لا توجد رسالة، الصورة فقط."}
+
+أعد JSON فقط.
+`
+      : `
+Analyze the image as an initial public-health and agricultural pest assistant for Jothrah.
+
+Required:
+- Identify what appears in the image if possible.
+- Is it a household insect, plant pest, plant disease, rodent sign, or unclear?
+- Do not be overconfident if the image is unclear.
+- Do not provide pesticide dosage.
+- If the image is unclear, risky, or needs direct review, set whatsapp_needed = true.
+
+Customer message:
+${message || "No message, image only."}
+
+Return JSON only.
+`;
+
+  try {
+    const completion = await client.chat.completions.create({
+      model: getModel(),
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: prompt
+            },
+            {
+              type: "image_url",
+              image_url: {
+                url: imageDataUrl
+              }
+            }
+          ] as any
+        }
+      ],
+      response_format: {
+        type: "json_schema",
+        json_schema: {
+          name: "jothrah_image_analysis",
+          strict: true,
+          schema: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              detected_problem: {
+                type: "string"
+              },
+              possible_category_terms: {
+                type: "array",
+                items: {
+                  type: "string"
+                },
+                maxItems: 6
+              },
+              confidence: {
+                type: "string",
+                enum: ["high", "medium", "low"]
+              },
+              image_clarity: {
+                type: "string",
+                enum: ["clear", "partial", "unclear"]
+              },
+              visual_notes: {
+                type: "string"
+              },
+              whatsapp_needed: {
+                type: "boolean"
+              },
+              whatsapp_reason: {
+                type: "string"
+              }
+            },
+            required: [
+              "detected_problem",
+              "possible_category_terms",
+              "confidence",
+              "image_clarity",
+              "visual_notes",
+              "whatsapp_needed",
+              "whatsapp_reason"
+            ]
+          }
+        }
+      },
+      max_completion_tokens: 500
+    });
+
+    const raw = completion.choices[0]?.message?.content || "{}";
+    const parsed = JSON.parse(raw) as VisionAnalysis;
+
+    return parsed;
+  } catch (error) {
+    console.warn("Image analysis failed:", error);
+    return fallbackVisionAnalysis(language);
+  }
+}
+
+function buildVisionContext(
+  imageDataUrl: string | null,
+  visionAnalysis: VisionAnalysis | null,
+  language: Language
+) {
+  if (!imageDataUrl) {
+    return language === "ar"
+      ? "لا توجد صورة مرفقة."
+      : "No image was attached.";
+  }
+
+  if (!visionAnalysis) {
+    return language === "ar"
+      ? "تم إرفاق صورة، لكن لم يتم تحليلها."
+      : "An image was attached, but it was not analyzed.";
+  }
+
+  return `
+Image was analyzed first.
+
+Detected problem:
+${visionAnalysis.detected_problem}
+
+Possible category terms:
+${visionAnalysis.possible_category_terms.join(", ")}
+
+Confidence:
+${visionAnalysis.confidence}
+
+Image clarity:
+${visionAnalysis.image_clarity}
+
+Visual notes:
+${visionAnalysis.visual_notes}
+
+Vision WhatsApp needed:
+${visionAnalysis.whatsapp_needed}
+
+Vision WhatsApp reason:
+${visionAnalysis.whatsapp_reason}
+`.trim();
+}
+
+function shouldForceWhatsappFromVision(visionAnalysis: VisionAnalysis | null) {
+  if (!visionAnalysis) return false;
+
+  if (visionAnalysis.whatsapp_needed) return true;
+  if (visionAnalysis.confidence === "low") return true;
+  if (visionAnalysis.image_clarity === "unclear") return true;
+
+  const sensitive = normalizeText(
+    [
+      visionAnalysis.detected_problem,
+      visionAnalysis.visual_notes,
+      visionAnalysis.whatsapp_reason,
+      ...visionAnalysis.possible_category_terms
+    ].join(" ")
+  );
+
+  const sensitiveTerms = [
+    "نمل ابيض",
+    "ارضه",
+    "بق الفراش",
+    "قوارض",
+    "فئران",
+    "جرذان",
+    "سوسه النخيل",
+    "termite",
+    "bed bug",
+    "rodent",
+    "rat",
+    "mouse",
+    "red palm weevil",
+    "unclear"
+  ];
+
+  return sensitiveTerms.some((term) => sensitive.includes(normalizeText(term)));
+}
+
 const responseSchema = {
   name: "jothrah_chat_response",
   schema: {
@@ -496,6 +760,12 @@ const responseSchema = {
     additionalProperties: false,
     properties: {
       language: { type: "string", enum: ["ar", "en"] },
+      analysis_source: {
+        type: "string",
+        enum: ["text", "image", "image_and_text"]
+      },
+      detected_problem: { type: "string" },
+      confidence: { type: "string", enum: ["high", "medium", "low"] },
       summary: { type: "string" },
       advice: {
         type: "array",
@@ -520,15 +790,33 @@ const responseSchema = {
         },
         maxItems: 3
       },
+      product_suggestions: {
+        type: "array",
+        items: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            name: { type: "string" },
+            url: { type: "string" },
+            reason: { type: "string" }
+          },
+          required: ["name", "url", "reason"]
+        },
+        maxItems: 3
+      },
       whatsapp_needed: { type: "boolean" },
       whatsapp_message: { type: "string" }
     },
     required: [
       "language",
+      "analysis_source",
+      "detected_problem",
+      "confidence",
       "summary",
       "advice",
       "questions",
       "categories",
+      "product_suggestions",
       "whatsapp_needed",
       "whatsapp_message"
     ]
@@ -536,53 +824,192 @@ const responseSchema = {
   strict: true
 } as const;
 
+async function readRequestBody(req: NextRequest) {
+  const contentType = req.headers.get("content-type") || "";
+
+  let message = "";
+  let languageFromClient: Language | null = null;
+  let imageDataUrl: string | null = null;
+
+  if (contentType.includes("multipart/form-data")) {
+    const form = await req.formData();
+
+    message = String(form.get("message") || "").trim();
+    languageFromClient = normalizeLanguage(form.get("language"), "ar");
+
+    const image = form.get("image");
+
+    if (image instanceof File && image.size > 0) {
+      if (!image.type || !isAllowedImageType(image.type)) {
+        throw new Error("INVALID_IMAGE_TYPE");
+      }
+
+      if (image.size > MAX_IMAGE_SIZE) {
+        throw new Error("IMAGE_TOO_LARGE");
+      }
+
+      imageDataUrl = await imageFileToDataUrl(image);
+    }
+  } else {
+    const body = await req.json();
+
+    message = String(body.message || "").trim();
+    languageFromClient = normalizeLanguage(body.language, "ar");
+
+    const rawImage =
+      typeof body.image === "string"
+        ? body.image
+        : typeof body.image_data_url === "string"
+          ? body.image_data_url
+          : "";
+
+    if (rawImage) {
+      if (
+        !rawImage.startsWith("data:image/") &&
+        !rawImage.startsWith("https://") &&
+        !rawImage.startsWith("http://")
+      ) {
+        throw new Error("INVALID_IMAGE_TYPE");
+      }
+
+      imageDataUrl = rawImage;
+    }
+  }
+
+  return {
+    message,
+    languageFromClient,
+    imageDataUrl
+  };
+}
+
 export async function POST(req: NextRequest) {
   const origin = req.headers.get("origin");
 
   try {
-    const body = await req.json();
-    const message = String(body.message || "").trim();
+    const { message, languageFromClient, imageDataUrl } =
+      await readRequestBody(req);
 
-    if (!message) {
+    if (!message && !imageDataUrl) {
+      const language = languageFromClient || "ar";
+
       return NextResponse.json(
-        { error: "Message is required" },
+        {
+          error:
+            language === "ar"
+              ? "اكتب رسالة أو أرفق صورة."
+              : "Please write a message or attach an image."
+        },
         { status: 400, headers: corsHeaders(origin) }
       );
     }
 
-    const detectedLanguage = detectLanguage(message);
-    const language: Language = detectedLanguage === "en" ? "en" : "ar";
+    const detectedLanguageFromText = message ? detectLanguage(message) : null;
+
+    const language: Language =
+      detectedLanguageFromText === "en"
+        ? "en"
+        : detectedLanguageFromText === "ar"
+          ? "ar"
+          : languageFromClient || "ar";
+
+    const client = getOpenAIClient();
+
+    const visionAnalysis = imageDataUrl
+      ? await analyzeImageFirst({
+          client,
+          imageDataUrl,
+          message,
+          language
+        })
+      : null;
+
+    const matchingText = [
+      message,
+      visionAnalysis?.detected_problem || "",
+      visionAnalysis?.visual_notes || "",
+      ...(visionAnalysis?.possible_category_terms || [])
+    ]
+      .filter(Boolean)
+      .join(" ");
 
     const matchedCategories = matchCategories(
-      message,
+      matchingText || message,
       language
     ) as ChatCategory[];
 
-    const forceWhatsapp = needsWhatsapp(message);
+    const knowledgeHits = selectKnowledgeFiles(
+      matchingText || message,
+      matchedCategories
+    );
 
-    const knowledgeHits = selectKnowledgeFiles(message, matchedCategories);
     const knowledgeContext = await buildKnowledgeContext(
       knowledgeHits,
       language
     );
 
-    const client = getOpenAIClient();
+    const forceWhatsappByText = needsWhatsapp(message);
+    const forceWhatsappByVision = shouldForceWhatsappFromVision(visionAnalysis);
+    const forceWhatsapp = forceWhatsappByText || forceWhatsappByVision;
 
-    const completion = await client.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        {
-          role: "system",
-          content: jothrahSystemPrompt
-        },
-        {
-          role: "system",
-          content: `
-Jothrah matched categories:
+    const visionContext = buildVisionContext(
+      imageDataUrl,
+      visionAnalysis,
+      language
+    );
+
+    const analysisSource = imageDataUrl
+      ? message
+        ? "image_and_text"
+        : "image"
+      : "text";
+
+    const userPrompt =
+      language === "ar"
+        ? `
+رسالة العميل:
+${message || "لم يكتب العميل رسالة، أرسل صورة فقط."}
+
+مصدر التحليل:
+${analysisSource}
+
+نتيجة تحليل الصورة الأولية:
+${visionContext}
+
+التصنيفات المطابقة من المتجر:
 ${JSON.stringify(matchedCategories, null, 2)}
 
-Force WhatsApp:
+ملفات المعرفة المطابقة:
+${JSON.stringify(
+  knowledgeHits.map((hit) => ({
+    id: hit.id,
+    file: hit.file,
+    score: hit.score
+  })),
+  null,
+  2
+)}
+
+سياق المعرفة:
+${knowledgeContext}
+
+هل يجب التحويل إلى واتساب؟
 ${forceWhatsapp}
+
+أجب للعميل بصيغة مختصرة ومفيدة داخل شات متجر إلكتروني.
+`
+        : `
+Customer message:
+${message || "The customer did not write a message and only sent an image."}
+
+Analysis source:
+${analysisSource}
+
+Initial image analysis:
+${visionContext}
+
+Matched store categories:
+${JSON.stringify(matchedCategories, null, 2)}
 
 Matched knowledge files:
 ${JSON.stringify(
@@ -595,44 +1022,72 @@ ${JSON.stringify(
   2
 )}
 
-Jothrah knowledge context:
+Knowledge context:
 ${knowledgeContext}
 
-Important response rules:
-- Use the knowledge context above when it is available.
-- Keep the answer short and useful for an ecommerce chat widget.
-- Do not invent pesticide dosage, dilution, mixing ratios, safety claims, or product recommendations.
-- If dosage or exact method is not present in the knowledge context, tell the customer to follow the product label.
-- Maximum 3 advice items.
-- Maximum 2 follow-up questions.
-- If children, pets, pregnancy, asthma, allergy, poisoning symptoms, bedroom, closed place, food, or strong odor are mentioned, set whatsapp_needed to true.
+Should WhatsApp escalation be enabled?
+${forceWhatsapp}
+
+Reply in a short, useful ecommerce chat style.
+`;
+
+    const completion = await client.chat.completions.create({
+      model: getModel(),
+      messages: [
+        {
+          role: "system",
+          content: jothrahSystemPrompt
+        },
+        {
+          role: "system",
+          content: `
+Important Jothrah response rules:
+- The image analysis, if available, was performed first.
+- Use the image analysis result, the customer text, matched categories, and knowledge context.
+- Do not claim certainty from an unclear image.
+- If confidence is low, image is unclear, or the case needs direct diagnosis, set whatsapp_needed to true.
+- Do not invent pesticide dosage, dilution, mixing ratios, or safety claims.
+- Do not recommend a specific product unless the product exists in provided knowledge or matched category data.
+- product_suggestions may be an empty array.
+- Keep advice to maximum 3 items.
+- Keep questions to maximum 2 items.
 - Return only valid JSON matching the schema.
 `
         },
         {
           role: "user",
-          content: message
+          content: userPrompt
         }
       ],
       response_format: {
         type: "json_schema",
         json_schema: responseSchema
-      }
+      },
+      max_completion_tokens: 1000
     });
 
     const raw = completion.choices[0]?.message?.content || "{}";
     const data = JSON.parse(raw);
 
+    const fallbackWhatsappMessage =
+      language === "ar"
+        ? `السلام عليكم، أحتاج مساعدة في تشخيص المشكلة. ${
+            message ? `الرسالة: ${message}` : "أرسلت صورة فقط."
+          }`
+        : `Hello, I need help diagnosing the issue. ${
+            message ? `Message: ${message}` : "I sent an image only."
+          }`;
+
     const whatsappMessage =
-      data.whatsapp_message ||
-      (language === "ar"
-        ? `السلام عليكم، أحتاج مساعدة في: ${message}`
-        : `Hello, I need help with: ${message}`);
+      data.whatsapp_message && String(data.whatsapp_message).trim()
+        ? data.whatsapp_message
+        : fallbackWhatsappMessage;
 
     return NextResponse.json(
       {
         ...data,
         language,
+        analysis_source: data.analysis_source || analysisSource,
         categories:
           Array.isArray(data.categories) && data.categories.length
             ? data.categories
@@ -644,6 +1099,23 @@ Important response rules:
     );
   } catch (error) {
     console.error(error);
+
+    const message =
+      error instanceof Error ? error.message : "UNKNOWN_ERROR";
+
+    if (message === "INVALID_IMAGE_TYPE") {
+      return NextResponse.json(
+        { error: "Invalid image type" },
+        { status: 400, headers: corsHeaders(origin) }
+      );
+    }
+
+    if (message === "IMAGE_TOO_LARGE") {
+      return NextResponse.json(
+        { error: "Image is too large. Maximum size is 4MB." },
+        { status: 400, headers: corsHeaders(origin) }
+      );
+    }
 
     return NextResponse.json(
       { error: "Failed to process chat request" },
