@@ -8,6 +8,20 @@ import { needsWhatsapp } from "@/lib/safety";
 
 export const runtime = "nodejs";
 
+function corsHeaders() {
+  const allowedOrigin = process.env.ALLOWED_ORIGIN || "https://jothrah.com";
+
+  return {
+    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type"
+  };
+}
+
+export async function OPTIONS() {
+  return NextResponse.json({}, { headers: corsHeaders() });
+}
+
 function getOpenAIClient() {
   const apiKey = process.env.OPENAI_API_KEY;
 
@@ -73,7 +87,7 @@ export async function POST(req: NextRequest) {
     if (!message) {
       return NextResponse.json(
         { error: "Message is required" },
-        { status: 400 }
+        { status: 400, headers: corsHeaders() }
       );
     }
 
@@ -81,9 +95,9 @@ export async function POST(req: NextRequest) {
     const matchedCategories = matchCategories(message, language);
     const forceWhatsapp = needsWhatsapp(message);
 
-const client = getOpenAIClient();
+    const client = getOpenAIClient();
 
-const completion = await client.chat.completions.create({
+    const completion = await client.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
         {
@@ -120,18 +134,21 @@ ${forceWhatsapp}
         ? `السلام عليكم، أحتاج مساعدة في: ${message}`
         : `Hello, I need help with: ${message}`);
 
-    return NextResponse.json({
-      ...data,
-      categories: data.categories?.length ? data.categories : matchedCategories,
-      whatsapp_needed: Boolean(data.whatsapp_needed || forceWhatsapp),
-      whatsapp_url: buildWhatsappUrl(whatsappMessage)
-    });
+    return NextResponse.json(
+      {
+        ...data,
+        categories: data.categories?.length ? data.categories : matchedCategories,
+        whatsapp_needed: Boolean(data.whatsapp_needed || forceWhatsapp),
+        whatsapp_url: buildWhatsappUrl(whatsappMessage)
+      },
+      { headers: corsHeaders() }
+    );
   } catch (error) {
     console.error(error);
 
     return NextResponse.json(
       { error: "Failed to process chat request" },
-      { status: 500 }
+      { status: 500, headers: corsHeaders() }
     );
   }
 }
