@@ -878,9 +878,22 @@ function shouldForceWhatsappFromVision(visionAnalysis: VisionAnalysis | null) {
 }
 
 
+function cleanAiSummary(value: unknown) {
+  let summary = String(value || "").trim();
+
+  // يمنع تكرار العناوين داخل الشات إذا النموذج كتب "نصائح مباشرة" داخل الملخص.
+  summary = summary
+    .replace(/\n?\s*(نصائح مباشرة|Direct advice)\s*[:：]\s*/gi, "\n")
+    .replace(/\n?\s*(تشخيص مبدئي|Initial diagnosis)\s*[:：]\s*/gi, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+
+  return summary;
+}
+
 function buildStoredAiMessage(data: any, language: Language) {
   const parts: string[] = [];
-  const summary = String(data?.summary || "").trim();
+  const summary = cleanAiSummary(data?.summary);
 
   if (summary) parts.push(summary);
 
