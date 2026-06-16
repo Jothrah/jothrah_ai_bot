@@ -1,56 +1,72 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase-admin";
-
-type RouteContext = {
-  params: Promise<{ id: string }>;
-};
+import { saveChatEvent } from "@/lib/chat-store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function PATCH(req: NextRequest, context: RouteContext) {
+type Params = { params: Promise<{ id: string }> };
+
+function cleanCustomerName(value: unknown) {
+  const text = String(value || "")
+    .replace(/[<>]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 80);
+
+  if (text.length < 2) return "";
+  if (/^jth_[a-z0-9_\-]+$/i.test(text)) return "";
+  if (/^visitor_[a-z0-9_\-]+$/i.test(text)) return "";
+  if (/^guest_[a-z0-9_\-]+$/i.test(text)) return "";
+
+  return text;
+}
+
+export async function PATCH(req: NextRequest, props: Params) {
   try {
-    const { id } = await context.params;
-    const conversationId = String(id || "").trim();
+    const { id } = await props.params;
     const body = await req.json().catch(() => ({}));
-    const customerName = String(body?.customer_name || "").trim().slice(0, 80);
+    const customerName = cleanCustomerName(
+      body.customer_name || body.customerName || body.name,
+    );
 
-    if (!conversationId) {
+    if (!id) {
       return NextResponse.json(
-        { ok: false, error: "conversation id is required" },
+        { error: "conversation id is required" },
         { status: 400 },
       );
     }
 
-    if (!customerName || customerName.length < 2) {
+    if (!customerName) {
       return NextResponse.json(
-        { ok: false, error: "customer_name is required" },
+        { error: "اكتب اسم العميل بشكل واضح" },
         { status: 400 },
       );
     }
 
-    const { data: conversation, error } = await supabaseAdmin
+    const { data, error } = await supabaseAdmin
       .from("chat_conversations")
-      .update({ customer_name: customerName })
-      .eq("id", conversationId)
+      .update({
+        customer_name: customerName,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", id)
       .select("*")
-      .maybeSingle();
+      .single();
 
-    if (error) {
-      return NextResponse.json(
-        { ok: false, error: error.message },
-        { status: 500 },
-      );
-    }
+    if (error) throw error;
 
-    return NextResponse.json({ ok: true, conversation });
+    await saveChatEvent({
+      conversationId: id,
+      eventName: "customer_name_updated_by_admin",
+      eventData: { customerName },
+    });
+
+    return NextResponse.json({ ok: true, conversation: data });
   } catch (error) {
-    console.error("PATCH /api/admin/conversations/[id]/name error:", error);
+    console.error("PATCH admin customer name error:", error);
     return NextResponse.json(
-      {
-        ok: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-      },
+      { error: "Failed to update customer name" },
       { status: 500 },
     );
   }
