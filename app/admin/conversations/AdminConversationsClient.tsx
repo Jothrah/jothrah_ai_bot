@@ -950,6 +950,9 @@ export default function AdminConversationsClient({ initialData }: Props) {
   }, [refresh]);
 
   async function selectConversation(id: string) {
+    // مهم للجوال: نثبت الاختيار في المرجع فورًا قبل أي refresh دوري،
+    // حتى لا يرجع النظام لقائمة المحادثات أثناء فتح المحادثة.
+    selectedIdRef.current = id;
     setSelectedId(id);
     window.history.replaceState(null, "", `/admin/conversations?id=${id}`);
 
