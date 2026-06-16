@@ -102,9 +102,7 @@ function getCustomerInitial(conversation?: Conversation | null) {
 }
 
 function getCustomerSessionCode(conversation?: Conversation | null) {
-  const code = String(
-    conversation?.visitor_id || conversation?.id || "",
-  ).trim();
+  const code = String(conversation?.visitor_id || conversation?.id || "").trim();
   if (!code) return "—";
   return code.length > 16 ? `${code.slice(0, 8)}…${code.slice(-6)}` : code;
 }
@@ -206,10 +204,7 @@ function ratingText(conversation?: Conversation | null) {
   return `${rating}/5`;
 }
 
-function displayMessageText(
-  message: ChatMessage,
-  conversation?: Conversation | null,
-) {
+function displayMessageText(message: ChatMessage, conversation?: Conversation | null) {
   let text = cleanMessageText(message.message);
   if (isImageMessage(message) && isDefaultImagePrompt(text)) return "";
 
@@ -254,8 +249,7 @@ function statusTone(conversation?: Conversation | null) {
 }
 
 function senderLabel(message: ChatMessage, conversation?: Conversation | null) {
-  if (message.sender_type === "customer")
-    return getCleanCustomerNameOrVisitor(conversation);
+  if (message.sender_type === "customer") return getCleanCustomerNameOrVisitor(conversation);
   if (message.sender_type === "human") return "مختص جذرة";
   if (message.sender_type === "ai") return "مساعد جذرة";
   return "النظام";
@@ -290,46 +284,6 @@ function conversationMatches(conversation: Conversation, query: string) {
     .toLowerCase();
 
   return text.includes(query.trim().toLowerCase());
-}
-
-type PushStatus =
-  | "checking"
-  | "granted"
-  | "disabled"
-  | "denied"
-  | "unsupported"
-  | "waiting"
-  | "error";
-
-const ADMIN_PUSH_DISABLED_KEY = "jothrah_admin_push_disabled_v1";
-
-function base64UrlToUint8Array(base64String: string) {
-  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = `${base64String}${padding}`
-    .replace(/-/g, "+")
-    .replace(/_/g, "/");
-
-  const rawData = window.atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
-
-  for (let i = 0; i < rawData.length; i += 1) {
-    outputArray[i] = rawData.charCodeAt(i);
-  }
-
-  return outputArray;
-}
-
-async function getAdminPushRegistration() {
-  if (typeof window === "undefined") return null;
-  if (!("serviceWorker" in navigator)) return null;
-  if (!("PushManager" in window)) return null;
-  if (!("Notification" in window)) return null;
-
-  const existing = await navigator.serviceWorker.getRegistration();
-  if (existing) return existing;
-
-  await navigator.serviceWorker.register("/sw.js");
-  return navigator.serviceWorker.ready;
 }
 
 function playLuxuryNotify() {
@@ -392,8 +346,6 @@ export default function AdminConversationsClient({ initialData }: Props) {
   const [reply, setReply] = useState("");
   const [loading, setLoading] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
-  const [pushStatus, setPushStatus] = useState<PushStatus>("checking");
-  const [pushBusy, setPushBusy] = useState(false);
   const [emojiOpen, setEmojiOpen] = useState(false);
   const [filter, setFilter] = useState<"all" | "waiting" | "open" | "closed">(
     "all",
@@ -401,9 +353,7 @@ export default function AdminConversationsClient({ initialData }: Props) {
   const [query, setQuery] = useState("");
   const [toast, setToast] = useState("");
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const [typingConversationId, setTypingConversationId] = useState<
-    string | null
-  >(null);
+  const [typingConversationId, setTypingConversationId] = useState<string | null>(null);
   const [typingUntil, setTypingUntil] = useState(0);
   const [nameDraft, setNameDraft] = useState(
     cleanDisplayName(initialData.selectedConversation?.customer_name),
@@ -428,9 +378,6 @@ export default function AdminConversationsClient({ initialData }: Props) {
   const shouldStickToBottomRef = useRef(true);
   const lightboxDragRef = useRef<Record<string, any> | null>(null);
   const selectedIdRef = useRef<string | null>(selectedId);
-  const pushInitAttemptedRef = useRef(false);
-  const pushBusyRef = useRef(false);
-  const skipMessageRefreshUntilRef = useRef(0);
 
   useEffect(() => {
     selectedIdRef.current = selectedId;
@@ -530,8 +477,7 @@ export default function AdminConversationsClient({ initialData }: Props) {
           const sameSender = messageClass(candidate) === messageClass(previous);
           const previousTime = new Date(previous?.created_at || 0).getTime();
           const candidateTime = new Date(candidate?.created_at || 0).getTime();
-          const withinWindow =
-            Math.abs(candidateTime - previousTime) <= maxGroupGap;
+          const withinWindow = Math.abs(candidateTime - previousTime) <= maxGroupGap;
 
           if (candidateImage && sameSender && withinWindow) {
             group.push(candidate);
@@ -600,9 +546,7 @@ export default function AdminConversationsClient({ initialData }: Props) {
   }, [lightboxImages.length]);
 
   const zoomInLightbox = useCallback(() => {
-    setLightboxZoom((current) =>
-      Math.min(4, Number((current + 0.25).toFixed(2))),
-    );
+    setLightboxZoom((current) => Math.min(4, Number((current + 0.25).toFixed(2))));
   }, []);
 
   const zoomOutLightbox = useCallback(() => {
@@ -663,15 +607,7 @@ export default function AdminConversationsClient({ initialData }: Props) {
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", handleLightboxKeys);
     };
-  }, [
-    lightboxImages.length,
-    closeLightbox,
-    nextLightbox,
-    prevLightbox,
-    resetLightboxZoom,
-    zoomInLightbox,
-    zoomOutLightbox,
-  ]);
+  }, [lightboxImages.length, closeLightbox, nextLightbox, prevLightbox, resetLightboxZoom, zoomInLightbox, zoomOutLightbox]);
 
   const isNearBottom = useCallback(() => {
     const panel = messagesPanelRef.current;
@@ -680,7 +616,6 @@ export default function AdminConversationsClient({ initialData }: Props) {
   }, []);
 
   const updateScrollState = useCallback(() => {
-    skipMessageRefreshUntilRef.current = Date.now() + 1400;
     const nearBottom = isNearBottom();
     shouldStickToBottomRef.current = nearBottom;
     setShowJumpToBottom(!nearBottom);
@@ -722,178 +657,6 @@ export default function AdminConversationsClient({ initialData }: Props) {
     setToast(message);
     setTimeout(() => setToast(""), 2800);
   }, []);
-
-  const enablePushNotifications = useCallback(
-    async (options?: { notify?: boolean; force?: boolean }) => {
-      if (pushBusyRef.current) return;
-      pushBusyRef.current = true;
-      setPushBusy(true);
-
-      try {
-        if (options?.force) {
-          window.localStorage.removeItem(ADMIN_PUSH_DISABLED_KEY);
-        }
-
-        if (
-          !options?.force &&
-          window.localStorage.getItem(ADMIN_PUSH_DISABLED_KEY) === "1"
-        ) {
-          setPushStatus("disabled");
-          return;
-        }
-
-        const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-        if (!publicKey) {
-          setPushStatus("unsupported");
-          if (options?.notify) flashToast("مفتاح الإشعارات غير موجود");
-          return;
-        }
-
-        const registration = await getAdminPushRegistration();
-        if (!registration || !("Notification" in window)) {
-          setPushStatus("unsupported");
-          if (options?.notify)
-            flashToast("الإشعارات غير مدعومة في هذا المتصفح");
-          return;
-        }
-
-        let permission = Notification.permission;
-        if (permission === "denied") {
-          setPushStatus("denied");
-          if (options?.notify) flashToast("الإشعارات مرفوضة من إعدادات الجهاز");
-          return;
-        }
-
-        if (permission === "default") {
-          setPushStatus("waiting");
-          permission = await Notification.requestPermission();
-        }
-
-        if (permission !== "granted") {
-          setPushStatus(permission === "denied" ? "denied" : "waiting");
-          if (options?.notify) flashToast("لم يتم السماح بالإشعارات");
-          return;
-        }
-
-        const existing = await registration.pushManager.getSubscription();
-        const subscription =
-          existing ||
-          (await registration.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: base64UrlToUint8Array(publicKey),
-          }));
-
-        const res = await fetch("/api/admin/push/subscribe", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(subscription.toJSON()),
-        });
-
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok || !data.ok) {
-          throw new Error(data?.error || "تعذر حفظ اشتراك الإشعارات");
-        }
-
-        window.localStorage.removeItem(ADMIN_PUSH_DISABLED_KEY);
-        setPushStatus("granted");
-        if (options?.notify) flashToast("إشعارات المحادثات مفعلة ✅");
-      } catch (error) {
-        setPushStatus("error");
-        if (options?.notify) {
-          flashToast(
-            error instanceof Error ? error.message : "تعذر تفعيل الإشعارات",
-          );
-        }
-      } finally {
-        pushBusyRef.current = false;
-        setPushBusy(false);
-      }
-    },
-    [flashToast],
-  );
-
-  const stopPushNotifications = useCallback(async () => {
-    if (pushBusyRef.current) return;
-    pushBusyRef.current = true;
-    setPushBusy(true);
-
-    try {
-      window.localStorage.setItem(ADMIN_PUSH_DISABLED_KEY, "1");
-
-      const registration = await getAdminPushRegistration();
-      const subscription = await registration?.pushManager.getSubscription();
-
-      if (subscription) {
-        await fetch("/api/admin/push/unsubscribe", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ endpoint: subscription.endpoint }),
-        }).catch(() => null);
-
-        await subscription.unsubscribe().catch(() => false);
-      }
-
-      setPushStatus("disabled");
-      flashToast("تم إيقاف إشعارات المحادثات 🔕");
-    } catch (error) {
-      flashToast(
-        error instanceof Error ? error.message : "تعذر إيقاف الإشعارات",
-      );
-    } finally {
-      pushBusyRef.current = false;
-      setPushBusy(false);
-    }
-  }, [flashToast]);
-
-  const togglePushNotifications = useCallback(() => {
-    if (pushStatus === "granted") {
-      stopPushNotifications();
-      return;
-    }
-
-    enablePushNotifications({ notify: true, force: true });
-  }, [enablePushNotifications, pushStatus, stopPushNotifications]);
-
-  const pushButtonText = pushBusy
-    ? "..."
-    : pushStatus === "granted"
-      ? "إيقاف"
-      : "تفعيل";
-
-  useEffect(() => {
-    if (pushInitAttemptedRef.current) return;
-    pushInitAttemptedRef.current = true;
-
-    enablePushNotifications({ notify: false });
-
-    const retryOnFirstInteraction = () => {
-      if (window.localStorage.getItem(ADMIN_PUSH_DISABLED_KEY) === "1") return;
-      if (!("Notification" in window)) return;
-      if (
-        Notification.permission === "granted" ||
-        Notification.permission === "denied"
-      )
-        return;
-      enablePushNotifications({ notify: false });
-    };
-
-    window.addEventListener("pointerdown", retryOnFirstInteraction, {
-      capture: true,
-      passive: true,
-    });
-    window.addEventListener("keydown", retryOnFirstInteraction, {
-      capture: true,
-    });
-
-    return () => {
-      window.removeEventListener("pointerdown", retryOnFirstInteraction, {
-        capture: true,
-      } as any);
-      window.removeEventListener("keydown", retryOnFirstInteraction, {
-        capture: true,
-      } as any);
-    };
-  }, [enablePushNotifications]);
 
   const clearMobileSelection = useCallback(() => {
     selectedIdRef.current = null;
@@ -969,21 +732,9 @@ export default function AdminConversationsClient({ initialData }: Props) {
         // إذا لا توجد محادثة مختارة محليًا، لا نسمح للـ API بفتح آخر محادثة تلقائيًا،
         // خصوصًا في الجوال عند الرجوع لقائمة المحادثات.
         if (id) {
-          // لا تمسح شاشة المحادثة أثناء التحديث الدوري أو أثناء سكرول الآيفون.
-          if (nextSelected) {
-            setSelectedConversation(nextSelected);
-          }
-
-          const isUserScrolling =
-            Date.now() < skipMessageRefreshUntilRef.current;
-          if (
-            !isUserScrolling &&
-            Array.isArray(nextMessages) &&
-            nextMessages.length > 0
-          ) {
-            setMessages(nextMessages);
-            scrollToBottom();
-          }
+          setSelectedConversation(nextSelected);
+          setMessages(nextMessages);
+          scrollToBottom();
         } else {
           setSelectedConversation(null);
           setMessages([]);
@@ -1014,14 +765,7 @@ export default function AdminConversationsClient({ initialData }: Props) {
   }, [refresh]);
 
   async function selectConversation(id: string) {
-    selectedIdRef.current = id;
-    const cardConversation =
-      conversations.find((item) => item.id === id) || null;
-    if (cardConversation) setSelectedConversation(cardConversation);
     setSelectedId(id);
-    setDetailsOpen(false);
-    shouldStickToBottomRef.current = true;
-    setShowJumpToBottom(false);
     window.history.replaceState(null, "", `/admin/conversations?id=${id}`);
 
     try {
@@ -1032,12 +776,8 @@ export default function AdminConversationsClient({ initialData }: Props) {
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "تعذر فتح المحادثة");
       setConversations(data.conversations || []);
-      if (data.selectedConversation) {
-        setSelectedConversation(data.selectedConversation);
-      }
-      if (Array.isArray(data.messages) && data.messages.length > 0) {
-        setMessages(data.messages);
-      }
+      setSelectedConversation(data.selectedConversation || null);
+      setMessages(data.messages || []);
       const newestCustomer = [...(data.messages || [])]
         .reverse()
         .find((msg: ChatMessage) => msg.sender_type === "customer");
@@ -1172,18 +912,14 @@ export default function AdminConversationsClient({ initialData }: Props) {
         );
         setConversations((current) =>
           current.map((item) =>
-            item.id === selectedId
-              ? { ...item, customer_name: cleanName }
-              : item,
+            item.id === selectedId ? { ...item, customer_name: cleanName } : item,
           ),
         );
       }
 
       flashToast("تم حفظ اسم العميل ✅");
     } catch (error) {
-      flashToast(
-        error instanceof Error ? error.message : "تعذر تحديث اسم العميل",
-      );
+      flashToast(error instanceof Error ? error.message : "تعذر تحديث اسم العميل");
     } finally {
       setSavingName(false);
     }
@@ -1229,10 +965,7 @@ export default function AdminConversationsClient({ initialData }: Props) {
   let lastDay = "";
 
   return (
-    <main
-      className={selectedId ? "jth-desk has-chat" : "jth-desk no-chat"}
-      dir="rtl"
-    >
+    <main className={selectedConversation ? "jth-desk has-chat" : "jth-desk no-chat"} dir="rtl">
       <style jsx global>
         {styles}
       </style>
@@ -1278,22 +1011,6 @@ export default function AdminConversationsClient({ initialData }: Props) {
           >
             {soundEnabled ? "🔔 كتم الصوت" : "🔕 تشغيل الصوت"}
           </button>
-          <button
-            type="button"
-            className={
-              pushStatus === "granted"
-                ? "top-btn push-toggle on"
-                : "top-btn push-toggle"
-            }
-            onClick={togglePushNotifications}
-            disabled={
-              pushBusy ||
-              pushStatus === "unsupported" ||
-              pushStatus === "denied"
-            }
-          >
-            {pushButtonText} الإشعارات
-          </button>
           <button type="button" className="top-btn" onClick={() => refresh()}>
             تحديث
           </button>
@@ -1304,25 +1021,7 @@ export default function AdminConversationsClient({ initialData }: Props) {
         <aside className="inbox-panel">
           <div className="panel-head">
             <strong>صندوق المحادثات</strong>
-            <span className="panel-head-actions">
-              {stats.waiting > 0 ? <em>{stats.waiting}</em> : null}
-              <button
-                type="button"
-                className={
-                  pushStatus === "granted"
-                    ? "mobile-push-toggle on"
-                    : "mobile-push-toggle"
-                }
-                onClick={togglePushNotifications}
-                disabled={
-                  pushBusy ||
-                  pushStatus === "unsupported" ||
-                  pushStatus === "denied"
-                }
-              >
-                {pushButtonText}
-              </button>
-            </span>
+            {stats.waiting > 0 ? <em>{stats.waiting}</em> : null}
           </div>
 
           <label className="search-line">
@@ -1379,8 +1078,7 @@ export default function AdminConversationsClient({ initialData }: Props) {
                       "conversation-card",
                       active ? "active" : "",
                       tone === "danger" ? "waiting" : "",
-                      conversation.id === typingConversationId &&
-                      Date.now() < typingUntil
+                      conversation.id === typingConversationId && Date.now() < typingUntil
                         ? "typing"
                         : "",
                     ]
@@ -1400,18 +1098,10 @@ export default function AdminConversationsClient({ initialData }: Props) {
                         </time>
                       </span>
                       <span className="conversation-preview">
-                        {conversation.id === typingConversationId &&
-                        Date.now() < typingUntil ? (
+                        {conversation.id === typingConversationId && Date.now() < typingUntil ? (
                           typingLabel(conversation)
-                        ) : isConversationImagePreview(
-                            conversation.last_message,
-                          ) ? (
-                          <span
-                            className="preview-image-only"
-                            title="آخر رسالة صورة"
-                          >
-                            🖼️
-                          </span>
+                        ) : isConversationImagePreview(conversation.last_message) ? (
+                          <span className="preview-image-only" title="آخر رسالة صورة">🖼️</span>
                         ) : (
                           getConversationPreviewText(conversation)
                         )}
@@ -1461,8 +1151,7 @@ export default function AdminConversationsClient({ initialData }: Props) {
                   <div>
                     <h2>{getCustomerName(selectedConversation)}</h2>
                     <p>
-                      {selectedConversation.language || "ar"} · رمز الجلسة{" "}
-                      {getCustomerSessionCode(selectedConversation)} ·{" "}
+                      {selectedConversation.language || "ar"} · رمز الجلسة {getCustomerSessionCode(selectedConversation)} ·{" "}
                       {formatDateTime(selectedConversation.last_message_at) ||
                         "آخر نشاط غير متوفر"}
                     </p>
@@ -1500,28 +1189,10 @@ export default function AdminConversationsClient({ initialData }: Props) {
                   >
                     حذف
                   </button>
-                  <button
-                    type="button"
-                    className={
-                      pushStatus === "granted" ? "push-mini on" : "push-mini"
-                    }
-                    onClick={togglePushNotifications}
-                    disabled={
-                      pushBusy ||
-                      pushStatus === "unsupported" ||
-                      pushStatus === "denied"
-                    }
-                  >
-                    {pushButtonText}
-                  </button>
                 </div>
               </div>
 
-              <div
-                className="messages-panel"
-                ref={messagesPanelRef}
-                onScroll={updateScrollState}
-              >
+              <div className="messages-panel" ref={messagesPanelRef} onScroll={updateScrollState}>
                 {messages.length === 0 ? (
                   <div className="empty center">
                     لا توجد رسائل داخل هذه المحادثة.
@@ -1535,14 +1206,10 @@ export default function AdminConversationsClient({ initialData }: Props) {
                     if (block.type === "image-group") {
                       const groupMessages = block.messages as ChatMessage[];
                       const leadMessage = groupMessages[0];
-                      const imageUrls = groupMessages
-                        .map((item) => getImageUrl(item))
-                        .filter(Boolean);
+                      const imageUrls = groupMessages.map((item) => getImageUrl(item)).filter(Boolean);
                       const visibleImages = imageUrls.slice(0, 4);
                       const caption = groupMessages
-                        .map((item) =>
-                          displayMessageText(item, selectedConversation),
-                        )
+                        .map((item) => displayMessageText(item, selectedConversation))
                         .find(Boolean);
                       const trailingTime =
                         groupMessages[groupMessages.length - 1]?.created_at ||
@@ -1553,53 +1220,31 @@ export default function AdminConversationsClient({ initialData }: Props) {
                           {showDay ? (
                             <div className="day-separator">{day}</div>
                           ) : null}
-                          <div
-                            className={`message-row ${messageClass(leadMessage)}`}
-                          >
+                          <div className={`message-row ${messageClass(leadMessage)}`}>
                             <article className="bubble image-bubble">
                               <header>
                                 <span>{senderIcon(leadMessage)}</span>
-                                <b>
-                                  {senderLabel(
-                                    leadMessage,
-                                    selectedConversation,
-                                  )}
-                                </b>
-                                <em className="image-count">
-                                  {imageUrls.length} صور
-                                </em>
+                                <b>{senderLabel(leadMessage, selectedConversation)}</b>
+                                <em className="image-count">{imageUrls.length} صور</em>
                               </header>
 
                               {caption ? <p>{caption}</p> : null}
 
-                              <div
-                                className={`image-grid count-${Math.min(visibleImages.length, 4)}`}
-                              >
+                              <div className={`image-grid count-${Math.min(visibleImages.length, 4)}`}>
                                 {visibleImages.map((src, index) => {
                                   const hiddenCount = imageUrls.length - 4;
-                                  const showMore =
-                                    index === 3 && hiddenCount > 0;
+                                  const showMore = index === 3 && hiddenCount > 0;
 
                                   return (
                                     <button
                                       type="button"
                                       key={`${block.key}-${src}-${index}`}
                                       className="image-thumb"
-                                      onClick={() =>
-                                        openLightbox(imageUrls, index)
-                                      }
+                                      onClick={() => openLightbox(imageUrls, index)}
                                       title="عرض الصورة"
                                     >
-                                      <img
-                                        src={src}
-                                        alt={`صورة مرفقة ${index + 1}`}
-                                        loading="lazy"
-                                      />
-                                      {showMore ? (
-                                        <span className="image-more">
-                                          +{hiddenCount}
-                                        </span>
-                                      ) : null}
+                                      <img src={src} alt={`صورة مرفقة ${index + 1}`} loading="lazy" />
+                                      {showMore ? <span className="image-more">+{hiddenCount}</span> : null}
                                     </button>
                                   );
                                 })}
@@ -1614,10 +1259,7 @@ export default function AdminConversationsClient({ initialData }: Props) {
 
                     const message = block.message as ChatMessage;
                     const imageUrl = getImageUrl(message);
-                    const visibleText = displayMessageText(
-                      message,
-                      selectedConversation,
-                    );
+                    const visibleText = displayMessageText(message, selectedConversation);
 
                     return (
                       <div key={block.key}>
@@ -1625,19 +1267,11 @@ export default function AdminConversationsClient({ initialData }: Props) {
                           <div className="day-separator">{day}</div>
                         ) : null}
                         <div className={`message-row ${messageClass(message)}`}>
-                          <article
-                            className={
-                              imageUrl ? "bubble image-bubble" : "bubble"
-                            }
-                          >
+                          <article className={imageUrl ? "bubble image-bubble" : "bubble"}>
                             <header>
                               <span>{senderIcon(message)}</span>
-                              <b>
-                                {senderLabel(message, selectedConversation)}
-                              </b>
-                              {imageUrl ? (
-                                <em className="image-count">1 صورة</em>
-                              ) : null}
+                              <b>{senderLabel(message, selectedConversation)}</b>
+                              {imageUrl ? <em className="image-count">1 صورة</em> : null}
                             </header>
                             {visibleText ? <p>{visibleText}</p> : null}
                             {imageUrl ? (
@@ -1647,11 +1281,7 @@ export default function AdminConversationsClient({ initialData }: Props) {
                                 onClick={() => openLightbox([imageUrl], 0)}
                                 title="عرض الصورة"
                               >
-                                <img
-                                  src={imageUrl}
-                                  alt="صورة مرفقة"
-                                  loading="lazy"
-                                />
+                                <img src={imageUrl} alt="صورة مرفقة" loading="lazy" />
                               </button>
                             ) : null}
                             {message.ai_detected_problem ? (
@@ -1783,8 +1413,7 @@ export default function AdminConversationsClient({ initialData }: Props) {
                 <span>ملف العميل</span>
                 <h3>{getCustomerName(selectedConversation)}</h3>
                 <p>
-                  {statusLabel(selectedConversation)} · رمز الجلسة{" "}
-                  {getCustomerSessionCode(selectedConversation)}
+                  {statusLabel(selectedConversation)} · رمز الجلسة {getCustomerSessionCode(selectedConversation)}
                 </p>
                 <div className="name-editor">
                   <input
@@ -1850,21 +1479,14 @@ export default function AdminConversationsClient({ initialData }: Props) {
                 {getConversationRating(selectedConversation) ? (
                   <>
                     <div className="rating-score">
-                      <span>
-                        {ratingStars(
-                          getConversationRating(selectedConversation),
-                        )}
-                      </span>
+                      <span>{ratingStars(getConversationRating(selectedConversation))}</span>
                       <b>{ratingText(selectedConversation)}</b>
                     </div>
                     <p>
-                      {selectedConversation.rating_note ||
-                        "لا توجد ملاحظة مكتوبة من العميل."}
+                      {selectedConversation.rating_note || "لا توجد ملاحظة مكتوبة من العميل."}
                     </p>
                     <small>
-                      وقت التقييم:{" "}
-                      {formatDateTime(selectedConversation.rated_at) ||
-                        "غير متوفر"}
+                      وقت التقييم: {formatDateTime(selectedConversation.rated_at) || "غير متوفر"}
                     </small>
                   </>
                 ) : (
@@ -1896,21 +1518,10 @@ export default function AdminConversationsClient({ initialData }: Props) {
 
       {lightboxImages.length ? (
         <div className="image-lightbox" onClick={closeLightbox}>
-          <section
-            className="image-lightbox-card"
-            onClick={(event) => event.stopPropagation()}
-          >
+          <section className="image-lightbox-card" onClick={(event) => event.stopPropagation()}>
             <header className="image-lightbox-top">
-              <button
-                type="button"
-                className="lightbox-close"
-                onClick={closeLightbox}
-              >
-                ×
-              </button>
-              <strong>
-                {lightboxIndex + 1} / {lightboxImages.length}
-              </strong>
+              <button type="button" className="lightbox-close" onClick={closeLightbox}>×</button>
+              <strong>{lightboxIndex + 1} / {lightboxImages.length}</strong>
               <div className="lightbox-tools">
                 <a
                   href={lightboxImages[lightboxIndex]}
@@ -1921,15 +1532,9 @@ export default function AdminConversationsClient({ initialData }: Props) {
                 >
                   ⬇
                 </a>
-                <button type="button" onClick={resetLightboxZoom}>
-                  100%
-                </button>
-                <button type="button" onClick={zoomOutLightbox}>
-                  -
-                </button>
-                <button type="button" onClick={zoomInLightbox}>
-                  +
-                </button>
+                <button type="button" onClick={resetLightboxZoom}>100%</button>
+                <button type="button" onClick={zoomOutLightbox}>-</button>
+                <button type="button" onClick={zoomInLightbox}>+</button>
                 <a
                   href={lightboxImages[lightboxIndex]}
                   target="_blank"
@@ -1943,21 +1548,11 @@ export default function AdminConversationsClient({ initialData }: Props) {
 
             <div className="lightbox-stage">
               {lightboxImages.length > 1 ? (
-                <button
-                  type="button"
-                  className="lightbox-nav prev"
-                  onClick={prevLightbox}
-                >
-                  ‹
-                </button>
+                <button type="button" className="lightbox-nav prev" onClick={prevLightbox}>‹</button>
               ) : null}
 
               <div
-                className={
-                  lightboxZoom > 1
-                    ? "lightbox-canvas can-pan"
-                    : "lightbox-canvas"
-                }
+                className={lightboxZoom > 1 ? "lightbox-canvas can-pan" : "lightbox-canvas"}
                 onPointerDown={startLightboxPan}
                 onPointerMove={moveLightboxPan}
                 onPointerUp={endLightboxPan}
@@ -1974,13 +1569,7 @@ export default function AdminConversationsClient({ initialData }: Props) {
               </div>
 
               {lightboxImages.length > 1 ? (
-                <button
-                  type="button"
-                  className="lightbox-nav next"
-                  onClick={nextLightbox}
-                >
-                  ›
-                </button>
+                <button type="button" className="lightbox-nav next" onClick={nextLightbox}>›</button>
               ) : null}
             </div>
 
@@ -2193,24 +1782,10 @@ const styles = `
     transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
   }
   .top-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 16px rgba(15,36,48,.08); }
-  .top-btn.sound.on,
-  .top-btn.push-toggle.on {
+  .top-btn.sound.on {
     color: #fff;
     border-color: transparent;
     background: linear-gradient(135deg, var(--j-green), var(--j-green2));
-  }
-  .top-btn.push-toggle:disabled {
-    opacity: .55;
-    cursor: not-allowed;
-  }
-  .panel-head-actions {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .mobile-push-toggle,
-  .push-mini {
-    display: none;
   }
 
   .desk-grid {
@@ -3209,36 +2784,6 @@ const styles = `
       box-shadow: none !important;
     }
 
-    .panel-head-actions {
-      display: flex !important;
-      align-items: center !important;
-      gap: 8px !important;
-    }
-
-    .mobile-push-toggle {
-      display: inline-flex !important;
-      align-items: center !important;
-      justify-content: center !important;
-      height: 30px !important;
-      min-width: 58px !important;
-      border: 1px solid rgba(255,255,255,.22) !important;
-      border-radius: 999px !important;
-      background: rgba(255,255,255,.13) !important;
-      color: #ffffff !important;
-      font-size: 12px !important;
-      font-weight: 900 !important;
-      padding: 0 10px !important;
-    }
-
-    .mobile-push-toggle.on {
-      background: #ffffff !important;
-      color: #005f5d !important;
-    }
-
-    .mobile-push-toggle:disabled {
-      opacity: .55 !important;
-    }
-
     .search-line {
       height: 44px !important;
       margin: 7px 12px !important;
@@ -3516,20 +3061,6 @@ const styles = `
     .chat-actions .danger {
       background: rgba(255,255,255,.10) !important;
       color: #ffd8dc !important;
-    }
-
-    .chat-actions .push-mini {
-      display: inline-flex !important;
-      align-items: center !important;
-      justify-content: center !important;
-      min-width: 45px !important;
-      background: rgba(255,255,255,.16) !important;
-      color: #ffffff !important;
-    }
-
-    .chat-actions .push-mini.on {
-      background: #ffffff !important;
-      color: #005f5d !important;
     }
 
     .messages-panel {
