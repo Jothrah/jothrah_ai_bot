@@ -23,6 +23,18 @@ function corsHeaders(origin?: string | null) {
   };
 }
 
+
+function buildStateReason(conversation?: Record<string, any> | null) {
+  if (!conversation) return "conversation_not_found";
+
+  const status = String(conversation.status || "").trim();
+  const closedBy = String(conversation.closed_by || "").trim();
+
+  if (status === "closed" && closedBy === "admin") return "admin_closed";
+  if (status === "closed") return "closed";
+  return "active";
+}
+
 export async function OPTIONS(req: NextRequest) {
   return NextResponse.json({}, { headers: corsHeaders(req.headers.get("origin")) });
 }
@@ -66,7 +78,7 @@ export async function GET(req: NextRequest) {
 
     if (!conversation) {
       return NextResponse.json(
-        { conversation: null, messages: [] },
+        { conversation: null, messages: [], state_reason: "conversation_not_found" },
         { headers: corsHeaders(origin) }
       );
     }
@@ -116,11 +128,13 @@ export async function GET(req: NextRequest) {
           last_customer_message_at: conversation.last_customer_message_at,
           last_human_reply_at: conversation.last_human_reply_at,
           closed_at: conversation.closed_at,
+          closed_by: conversation.closed_by || null,
           rating: conversation.rating,
           rated_at: conversation.rated_at,
           metadata: conversation.metadata || {}
         },
-        messages: messages || []
+        messages: messages || [],
+        state_reason: buildStateReason(conversation)
       },
       { headers: corsHeaders(origin) }
     );
