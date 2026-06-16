@@ -205,7 +205,9 @@ const KNOWLEDGE_RULES: KnowledgeRule[] = [
     file: "fertilizers/00_fertilizer_operating_rules.json",
     terms: [
       "سماد", "اسمده", "أسمدة", "تسميد", "محسن تربة", "محسنات التربة",
-      "fertilizer", "fertiliser", "fertilizers", "soil amendment"
+      "نيتروجين", "فوسفور", "بوتاسيوم", "كالسيوم", "مغنيسيوم", "حديد", "زنك", "بورون",
+      "جرعة سماد", "معدل سماد", "خلط سماد", "فوائد العناصر", "نقص عناصر",
+      "fertilizer", "fertiliser", "fertilizers", "soil amendment", "nitrogen", "phosphorus", "potassium", "calcium"
     ],
   },
   {
@@ -238,7 +240,8 @@ const KNOWLEDGE_RULES: KnowledgeRule[] = [
     file: "fertilizers/fertilizer_rates_single_fertilizers.json",
     terms: [
       "يوريا", "نترات البوتاسيوم", "نترات كالسيوم", "نترات الكالسيوم", "سلفات بوتاسيوم",
-      "سلفات أمونيوم", "سلفات الماغنيسيوم", "سلفات مغنيسيوم", "map", "mkp", "سترات البوتاسيوم", "ثيو سلفات البوتاسيوم"
+      "سلفات أمونيوم", "سلفات الماغنيسيوم", "سلفات مغنيسيوم", "map", "mkp", "سترات البوتاسيوم", "ثيو سلفات البوتاسيوم",
+      "حامض الفوسفوريك", "حمض الفوسفوريك", "فوسفوريك", "كبريتات البوتاسيوم", "كبريتات المغنيسيوم", "يوريا فوسفات"
     ],
   },
   {
