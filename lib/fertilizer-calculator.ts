@@ -90,6 +90,54 @@ function containsAny(text: string, terms: string[]) {
   return terms.some((term) => normalized.includes(normalizeArabic(term)));
 }
 
+
+function customerOnlyContext(value: string) {
+  const lines = String(value || "")
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  const picked: string[] = [];
+
+  for (const line of lines) {
+    const raw = line.trim();
+    const normalized = normalizeArabic(raw);
+
+    // Check raw labels before normalization because normalizeArabic removes the colon.
+    if (/^\s*(المساعد|Assistant)\s*:/i.test(raw)) continue;
+
+    if (/^\s*(العميل|Customer)\s*:/i.test(raw)) {
+      picked.push(raw.replace(/^\s*(العميل|Customer)\s*:\s*/i, ""));
+      continue;
+    }
+
+    if (
+      normalized.startsWith("المساعد ") ||
+      normalized.includes("تشخيص مبدئي") ||
+      normalized.includes("نصائح مباشرة") ||
+      normalized.includes("تصنيفات مناسبة") ||
+      normalized.includes("initial diagnosis") ||
+      normalized.includes("direct advice")
+    ) continue;
+
+    picked.push(raw);
+  }
+
+  return picked.join("\n");
+}
+
+function firstKnownForm(current: string, context: string): FertilizerForm {
+  const currentForm = detectFertilizerForm(current);
+  if (currentForm !== "unknown") return currentForm;
+  return detectFertilizerForm(context);
+}
+
+function firstKnownMethod(current: string, context: string): ApplicationMethod {
+  const currentMethod = detectApplicationMethod(current);
+  if (currentMethod !== "unknown") return currentMethod;
+  return detectApplicationMethod(context);
+}
+
 function roundSmart(value: number) {
   if (!Number.isFinite(value)) return 0;
   if (Math.abs(value) >= 100) return Math.round(value);
@@ -637,15 +685,18 @@ function buildTankDoseResponse(params: BuildParams, tankLiters: number, rate: { 
   });
 }
 
-function buildNpkResponse(params: BuildParams, textForCalc: string) {
+function buildNpkResponse(params: BuildParams, customerContextText: string = "") {
   const current = normalizeArabic(params.message || "");
-  const areaM2 = extractAreaM2(textForCalc);
-  const crop = detectCropType(current) || detectCropType(textForCalc);
-  const form = detectFertilizerForm(textForCalc);
-  const method = detectApplicationMethod(textForCalc);
-  const formula = extractNpkFormula(textForCalc);
+  const context = normalizeArabic(customerOnlyContext(customerContextText || params.recentContext || ""));
+
+  // Current message has absolute priority. Context is used only for missing values.
+  const areaM2 = extractAreaM2(current) ?? extractAreaM2(context);
+  const crop = detectCropType(current) || detectCropType(context);
+  const form = firstKnownForm(current, context);
+  const method = firstKnownMethod(current, context);
+  const formula = extractNpkFormula(current) || extractNpkFormula(context);
   const formulaLabel = formula?.label || "NPK";
-  const treeCount = extractTrees(textForCalc);
+  const treeCount = extractTrees(current) ?? extractTrees(context);
 
   if (form === "granular" || method === "broadcast") {
     if (crop === "fruit" && treeCount) {
@@ -1062,8 +1113,23 @@ function buildGeneralElementResponse(params: BuildParams) {
 }
 
 function isLikelyFertilizerFollowup(current: string, context: string) {
-  const crop = detectCropType(current);
-  return Boolean(crop && (detectNpk(context) || findFertilizerTypes(context).length) && (extractAreaM2(context) || extractTankLiters(context)));
+  const cleanContext = normalizeArabic(customerOnlyContext(context));
+  const cleanCurrent = normalizeArabic(current);
+  const crop = detectCropType(cleanCurrent);
+  const form = detectFertilizerForm(cleanCurrent);
+  const method = detectApplicationMethod(cleanCurrent);
+  const hasContextDoseCase = (detectNpk(cleanContext) || findFertilizerTypes(cleanContext).length > 0) && (extractAreaM2(cleanContext) || extractTankLiters(cleanContext) || extractTrees(cleanContext));
+
+  if (!hasContextDoseCase) return false;
+  if (isMixingQuestionCurrent(cleanCurrent)) return false;
+
+  return Boolean(
+    crop ||
+    form !== "unknown" ||
+    method !== "unknown" ||
+    isDoseQuestion(cleanCurrent) ||
+    containsAny(cleanCurrent, ["خيار", "طماطم", "بندوره", "بندورة", "بيت محمي", "بيوت محمية", "ذواب", "محبب", "رش ورقي", "ماء الري"])
+  );
 }
 
 function buildSpecialistHandoff(params: BuildParams) {
@@ -1083,7 +1149,7 @@ function buildSpecialistHandoff(params: BuildParams) {
 
 export function buildDeterministicFertilizerResponse(params: BuildParams): FertilizerBotResponse | null {
   const current = normalizeArabic(params.message || "");
-  const context = normalizeArabic(params.recentContext || "");
+  const context = normalizeArabic(customerOnlyContext(params.recentContext || ""));
   const combined = `${context}\n${current}`;
 
   // 1) سؤال شراء/ترشيح منتج: لا نرشح منتج الآن.
@@ -1098,14 +1164,13 @@ export function buildDeterministicFertilizerResponse(params: BuildParams): Ferti
     return buildTankDoseResponse(params, tankLiters, ratePerLiter);
   }
 
-  // 3) سؤال الجرعة الحالي له أولوية على أي سياق قديم.
+  // 3) سؤال الجرعة الحالي له أولوية مطلقة، والسياق يستخدم فقط لتعبئة الناقص.
   const currentHasNpk = detectNpk(current);
-  const contextHasNpkWithArea = detectNpk(context) && extractAreaM2(context);
   const currentIsFollowup = isLikelyFertilizerFollowup(current, context);
+  const currentDoseOrNpk = currentHasNpk && isDoseQuestion(current);
 
-  if ((currentHasNpk || currentIsFollowup || contextHasNpkWithArea) && (isDoseQuestion(currentHasNpk ? current : combined) || currentIsFollowup)) {
-    const textForCalc = currentHasNpk ? current : combined;
-    return buildNpkResponse(params, textForCalc);
+  if (currentDoseOrNpk || currentIsFollowup) {
+    return buildNpkResponse(params, context);
   }
 
   // 4) الخلط فقط إذا السؤال الحالي سؤال خلط، وليس سؤال جرعة.
