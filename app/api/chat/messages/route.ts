@@ -32,8 +32,11 @@ export async function GET(req: NextRequest) {
 
   try {
     const url = new URL(req.url);
-    const visitorId = String(url.searchParams.get("visitor_id") || "").trim();
+    const visitorId = String(url.searchParams.get("customer_key") || url.searchParams.get("visitor_id") || "").trim();
     const conversationId = String(url.searchParams.get("conversation_id") || "").trim();
+    const customerName = String(url.searchParams.get("customer_name") || "").replace(/[<>]/g, "").replace(/\s+/g, " ").trim().slice(0, 80);
+    const customerPhone = String(url.searchParams.get("customer_phone") || "").replace(/[<>]/g, "").replace(/\s+/g, " ").trim().slice(0, 40);
+    const customerEmail = String(url.searchParams.get("customer_email") || "").replace(/[<>]/g, "").replace(/\s+/g, " ").trim().slice(0, 120);
 
     if (!visitorId && !conversationId) {
       return NextResponse.json(
@@ -64,6 +67,25 @@ export async function GET(req: NextRequest) {
         { conversation: null, messages: [] },
         { headers: corsHeaders(origin) }
       );
+    }
+
+    if (customerName || customerPhone || customerEmail) {
+      const updatePayload: Record<string, string> = {};
+      if (customerName && customerName !== conversation.customer_name) updatePayload.customer_name = customerName;
+      if (customerPhone && customerPhone !== conversation.customer_phone) updatePayload.customer_phone = customerPhone;
+      if (customerEmail && customerEmail !== conversation.customer_email) updatePayload.customer_email = customerEmail;
+
+      if (Object.keys(updatePayload).length) {
+        const { data: updatedConversation, error: updateError } = await supabaseAdmin
+          .from("chat_conversations")
+          .update(updatePayload)
+          .eq("id", conversation.id)
+          .select("*")
+          .single();
+
+        if (updateError) throw updateError;
+        Object.assign(conversation, updatedConversation || {});
+      }
     }
 
     const { data: messages, error: messagesError } = await supabaseAdmin

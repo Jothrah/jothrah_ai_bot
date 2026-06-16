@@ -814,6 +814,7 @@ async function readRequestBody(req: NextRequest) {
   let customerName = "";
   let customerPhone = "";
   let customerEmail = "";
+  let customerKey = "";
   let requestHuman = false;
 
   if (contentType.includes("multipart/form-data")) {
@@ -826,6 +827,7 @@ async function readRequestBody(req: NextRequest) {
     customerName = String(form.get("customer_name") || "").trim();
     customerPhone = String(form.get("customer_phone") || "").trim();
     customerEmail = String(form.get("customer_email") || "").trim();
+    customerKey = String(form.get("customer_key") || form.get("customer_id") || "").trim();
     requestHuman = String(form.get("request_type") || form.get("action") || "").toLowerCase().includes("human") || String(form.get("needs_human") || "").toLowerCase() === "true";
 
     const image = form.get("image");
@@ -851,6 +853,7 @@ async function readRequestBody(req: NextRequest) {
     customerName = String(body.customer_name || body.customerName || "").trim();
     customerPhone = String(body.customer_phone || body.customerPhone || "").trim();
     customerEmail = String(body.customer_email || body.customerEmail || "").trim();
+    customerKey = String(body.customer_key || body.customerKey || body.customer_id || body.customerId || "").trim();
     requestHuman = Boolean(body.needs_human || body.needsHuman) || String(body.request_type || body.action || "").toLowerCase().includes("human");
 
     const rawImage =
@@ -882,6 +885,7 @@ async function readRequestBody(req: NextRequest) {
     customerName,
     customerPhone,
     customerEmail,
+    customerKey,
     requestHuman,
   };
 }
@@ -899,10 +903,13 @@ export async function POST(req: NextRequest) {
       customerName,
       customerPhone,
       customerEmail,
+      customerKey,
       requestHuman,
     } = await readRequestBody(req);
 
+    const safeCustomerKey = String(customerKey || "").replace(/[^a-zA-Z0-9_\-:.]/g, "").slice(0, 120);
     const safeVisitorId =
+      safeCustomerKey ||
       visitorId ||
       `visitor_${Date.now()}_${Math.random().toString(36).slice(2)}`;
 
@@ -944,7 +951,9 @@ export async function POST(req: NextRequest) {
       customerPhone,
       customerEmail,
       metadata: {
-        customerNameSource: customerName ? "client" : "unknown",
+        customerNameSource: customerName ? "salla_account" : "visitor",
+        customerKey: safeCustomerKey || null,
+        identityMode: safeCustomerKey ? "logged_customer" : "visitor",
       },
     });
 
@@ -992,6 +1001,8 @@ export async function POST(req: NextRequest) {
       metadata: {
         hasImage: Boolean(imageDataUrl),
         pageUrl,
+        customerKey: safeCustomerKey || null,
+        identityMode: safeCustomerKey ? "logged_customer" : "visitor",
       },
     });
 
@@ -1249,6 +1260,9 @@ Important Jothrah response rules:
     return NextResponse.json(
       {
         ...data,
+        conversation_id: conversation.id,
+        visitor_id: safeVisitorId,
+        customer_name: customerName || conversation.customer_name || "",
         language,
         analysis_source: data.analysis_source || analysisSource,
         categories:

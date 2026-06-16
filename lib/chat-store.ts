@@ -12,6 +12,7 @@ type UpsertConversationInput = {
   customerName?: string;
   customerPhone?: string;
   customerEmail?: string;
+  customerKey?: string;
   metadata?: Record<string, unknown>;
 };
 
