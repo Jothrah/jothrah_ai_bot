@@ -54,11 +54,9 @@ export async function GET(req: NextRequest) {
     if (conversationId) {
       conversationQuery = conversationQuery.eq("id", conversationId);
     } else {
-      // V116: لا نرجع المحادثات المغلقة للعميل في المتجر.
-      // بعد إنهاء المحادثة من الأدمن، واجهة العميل تبدأ من جديد بدل الدخول في حلقة محادثة مغلقة.
-      conversationQuery = conversationQuery
-        .eq("visitor_id", visitorId)
-        .neq("status", "closed");
+      // V117: نرجع المحادثة المغلقة مرة للواجهة حتى تعرض رسالة الإنهاء والتقييم.
+      // كود سلة يمنع تكرار الإشعار ولا يبدأ حلقة مزعجة.
+      conversationQuery = conversationQuery.eq("visitor_id", visitorId);
     }
 
     const { data: conversations, error: conversationError } = await conversationQuery;

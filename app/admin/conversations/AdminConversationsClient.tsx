@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-// Jothrah Admin Conversations V106 - smart scroll + premium image gallery + lightbox
+// Jothrah Admin Conversations V117 - rating visibility + smart image gallery
 
 type Conversation = Record<string, any>;
 type ChatMessage = Record<string, any>;
@@ -185,6 +185,23 @@ function getConversationPreviewText(conversation: Conversation) {
   if (!text) return "بدون رسالة";
   if (isConversationImagePreview(text)) return "";
   return text;
+}
+
+function getConversationRating(conversation?: Conversation | null) {
+  const rating = Number(conversation?.rating || 0);
+  if (!Number.isFinite(rating) || rating <= 0) return 0;
+  return Math.max(1, Math.min(5, Math.round(rating)));
+}
+
+function ratingStars(rating: number) {
+  if (!rating) return "لم يتم التقييم بعد";
+  return "★".repeat(rating) + "☆".repeat(5 - rating);
+}
+
+function ratingText(conversation?: Conversation | null) {
+  const rating = getConversationRating(conversation);
+  if (!rating) return "لم يتم التقييم بعد";
+  return `${rating}/5`;
 }
 
 function displayMessageText(message: ChatMessage, conversation?: Conversation | null) {
@@ -1054,6 +1071,11 @@ export default function AdminConversationsClient({ initialData }: Props) {
                         <small className={`mini-pill ${tone}`}>
                           {statusLabel(conversation)}
                         </small>
+                        {getConversationRating(conversation) ? (
+                          <small className="mini-pill rating">
+                            ★ {ratingText(conversation)}
+                          </small>
+                        ) : null}
                         <small>
                           {formatDateTime(conversation.last_message_at)}
                         </small>
@@ -1401,6 +1423,26 @@ export default function AdminConversationsClient({ initialData }: Props) {
                 >
                   نسخ البيانات
                 </button>
+              </section>
+
+              <section className="profile-card rating-card">
+                <h4>تقييم المحادثة</h4>
+                {getConversationRating(selectedConversation) ? (
+                  <>
+                    <div className="rating-score">
+                      <span>{ratingStars(getConversationRating(selectedConversation))}</span>
+                      <b>{ratingText(selectedConversation)}</b>
+                    </div>
+                    <p>
+                      {selectedConversation.rating_note || "لا توجد ملاحظة مكتوبة من العميل."}
+                    </p>
+                    <small>
+                      وقت التقييم: {formatDateTime(selectedConversation.rated_at) || "غير متوفر"}
+                    </small>
+                  </>
+                ) : (
+                  <p>لم يتم تقييم هذه المحادثة حتى الآن.</p>
+                )}
               </section>
 
               <section className="profile-card team">
@@ -2550,4 +2592,32 @@ const styles = `
     .composer-meta { font-size: 10.5px; }
     .jth-toast { left: 8px; right: 8px; bottom: 8px; text-align: center; }
   }
+  .mini-pill.rating {
+    background: #fff7df;
+    color: #9a6a00;
+    border-color: rgba(154,106,0,.18);
+  }
+  .rating-card {
+    background: linear-gradient(180deg, #fffdf7, #ffffff);
+  }
+  .rating-score {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    padding: 12px 14px;
+    border-radius: 16px;
+    background: #fff8e7;
+    border: 1px solid rgba(154,106,0,.12);
+    color:#9a6a00;
+    font-weight: 900;
+  }
+  .rating-score span {
+    letter-spacing: 1px;
+    font-size: 17px;
+  }
+  .rating-score b {
+    font-size: 14px;
+  }
+
 `;
