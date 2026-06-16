@@ -8,7 +8,6 @@ import { buildWhatsappUrl } from "@/lib/whatsapp";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { detectLanguage, matchCategories } from "@/lib/matcher";
 import { needsWhatsapp } from "@/lib/safety";
-import { buildDeterministicFertilizerResponse as buildExternalDeterministicFertilizerResponse } from "@/lib/fertilizer-calculator";
 import {
   saveChatAttachment,
   saveChatEvent,
@@ -199,107 +198,6 @@ const KNOWLEDGE_RULES: KnowledgeRule[] = [
     file: "plant-diseases/root-rot.json",
     terms: ["عفن جذور", "تعفن الجذور", "root rot"],
   },
-
-  {
-    id: "fertilizer-operating-rules",
-    file: "fertilizers/00_fertilizer_operating_rules.json",
-    terms: [
-      "سماد", "اسمده", "أسمدة", "تسميد", "محسن تربة", "محسنات التربة",
-      "نيتروجين", "فوسفور", "بوتاسيوم", "كالسيوم", "مغنيسيوم", "حديد", "زنك", "بورون",
-      "جرعة سماد", "معدل سماد", "خلط سماد", "فوائد العناصر", "نقص عناصر",
-      "fertilizer", "fertiliser", "fertilizers", "soil amendment", "nitrogen", "phosphorus", "potassium", "calcium"
-    ],
-  },
-  {
-    id: "fertilizer-npk-rates",
-    file: "fertilizers/fertilizer_rates_npk.json",
-    terms: [
-      "npk", "NPK", "20-20-20", "٢٠-٢٠-٢٠", "العناصر الكبرى", "سماد مركب",
-      "كم احط", "كم أحط", "كم اضع", "كم أضع", "جرعة", "جرعه", "معدل", "معدل استخدام",
-      "مساحة", "مساحه", "متر", "هكتار", "بيت محمي", "بيوت محمية", "1000 متر", "رش ورقي", "ماء الري"
-    ],
-  },
-  {
-    id: "fertilizer-micronutrients-rates",
-    file: "fertilizers/fertilizer_rates_micronutrients.json",
-    terms: [
-      "عناصر صغرى", "العناصر الصغرى", "حديد", "نقص الحديد", "زنك", "منجنيز", "منغنيز",
-      "نحاس", "بورون", "موليبدنم", "مخلب", "مخلبية", "edta", "eddha", "ortho", "رش ورقي"
-    ],
-  },
-  {
-    id: "fertilizer-humic-amino-seaweed-rates",
-    file: "fertilizers/fertilizer_rates_humic_fulvic_amino_seaweed.json",
-    terms: [
-      "هيوميك", "هيومك", "فولفيك", "فلفيك", "احماض امينية", "أحماض أمينية",
-      "امينو", "أمينو", "طحالب", "طحالب بحرية", "سي ويد", "seaweed", "humic", "fulvic", "amino"
-    ],
-  },
-  {
-    id: "fertilizer-single-rates",
-    file: "fertilizers/fertilizer_rates_single_fertilizers.json",
-    terms: [
-      "يوريا", "نترات البوتاسيوم", "نترات كالسيوم", "نترات الكالسيوم", "سلفات بوتاسيوم",
-      "سلفات أمونيوم", "سلفات الماغنيسيوم", "سلفات مغنيسيوم", "map", "mkp", "سترات البوتاسيوم", "ثيو سلفات البوتاسيوم",
-      "حامض الفوسفوريك", "حمض الفوسفوريك", "فوسفوريك", "كبريتات البوتاسيوم", "كبريتات المغنيسيوم", "يوريا فوسفات"
-    ],
-  },
-  {
-    id: "fertilizer-soil-amendments-rates",
-    file: "fertilizers/fertilizer_rates_soil_amendments.json",
-    terms: [
-      "محسنات التربة", "محسن تربة", "كبريت زراعي", "جبس زراعي", "سماد عضوي", "اسمدة عضوية",
-      "أسمدة عضوية", "نثرا", "نثر", "محبب", "حبيبات", "بيتموس", "بوتنج سويل", "كوكوبيت"
-    ],
-  },
-  {
-    id: "fertilizer-mixing-rules",
-    file: "fertilizers/fertilizer_mixing_rules.json",
-    terms: [
-      "خلط", "اخلط", "أخلط", "اخلطه", "أخلطه", "ينخلط", "قابلية الخلط", "تجربة خلط",
-      "كالسيوم مع فوسفور", "نترات الكالسيوم مع", "فوسفور مع كالسيوم", "هيوميك مع", "سماد مع مبيد", "زيت معدني"
-    ],
-  },
-  {
-    id: "fertilizer-yellowing-diagnosis",
-    file: "fertilizers/fertilizer_diagnosis_yellowing.json",
-    terms: [
-      "اصفرار", "اصفر", "صفراء", "ورق اصفر", "الاوراق صفراء", "الأوراق صفراء",
-      "اصفرار الورق", "اصفرار الأوراق", "yellow leaves", "chlorosis"
-    ],
-  },
-  {
-    id: "fertilizer-general-diagnosis",
-    file: "fertilizers/fertilizer_diagnosis_general.json",
-    terms: [
-      "النبات تعبان", "نباتي تعبان", "ضعف نمو", "ما ينمو", "تساقط", "احتراق حواف",
-      "ذبول", "اجهاد", "إجهاد", "حر", "حرارة", "تزهير", "اثمار", "إثمار", "عفن الطرف الزهري"
-    ],
-  },
-  {
-    id: "fertilizer-label-reading",
-    file: "fertilizers/fertilizer_label_reading.json",
-    terms: [
-      "ملصق", "اللصق", "جدول الاستخدام", "مكتوب على العبوة", "العبوة مكتوب", "صورة سماد",
-      "كم لكل لتر", "جم لكل لتر", "مل لكل لتر", "رشاشة", "خزان", "لتر ماء"
-    ],
-  },
-  {
-    id: "fertilizer-compliance-limits",
-    file: "fertilizers/fertilizer_compliance_limits.json",
-    terms: [
-      "ph", "pH", "الرقم الهيدروجيني", "صوديوم", "كلور", "كلوريد", "بيوريت", "ملوثات",
-      "عناصر ثقيلة", "كادميوم", "رصاص", "زئبق", "نانو", "تسجيل سماد", "مسموح"
-    ],
-  },
-  {
-    id: "fertilizer-specialist-handoff",
-    file: "fertilizers/fertilizer_specialist_handoff.json",
-    terms: [
-      "وش اشتري", "وش أشتري", "اي منتج", "أي منتج", "ارشح", "رشح", "افضل سماد", "أفضل سماد",
-      "ابغى منتج", "أبغى منتج", "اعطني منتج", "عطني منتج", "برنامج تسميد", "خطة تسميد"
-    ],
-  },
   {
     id: "yellowing",
     file: "nutrition/yellowing.json",
@@ -388,7 +286,7 @@ function getModel() {
 function normalizeText(value: string) {
   return value
     .toLowerCase()
-    .replace(/[ًٌٍَُِّْـ]/g, "")
+    .replace(/[ًٌٍَُِّْـ]/g, "")
     .replace(/[أإآ]/g, "ا")
     .replace(/ى/g, "ي")
     .replace(/ة/g, "ه")
@@ -430,37 +328,7 @@ function selectKnowledgeFiles(
   }))
     .filter((rule) => rule.score > 0)
     .sort((a, b) => b.score - a.score)
-    .slice(0, 3);
-}
-
-function isFertilizerKnowledgeHit(hits: KnowledgeHit[]) {
-  return hits.some((hit) => hit.file.startsWith("fertilizers/"));
-}
-
-function isFertilizerProductSelectionRequest(message: string) {
-  const text = normalizeText(message);
-
-  if (!text) return false;
-
-  const terms = [
-    "وش اشتري",
-    "اي منتج",
-    "ارشح",
-    "رشح",
-    "افضل سماد",
-    "ابغي منتج",
-    "ابي منتج",
-    "اعطني منتج",
-    "عطني منتج",
-    "برنامج تسميد",
-    "خطه تسميد",
-    "خطة تسميد",
-    "what should i buy",
-    "recommend product",
-    "best fertilizer",
-  ];
-
-  return terms.some((term) => text.includes(normalizeText(term)));
+    .slice(0, 2);
 }
 
 function shouldUseObjectKey(key: string, language: Language) {
@@ -543,35 +411,28 @@ async function readKnowledgeFile(
   relativeFile: string,
   language: Language,
 ): Promise<string | null> {
-  const possiblePaths = [
-    path.join(process.cwd(), "app", "data", "knowledge", relativeFile),
-    path.join(process.cwd(), "data", "knowledge", relativeFile),
-  ];
+  const fullPath = path.join(process.cwd(), "data", "knowledge", relativeFile);
 
-  for (const fullPath of possiblePaths) {
-    try {
-      const raw = await fs.readFile(fullPath, "utf8");
-      const parsed = JSON.parse(raw);
+  try {
+    const raw = await fs.readFile(fullPath, "utf8");
+    const parsed = JSON.parse(raw);
 
-      const lines: string[] = [];
-      collectKnowledgeText(parsed, language, lines);
+    const lines: string[] = [];
+    collectKnowledgeText(parsed, language, lines);
 
-      const content = lines
-        .filter(Boolean)
-        .slice(0, 80)
-        .join("\n")
-        .slice(0, 6000);
+    const content = lines
+      .filter(Boolean)
+      .slice(0, 80)
+      .join("\n")
+      .slice(0, 6000);
 
-      if (!content.trim()) return null;
+    if (!content.trim()) return null;
 
-      return `Knowledge file: ${fullPath}\n${content}`;
-    } catch {
-      // جرّب المسار التالي؛ بعض نسخ المشروع تحفظ المعرفة داخل app/data وبعضها داخل data.
-    }
+    return `Knowledge file: data/knowledge/${relativeFile}\n${content}`;
+  } catch (error) {
+    console.warn(`Knowledge file not loaded: ${relativeFile}`, error);
+    return null;
   }
-
-  console.warn(`Knowledge file not loaded from any known path: ${relativeFile}`, possiblePaths);
-  return null;
 }
 
 async function buildKnowledgeContext(hits: KnowledgeHit[], language: Language) {
@@ -594,45 +455,6 @@ async function buildKnowledgeContext(hits: KnowledgeHit[], language: Language) {
   }
 
   return context;
-}
-
-async function loadRecentConversationContext(
-  conversationId: string,
-  language: Language,
-) {
-  try {
-    const { data, error } = await supabaseAdmin
-      .from("chat_messages")
-      .select("sender_type,message,created_at")
-      .eq("conversation_id", conversationId)
-      .order("created_at", { ascending: false })
-      .limit(8);
-
-    if (error || !data?.length) return "";
-
-    return data
-      .slice()
-      .reverse()
-      .map((item: any) => {
-        const sender = String(item.sender_type || "");
-        const label =
-          sender === "customer"
-            ? language === "ar"
-              ? "العميل"
-              : "Customer"
-            : language === "ar"
-              ? "المساعد"
-              : "Assistant";
-        const body = String(item.message || "").replace(/\s+/g, " ").trim();
-        return body ? `${label}: ${body}` : "";
-      })
-      .filter(Boolean)
-      .join("\n")
-      .slice(-3000);
-  } catch (error) {
-    console.warn("Recent chat context not loaded:", error);
-    return "";
-  }
 }
 
 async function imageFileToDataUrl(file: File) {
@@ -698,11 +520,9 @@ async function analyzeImageFirst(params: {
 
 المطلوب:
 - حدد ما الذي يظهر بالصورة إن أمكن.
-- هل هي حشرة منزلية؟ آفة نباتية؟ مرض نبات؟ أثر قارض؟ ملصق سماد/جدول استخدام؟ أم غير واضح؟
-- إذا كانت الصورة ملصق سماد أو جدول استخدام، استخرج نوع السماد والتركيبة ومعدل الاستخدام ووحدة القياس إن ظهرت.
+- هل هي حشرة منزلية؟ آفة نباتية؟ مرض نبات؟ أثر قارض؟ أم غير واضح؟
 - لا تجزم إذا الصورة غير واضحة.
 - لا تعطي جرعات مبيدات.
-- لا تحسب جرعة سماد نهائية في تحليل الصورة الأولي إذا كان سطر المعدل غير واضح.
 - إذا كانت الصورة غير واضحة أو الحالة خطرة أو تحتاج تشخيص مباشر، اجعل whatsapp_needed = true.
 
 رسالة العميل:
@@ -715,11 +535,9 @@ Analyze the image as an initial public-health and agricultural pest assistant fo
 
 Required:
 - Identify what appears in the image if possible.
-- Is it a household insect, plant pest, plant disease, rodent sign, fertilizer label/rate table, or unclear?
-- If it is a fertilizer label or rate table, extract fertilizer type, composition, application rate, and unit if visible.
+- Is it a household insect, plant pest, plant disease, rodent sign, or unclear?
 - Do not be overconfident if the image is unclear.
 - Do not provide pesticide dosage.
-- Do not calculate a final fertilizer dose in the initial image analysis if the rate line is unclear.
 - If the image is unclear, risky, or needs direct review, set whatsapp_needed = true.
 
 Customer message:
@@ -885,661 +703,6 @@ function shouldForceWhatsappFromVision(visionAnalysis: VisionAnalysis | null) {
   ];
 
   return sensitiveTerms.some((term) => sensitive.includes(normalizeText(term)));
-}
-
-
-function cleanAiSummary(value: unknown) {
-  let summary = String(value || "").trim();
-
-  // يمنع تكرار العناوين داخل الشات إذا النموذج كتب "نصائح مباشرة" داخل الملخص.
-  summary = summary
-    .replace(/\n?\s*(نصائح مباشرة|Direct advice)\s*[:：]\s*/gi, "\n")
-    .replace(/\n?\s*(تشخيص مبدئي|Initial diagnosis)\s*[:：]\s*/gi, "")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
-
-  return summary;
-}
-
-function buildStoredAiMessage(data: any, language: Language) {
-  const parts: string[] = [];
-  const summary = cleanAiSummary(data?.summary);
-
-  if (summary) parts.push(summary);
-
-  if (Array.isArray(data?.advice) && data.advice.length) {
-    const advice = data.advice
-      .map((item: unknown) => String(item || "").trim())
-      .filter(Boolean);
-
-    if (advice.length) {
-      parts.push(
-        `${language === "ar" ? "نصائح مباشرة" : "Direct advice"}:\n${advice.join("\n")}`,
-      );
-    }
-  }
-
-  if (Array.isArray(data?.questions) && data.questions.length) {
-    const questions = data.questions
-      .map((item: unknown) => String(item || "").trim())
-      .filter(Boolean);
-
-    if (questions.length) {
-      parts.push(
-        `${language === "ar" ? "أسئلة متابعة" : "Follow-up questions"}:\n${questions.join("\n")}`,
-      );
-    }
-  }
-
-  if (Array.isArray(data?.categories) && data.categories.length) {
-    const categories = data.categories
-      .map((item: any) => String(item?.title || "").trim())
-      .filter(Boolean);
-
-    if (categories.length) {
-      parts.push(
-        `${language === "ar" ? "تصنيفات مناسبة" : "Suitable categories"}:\n${categories.join("\n")}`,
-      );
-    }
-  }
-
-  return parts.join("\n\n").slice(0, 3500) || summary;
-}
-
-
-type JothrahChatResponse = {
-  language: Language;
-  analysis_source: "text" | "image" | "image_and_text";
-  detected_problem: string;
-  confidence: "high" | "medium" | "low";
-  summary: string;
-  advice: string[];
-  questions: string[];
-  categories: ChatCategory[];
-  product_suggestions: { name: string; url: string; reason: string }[];
-  whatsapp_needed: boolean;
-  whatsapp_message: string;
-};
-
-function fertilizerCategory(language: Language): ChatCategory[] {
-  return [
-    {
-      title: language === "ar" ? "الأسمدة ومحسنات التربة" : "Fertilizers and Soil Amendments",
-      url: "https://jothrah.com/",
-    },
-  ];
-}
-
-function makeFertilizerResponse(params: {
-  language: Language;
-  analysisSource: "text" | "image" | "image_and_text";
-  detectedProblem: string;
-  summary: string;
-  advice?: string[];
-  questions?: string[];
-  confidence?: "high" | "medium" | "low";
-  whatsappNeeded?: boolean;
-  whatsappMessage?: string;
-}): JothrahChatResponse {
-  const { language } = params;
-
-  return {
-    language,
-    analysis_source: params.analysisSource,
-    detected_problem: params.detectedProblem,
-    confidence: params.confidence || "high",
-    summary: params.summary,
-    advice: (params.advice || []).filter(Boolean).slice(0, 3),
-    questions: (params.questions || []).filter(Boolean).slice(0, 2),
-    categories: fertilizerCategory(language),
-    product_suggestions: [],
-    whatsapp_needed: Boolean(params.whatsappNeeded),
-    whatsapp_message: params.whatsappMessage || "",
-  };
-}
-
-function normalizeFertilizerText(value: string) {
-  return normalizeText(value)
-    .replace(/[٠۰]/g, "0")
-    .replace(/[١۱]/g, "1")
-    .replace(/[٢۲]/g, "2")
-    .replace(/[٣۳]/g, "3")
-    .replace(/[٤۴]/g, "4")
-    .replace(/[٥۵]/g, "5")
-    .replace(/[٦۶]/g, "6")
-    .replace(/[٧۷]/g, "7")
-    .replace(/[٨۸]/g, "8")
-    .replace(/[٩۹]/g, "9")
-    .replace(/نترت/g, "نترات")
-    .replace(/نترات كلسيوم/g, "نترات كالسيوم")
-    .replace(/كلسيوم/g, "كالسيوم")
-    .replace(/هيومك/g, "هيوميك")
-    .replace(/هيموك/g, "هيوميك")
-    .replace(/فلفيك/g, "فولفيك")
-    .replace(/بي اتش/g, "ph")
-    .replace(/بى اتش/g, "ph")
-    .replace(/البي اتش/g, "ph");
-}
-
-function includesAny(text: string, terms: string[]) {
-  return terms.some((term) => text.includes(normalizeFertilizerText(term)));
-}
-
-function extractAreaSquareMeters(text: string) {
-  const normalized = normalizeFertilizerText(text);
-  const match = normalized.match(/(\d+(?:\.\d+)?)\s*(?:متر|م2|م²|m2|sqm|square meter)/i);
-
-  if (!match) return null;
-
-  const area = Number(match[1]);
-  return Number.isFinite(area) && area > 0 ? area : null;
-}
-
-function formatRange(min: number, max: number, unit: string) {
-  const format = (value: number) =>
-    Number.isInteger(value) ? String(value) : String(Number(value.toFixed(2)));
-
-  return `${format(min)}–${format(max)} ${unit}`;
-}
-
-function looksLikeFertilizerQuestion(text: string) {
-  return includesAny(text, [
-    "سماد",
-    "اسمده",
-    "اسمدة",
-    "تسميد",
-    "npk",
-    "نترات",
-    "كالسيوم",
-    "زنك",
-    "بورون",
-    "حديد",
-    "مغنيسيوم",
-    "فوسفور",
-    "فوسفوريك",
-    "هيوميك",
-    "فولفيك",
-    "احماض امينيه",
-    "طحالب",
-    "ph",
-    "محسن تربه",
-    "fertilizer",
-    "fertiliser",
-  ]);
-}
-
-function isMixingQuestion(text: string) {
-  return includesAny(text, [
-    "اخلط",
-    "اخلطه",
-    "خلط",
-    "ينخلط",
-    "ينفع اخلط",
-    "قابليه الخلط",
-    "قابلية الخلط",
-    "مع بعض",
-    "mix",
-    "mixing",
-  ]);
-}
-
-function isPhQuestion(text: string) {
-  return includesAny(text, ["ph", "الرقم الهيدروجيني", "الهيدروجيني", "حموضه", "حموضة"]);
-}
-
-function isLabelQuestion(text: string) {
-  return includesAny(text, ["ملصق", "بيانات الملصق", "اللصق", "بطاقه", "بطاقة", "label"]);
-}
-
-function isRateQuestion(text: string) {
-  return includesAny(text, [
-    "كيف استخدم",
-    "طريقة الاستخدام",
-    "طريقه الاستخدام",
-    "كم احط",
-    "كم اضع",
-    "جرعه",
-    "جرعة",
-    "معدل",
-    "مساحه",
-    "مساحة",
-    "لتر ماء",
-    "بيت محمي",
-    "بيوت محميه",
-    "محبب",
-    "ذواب",
-    "rate",
-    "dose",
-  ]);
-}
-
-function hasNpkRatio(text: string) {
-  const normalized = normalizeFertilizerText(text);
-  return /\b\d{1,2}\s*[-\/ ]\s*\d{1,2}\s*[-\/ ]\s*\d{1,2}\b/.test(normalized) || normalized.includes("npk");
-}
-
-function buildFertilizerMixingResponse(params: {
-  message: string;
-  recentContext: string;
-  language: Language;
-  analysisSource: "text" | "image" | "image_and_text";
-}): JothrahChatResponse | null {
-  const { language, analysisSource } = params;
-  const text = normalizeFertilizerText(`${params.recentContext}\n${params.message}`);
-
-  if (!isMixingQuestion(text) || !looksLikeFertilizerQuestion(text)) return null;
-
-  const hasCalcium = includesAny(text, ["كالسيوم", "نترات كالسيوم", "نترات الكالسيوم", "calcium"]);
-  const hasZinc = includesAny(text, ["زنك", "zinc", "zn"]);
-  const hasBoron = includesAny(text, ["بورون", "boron"]);
-  const hasMolybdenum = includesAny(text, ["موليبدنم", "موليبدينوم", "molybdenum", "mo"]);
-  const hasPhosphorus = includesAny(text, ["فوسفور", "فوسفوريك", "حمض فوسفوريك", "حامض الفوسفوريك", "map", "mkp", "phosphorus", "phosphoric"]);
-  const hasSulfur = includesAny(text, ["كبريت", "سلفات", "sulfur", "sulphur", "sulfate", "sulphate"]);
-  const hasUrea = includesAny(text, ["يوريا", "urea"]);
-  const hasHumic = includesAny(text, ["هيوميك", "humic"]);
-  const hasAcid = includesAny(text, ["حمض", "حامض", "acid"]);
-  const hasMineralOil = includesAny(text, ["زيت معدني", "زيوت معدنيه", "mineral oil"]);
-  const hasPotassiumNitrate = includesAny(text, ["نترات البوتاسيوم", "potassium nitrate"]);
-
-  if (hasBoron || hasMolybdenum) {
-    return makeFertilizerResponse({
-      language,
-      analysisSource,
-      detectedProblem: language === "ar" ? "سؤال خلط عناصر صغرى" : "Micronutrient mixing question",
-      summary:
-        language === "ar"
-          ? "البورون والموليبدنم من العناصر التي لا تُعامل كخلط عام مع بقية الأسمدة. لا أنصح بخلطها مباشرة في نفس الخزان إلا إذا نص ملصق المنتجين على ذلك بوضوح."
-          : "Boron and molybdenum should not be treated as general tank-mix nutrients. Do not mix them directly unless both product labels clearly allow it.",
-      advice:
-        language === "ar"
-          ? [
-              "افصل الإضافة أو اعمل تجربة خلط صغيرة فقط إذا كان الملصق يسمح.",
-              "لا تعتمد على أن كل العناصر الصغرى قابلة للخلط؛ البورون والموليبدنم أكثر حساسية.",
-              "إذا كان الاستخدام رشًا ورقيًا، التزم بملصق المنتج ولا ترفع التركيز من نفسك.",
-            ]
-          : [
-              "Separate applications, or run a small jar test only if the label allows mixing.",
-              "Do not assume all micronutrients are compatible; boron and molybdenum are more sensitive.",
-              "For foliar use, follow the label and do not increase concentration yourself.",
-            ],
-      questions:
-        language === "ar"
-          ? ["هل الخلط للرش الورقي أم مع ماء الري؟", "ما اسم المنتجين أو صورة الملصق؟"]
-          : ["Is this for foliar spraying or irrigation?", "What are the two product names or label photos?"],
-    });
-  }
-
-  if (hasCalcium && hasPhosphorus) {
-    return makeFertilizerResponse({
-      language,
-      analysisSource,
-      detectedProblem: language === "ar" ? "عدم توافق كالسيوم مع فوسفور" : "Calcium and phosphorus incompatibility",
-      summary:
-        language === "ar"
-          ? "لا، لا أنصح بخلط الكالسيوم مع الفوسفور أو حمض الفوسفوريك في نفس الخزان. القاعدة العامة أن الفوسفور لا يقبل الخلط مع الكالسيوم."
-          : "No. Do not mix calcium with phosphorus or phosphoric acid in the same tank. The general rule is that phosphorus is not compatible with calcium.",
-      advice:
-        language === "ar"
-          ? [
-              "افصل الإضافتين في وقتين مختلفين أو خزانات منفصلة.",
-              "لا تخلط حمض الفوسفوريك مع نترات الكالسيوم.",
-              "اعمل تجربة خلط صغيرة فقط إذا كان ملصق المنتجين يسمح صراحة، وليس كقاعدة عامة.",
-            ]
-          : [
-              "Apply them separately or in different tanks.",
-              "Do not mix phosphoric acid with calcium nitrate.",
-              "Only run a jar test if both labels explicitly allow mixing; do not use it as a general rule.",
-            ],
-      questions: language === "ar" ? ["هل الاستخدام مع ماء الري أم رش ورقي؟"] : ["Is this through irrigation or foliar spraying?"],
-    });
-  }
-
-  if (hasCalcium && hasSulfur) {
-    return makeFertilizerResponse({
-      language,
-      analysisSource,
-      detectedProblem: language === "ar" ? "عدم توافق كالسيوم مع كبريت/سلفات" : "Calcium and sulfur/sulfate incompatibility",
-      summary:
-        language === "ar"
-          ? "لا يُنصح بخلط الكالسيوم مع الكبريت أو السلفات في نفس الخزان. القاعدة العامة أن الكالسيوم لا يقبل الخلط مع الكبريت."
-          : "Do not mix calcium with sulfur or sulfates in the same tank. The general rule is that calcium is not compatible with sulfur.",
-      advice:
-        language === "ar"
-          ? ["افصل نترات الكالسيوم عن الأسمدة السلفاتية.", "نظف الخزان أو شبكة الري بين الإضافات عند الحاجة.", "ارجع لملصق المنتجين قبل أي خلط."]
-          : ["Separate calcium nitrate from sulfate fertilizers.", "Flush the tank or irrigation line between applications when needed.", "Check both product labels before any mix."],
-      questions: language === "ar" ? ["ما اسم السماد السلفاتي الذي تريد خلطه؟"] : ["Which sulfate fertilizer do you want to mix?"],
-    });
-  }
-
-  if (hasCalcium && hasUrea) {
-    return makeFertilizerResponse({
-      language,
-      analysisSource,
-      detectedProblem: language === "ar" ? "نترات كالسيوم مع يوريا" : "Calcium nitrate and urea",
-      summary:
-        language === "ar"
-          ? "لا أنصح بخلط نترات الكالسيوم مع اليوريا في نفس الخزان. الأفضل فصل الإضافة والرجوع لملصق المنتج."
-          : "Do not mix calcium nitrate with urea in the same tank. Separate applications and follow the product labels.",
-      advice:
-        language === "ar"
-          ? ["افصل الإضافة لتجنب مشاكل التوافق.", "استخدم ماء نظيفًا واشطف الخزان بين الإضافات.", "لا ترفع التركيز بهدف التعويض."]
-          : ["Separate applications to avoid compatibility issues.", "Use clean water and flush the tank between applications.", "Do not increase concentration to compensate."],
-      questions: language === "ar" ? ["هل الإضافة عبر التنقيط أم الرش؟"] : ["Is the application through drip irrigation or spraying?"],
-    });
-  }
-
-  if (hasCalcium && hasZinc) {
-    return makeFertilizerResponse({
-      language,
-      analysisSource,
-      detectedProblem: language === "ar" ? "خلط كالسيوم مع زنك" : "Calcium and zinc mixing",
-      summary:
-        language === "ar"
-          ? "تصحيح المقصود: غالبًا تقصد نترات كالسيوم مع زنك. القاعدة العامة أن العناصر الصغرى مثل الزنك لا تُخلط مباشرة مع الكالسيوم إلا إذا سمح ملصق المنتجين بوضوح."
-          : "You likely mean calcium nitrate with zinc. As a general rule, micronutrients such as zinc should not be directly mixed with calcium unless both labels clearly allow it.",
-      advice:
-        language === "ar"
-          ? [
-              "افصل إضافة نترات الكالسيوم عن الزنك، خصوصًا إذا كان الزنك سلفات أو ضمن خليط عناصر صغرى.",
-              "لو كان الزنك مخلبًا، لا يزال الملصق هو المرجع وليس اسم المخلب وحده.",
-              "اعمل تجربة خلط صغيرة فقط بعد التأكد من ملصق المنتجين.",
-            ]
-          : [
-              "Separate calcium nitrate from zinc, especially if zinc is sulfate or part of a micronutrient blend.",
-              "Even if zinc is chelated, the label is the reference—not the chelate name alone.",
-              "Run a small jar test only after checking both labels.",
-            ],
-      questions:
-        language === "ar"
-          ? ["هل الزنك مخلب EDTA أم سلفات أو خليط عناصر صغرى؟", "هل الاستخدام رش ورقي أم مع ماء الري؟"]
-          : ["Is the zinc EDTA-chelated, sulfate, or part of a micronutrient mix?", "Is this foliar or through irrigation?"],
-    });
-  }
-
-  if (hasHumic && (hasAcid || hasCalcium)) {
-    return makeFertilizerResponse({
-      language,
-      analysisSource,
-      detectedProblem: language === "ar" ? "خلط هيوميك" : "Humic mixing",
-      summary:
-        language === "ar"
-          ? "الهيوميك لا يقبل الخلط مع الأحماض ولا مع التركيزات العالية من الكالسيوم. الأفضل فصله في إضافة مستقلة."
-          : "Humic acid is not compatible with acids or high calcium concentrations. It is best applied separately.",
-      advice:
-        language === "ar"
-          ? ["لا تخلط الهيوميك مع حمض الفوسفوريك.", "لا تخلطه مع جرعات كالسيوم عالية.", "اتبع ملصق المنتج واعمل تجربة صغيرة عند الحاجة."]
-          : ["Do not mix humic with phosphoric acid.", "Do not mix it with high calcium doses.", "Follow the label and run a small jar test when needed."],
-      questions: language === "ar" ? ["هل الهيوميك سائل أم صلب؟"] : ["Is the humic product liquid or solid?"],
-    });
-  }
-
-  if (hasMineralOil) {
-    return makeFertilizerResponse({
-      language,
-      analysisSource,
-      detectedProblem: language === "ar" ? "خلط الزيوت المعدنية" : "Mineral oil mixing",
-      summary:
-        language === "ar"
-          ? "الزيوت المعدنية لا تُخلط مع أي سماد كقاعدة عامة. افصل استخدامها واتبع ملصق المنتج."
-          : "Mineral oils should not be mixed with any fertilizer as a general rule. Apply separately and follow the label.",
-      advice:
-        language === "ar"
-          ? ["لا تستخدم الزيت المعدني داخل خزان تسميد.", "افصل الرش أو الإضافة بفاصل مناسب حسب الملصق.", "تجنب الرش وقت الحرارة العالية."]
-          : ["Do not use mineral oil inside a fertilizer tank.", "Separate applications according to the label interval.", "Avoid spraying during high heat."],
-      questions: [],
-    });
-  }
-
-  if (hasPotassiumNitrate) {
-    return makeFertilizerResponse({
-      language,
-      analysisSource,
-      detectedProblem: language === "ar" ? "خلط نترات البوتاسيوم" : "Potassium nitrate mixing",
-      summary:
-        language === "ar"
-          ? "نترات البوتاسيوم تقبل الخلط مع أغلب الأسمدة كقاعدة عامة، لكن يفضّل دائمًا عمل تجربة خلط صغيرة واتباع ملصق المنتج."
-          : "Potassium nitrate is generally compatible with most fertilizers, but a small jar test and label guidance are still recommended.",
-      advice:
-        language === "ar"
-          ? ["استخدم ماء نظيفًا وذوّب المنتج جيدًا.", "لا تخلط مع منتجات غير معروفة التركيب.", "راقب أي ترسب أو تعكر قبل الاستخدام الواسع."]
-          : ["Use clean water and dissolve the product well.", "Do not mix with products of unknown composition.", "Watch for precipitation or cloudiness before broad use."],
-      questions: language === "ar" ? ["ما السماد الآخر الذي تريد خلطه معه؟"] : ["Which other fertilizer do you want to mix it with?"],
-    });
-  }
-
-  return makeFertilizerResponse({
-    language,
-    analysisSource,
-    detectedProblem: language === "ar" ? "سؤال عام عن خلط الأسمدة" : "General fertilizer mixing question",
-    summary:
-      language === "ar"
-        ? "لا أقدر أحكم على الخلط بدقة من اسم عام فقط. قابلية الخلط تعتمد على نوع السماد، صورته الكيميائية، التركيز، طريقة الاستخدام، وملصق المنتجين."
-        : "I cannot judge compatibility accurately from a general name only. Mixing depends on fertilizer type, chemical form, concentration, application method, and both labels.",
-    advice:
-      language === "ar"
-        ? ["لا تخلط أسمدة عشوائيًا في نفس الخزان.", "ابدأ دائمًا بقراءة قابلية الخلط على الملصق.", "اعمل تجربة خلط صغيرة قبل أي استخدام واسع إذا كان الخلط مسموحًا."]
-        : ["Do not randomly mix fertilizers in the same tank.", "Always check the compatibility section on the label.", "Run a small jar test before broad use if mixing is allowed."],
-    questions:
-      language === "ar" ? ["ما أسماء الأسمدة التي تريد خلطها بالضبط؟", "هل الاستخدام رش ورقي أم مع ماء الري؟"] : ["What exact fertilizers do you want to mix?", "Is this foliar spraying or irrigation?"],
-    confidence: "medium",
-  });
-}
-
-function buildFertilizerPhResponse(params: {
-  message: string;
-  recentContext: string;
-  language: Language;
-  analysisSource: "text" | "image" | "image_and_text";
-}): JothrahChatResponse | null {
-  const { language, analysisSource } = params;
-  const text = normalizeFertilizerText(`${params.recentContext}\n${params.message}`);
-
-  if (!isPhQuestion(text) || !looksLikeFertilizerQuestion(text)) return null;
-
-  const isLiquid = includesAny(text, ["سائل", "السائل", "liquid"]);
-  const isSolid = includesAny(text, ["صلب", "بودر", "مسحوق", "حبيبات", "محبب", "solid", "powder", "granular"]);
-  const hasHumic = includesAny(text, ["هيوميك", "humic"]);
-  const hasFulvic = includesAny(text, ["فولفيك", "fulvic"]);
-  const hasNpk = hasNpkRatio(text) || includesAny(text, ["العناصر الكبري", "العناصر الكبرى"]);
-  const hasSeaweed = includesAny(text, ["طحالب", "طحالب بحريه", "seaweed"]);
-  const hasAmino = includesAny(text, ["احماض امينيه", "أحماض أمينية", "amino"]);
-
-  if (hasHumic || hasFulvic) {
-    const answer = isLiquid
-      ? language === "ar"
-        ? "الحد الأعلى للهيوميك/الفولفيك السائل هو pH 8.5."
-        : "The upper pH limit for liquid humic/fulvic products is 8.5."
-      : isSolid
-        ? language === "ar"
-          ? "الحد الأعلى للهيوميك/الفولفيك الصلب هو pH 11."
-          : "The upper pH limit for solid humic/fulvic products is 11."
-        : language === "ar"
-          ? "الهيوميك/الفولفيك يختلف حسب الصورة: السائل حدّه الأعلى pH 8.5، والصلب حدّه الأعلى pH 11."
-          : "Humic/fulvic limits depend on form: liquid upper pH is 8.5, and solid upper pH is 11.";
-
-    return makeFertilizerResponse({
-      language,
-      analysisSource,
-      detectedProblem: language === "ar" ? "pH الهيوميك/الفولفيك" : "Humic/Fulvic pH",
-      summary: answer,
-      advice:
-        language === "ar"
-          ? ["تأكد هل المنتج سائل أم صلب قبل الحكم.", "راجع شهادة التحليل والملصق لأن pH جزء من بيانات التسجيل.", "لا تخلط الهيوميك مع الأحماض أو تركيز عالٍ من الكالسيوم."]
-          : ["Confirm whether the product is liquid or solid before judging.", "Check the analysis certificate and label because pH is part of registration data.", "Do not mix humic with acids or high calcium concentration."],
-      questions: isLiquid || isSolid ? [] : language === "ar" ? ["هل المنتج سائل أم صلب؟"] : ["Is the product liquid or solid?"],
-    });
-  }
-
-  if (hasNpk) {
-    return makeFertilizerResponse({
-      language,
-      analysisSource,
-      detectedProblem: language === "ar" ? "pH سماد NPK" : "NPK fertilizer pH",
-      summary:
-        language === "ar"
-          ? "أسمدة العناصر الكبرى المركبة NPK المفترض ألا يزيد رقمها الهيدروجيني عن pH 7."
-          : "Compound major-element NPK fertilizers should not exceed pH 7.",
-      advice:
-        language === "ar"
-          ? ["راجع pH في الملصق أو شهادة التحليل.", "لا تعتمد على الاسم التجاري فقط؛ التركيبة والصورة مهمة.", "إذا كان المنتج سائلًا أو معلقًا، راجع كذلك الكثافة والكلوريد والصوديوم."]
-          : ["Check pH on the label or analysis certificate.", "Do not rely on the trade name only; composition and form matter.", "For liquid or suspension products, also check density, chloride, and sodium."],
-      questions: [],
-    });
-  }
-
-  if (hasSeaweed) {
-    return makeFertilizerResponse({
-      language,
-      analysisSource,
-      detectedProblem: language === "ar" ? "pH الطحالب البحرية" : "Seaweed pH",
-      summary: language === "ar" ? "الطحالب البحرية: الحد الأعلى pH 8 للمنتج الصلب، وpH 7 للمنتج السائل." : "Seaweed products: upper pH is 8 for solid products and 7 for liquid products.",
-      advice: language === "ar" ? ["حدد صورة المنتج قبل الحكم.", "راجع الملصق وشهادة التحليل."] : ["Confirm product form before judging.", "Check the label and analysis certificate."],
-      questions: isLiquid || isSolid ? [] : language === "ar" ? ["هل الطحالب سائلة أم صلبة؟"] : ["Is the seaweed product liquid or solid?"],
-    });
-  }
-
-  if (hasAmino) {
-    return makeFertilizerResponse({
-      language,
-      analysisSource,
-      detectedProblem: language === "ar" ? "pH الأحماض الأمينية" : "Amino acid pH",
-      summary: language === "ar" ? "الأحماض الأمينية حدها الأعلى pH 7 سواء كانت صلبة أو سائلة." : "Amino acid fertilizers have an upper pH limit of 7 whether solid or liquid.",
-      advice: language === "ar" ? ["راجع مصدر الأحماض الأمينية ونسبتها الحرة والكلية.", "تأكد أن البيانات مطابقة للملصق وشهادة التحليل."] : ["Check amino acid source and free/total amino acid percentages.", "Make sure label and analysis certificate match."],
-      questions: [],
-    });
-  }
-
-  return makeFertilizerResponse({
-    language,
-    analysisSource,
-    detectedProblem: language === "ar" ? "سؤال pH لسماد" : "Fertilizer pH question",
-    summary: language === "ar" ? "pH المسموح يختلف حسب نوع السماد وصورته. لا أقدر أحدده بدقة قبل معرفة نوع المنتج: NPK، هيوميك، فولفيك، أحماض أمينية، طحالب، أو غيرها." : "Allowed pH depends on fertilizer type and form. I need to know whether it is NPK, humic, fulvic, amino acids, seaweed, or another fertilizer.",
-    advice: language === "ar" ? ["اكتب نوع السماد وصورته: سائل أم صلب.", "راجع خانة pH في الملصق أو شهادة التحليل.", "لا تقارن pH منتج بآخر إلا إذا كانا من نفس النوع والصورة."] : ["Provide fertilizer type and form: liquid or solid.", "Check the pH field on the label or analysis certificate.", "Do not compare pH across different product types/forms."],
-    questions: language === "ar" ? ["ما نوع السماد؟", "هل هو سائل أم صلب؟"] : ["What fertilizer type is it?", "Is it liquid or solid?"],
-    confidence: "medium",
-  });
-}
-
-function buildFertilizerRateResponse(params: {
-  message: string;
-  recentContext: string;
-  language: Language;
-  analysisSource: "text" | "image" | "image_and_text";
-}): JothrahChatResponse | null {
-  const { language, analysisSource } = params;
-  const combined = `${params.recentContext}\n${params.message}`;
-  const text = normalizeFertilizerText(combined);
-
-  if (!isRateQuestion(text) || !looksLikeFertilizerQuestion(text)) return null;
-
-  const area = extractAreaSquareMeters(text);
-  const greenhouse = includesAny(text, ["بيت محمي", "بيوت محميه", "محمية", "محمي", "greenhouse"]);
-  const granular = includesAny(text, ["محبب", "حبيبات", "نثر", "نثرا", "granular", "broadcast"]);
-  const liquid = includesAny(text, ["سائل", "liquid"]);
-  const soluble = includesAny(text, ["ذواب", "ذائب", "بودر", "مع ماء الري", "water soluble", "soluble"]);
-  const npk = hasNpkRatio(text);
-
-  if (npk && greenhouse && area && granular) {
-    const min = (15 / 1000) * area;
-    const max = (30 / 1000) * area;
-
-    return makeFertilizerResponse({
-      language,
-      analysisSource,
-      detectedProblem: language === "ar" ? "معدل NPK محبب للبيوت المحمية" : "Granular NPK greenhouse rate",
-      summary: language === "ar" ? `لسماد NPK محبب يُضاف نثرًا في بيت محمي، المعدل الاسترشادي هو 15–30 كجم / 1000 م². لمساحة ${area} م² يكون المعدل التقريبي ${formatRange(min, max, "كجم")}.` : `For granular NPK broadcast in a greenhouse, the reference rate is 15–30 kg / 1000 m². For ${area} m², the approximate range is ${formatRange(min, max, "kg")}.`,
-      advice: language === "ar" ? ["وزّعه بالتساوي حول منطقة الجذور أو بين الخطوط، ثم اسقِ مباشرة.", "لا تذوبه في الخزان إلا إذا كان الملصق يقول إنه ذواب بالكامل.", "هذه معدلات استرشادية وتختلف حسب تحليل التربة والمياه ونوع المحصول ومرحلة النمو."] : ["Distribute evenly around the root zone or between rows, then irrigate immediately.", "Do not dissolve it in the tank unless the label says it is fully water soluble.", "These are reference rates and vary by soil/water analysis, crop, and growth stage."],
-      questions: language === "ar" ? ["ما نوع المحصول أو النبات؟"] : ["What crop or plant is this for?"],
-    });
-  }
-
-  if (npk && greenhouse && area && soluble) {
-    const min = (1 / 1000) * area;
-    const max = (2 / 1000) * area;
-
-    return makeFertilizerResponse({
-      language,
-      analysisSource,
-      detectedProblem: language === "ar" ? "معدل NPK ذواب للبيوت المحمية" : "Water-soluble NPK greenhouse rate",
-      summary: language === "ar" ? `لسماد NPK ذواب مع ماء الري في بيت محمي، المعدل الاسترشادي هو 1–2 كجم / 1000 م². لمساحة ${area} م² يكون المعدل التقريبي ${formatRange(min, max, "كجم")}.` : `For water-soluble NPK through irrigation in a greenhouse, the reference rate is 1–2 kg / 1000 m². For ${area} m², the approximate range is ${formatRange(min, max, "kg")}.`,
-      advice: language === "ar" ? ["تأكد أن السماد مكتوب عليه ذواب بالكامل قبل وضعه في الخزان.", "قسّم الإضافة حسب البرنامج التسميدي بدل جرعة كبيرة واحدة عند الحاجة.", "هذه معدلات استرشادية وتختلف حسب تحليل التربة والمياه ونوع المحصول ومرحلة النمو."] : ["Make sure the label states it is fully water soluble before adding it to the tank.", "Split applications according to the fertilization program rather than one large dose when needed.", "These are reference rates and vary by soil/water analysis, crop, and growth stage."],
-      questions: language === "ar" ? ["ما نوع المحصول ومرحلة النمو؟"] : ["What crop and growth stage is it?"],
-    });
-  }
-
-  if (npk && greenhouse && area && liquid) {
-    const min = (1 / 1000) * area;
-    const max = (2 / 1000) * area;
-
-    return makeFertilizerResponse({
-      language,
-      analysisSource,
-      detectedProblem: language === "ar" ? "معدل NPK سائل للبيوت المحمية" : "Liquid NPK greenhouse rate",
-      summary: language === "ar" ? `لسماد NPK سائل مع ماء الري في بيت محمي، المعدل الاسترشادي هو 1–2 لتر / 1000 م². لمساحة ${area} م² يكون المعدل التقريبي ${formatRange(min, max, "لتر")}.` : `For liquid NPK through irrigation in a greenhouse, the reference rate is 1–2 L / 1000 m². For ${area} m², the approximate range is ${formatRange(min, max, "L")}.`,
-      advice: language === "ar" ? ["راجع كثافة السماد وتعليمات الملصق.", "لا تخلطه مع الكالسيوم أو مبيدات قبل التأكد من قابلية الخلط.", "المعدل استرشادي ويتغير حسب المحصول والتحليل."] : ["Check product density and label instructions.", "Do not mix it with calcium or pesticides before confirming compatibility.", "The rate is reference-based and changes by crop and analysis."],
-      questions: language === "ar" ? ["ما نوع المحصول؟"] : ["What crop is it for?"],
-    });
-  }
-
-  if (npk && !granular && !soluble && !liquid) {
-    return makeFertilizerResponse({
-      language,
-      analysisSource,
-      detectedProblem: language === "ar" ? "طريقة استخدام NPK غير محددة" : "Unspecified NPK use method",
-      summary: language === "ar" ? "سماد NPK مثل 15-15-15 أو 20-20-20 لا يمكن تحديد معدله من التركيبة فقط. أهم فرق: هل هو ذواب مع ماء الري، سائل، أم محبب يُنثر على التربة؟" : "An NPK such as 15-15-15 or 20-20-20 cannot be rated from the formula alone. The key question is whether it is water-soluble, liquid, or granular broadcast fertilizer.",
-      advice: language === "ar" ? ["لا تستخدم معدل السماد الذواب على سماد محبب، ولا العكس.", "اقرأ الملصق: طريقة الإضافة، وحدة القياس، ومعدل الاستخدام.", "المعدلات تختلف حسب المساحة والمحصول ومرحلة النمو وتحليل التربة والمياه."] : ["Do not use soluble fertilizer rates for granular fertilizer, or the reverse.", "Read the label: application method, unit, and rate.", "Rates vary by area, crop, growth stage, and soil/water analysis."],
-      questions: language === "ar" ? ["هل السماد ذواب أم سائل أم محبب؟", "كم المساحة ونوع النبات؟"] : ["Is it water-soluble, liquid, or granular?", "What is the area and plant/crop?"],
-      confidence: "medium",
-    });
-  }
-
-  return null;
-}
-
-function buildFertilizerLabelResponse(params: {
-  message: string;
-  language: Language;
-  analysisSource: "text" | "image" | "image_and_text";
-}): JothrahChatResponse | null {
-  const { language, analysisSource } = params;
-  const text = normalizeFertilizerText(params.message);
-
-  if (!isLabelQuestion(text) || !looksLikeFertilizerQuestion(text)) return null;
-
-  return makeFertilizerResponse({
-    language,
-    analysisSource,
-    detectedProblem: language === "ar" ? "بيانات ملصق السماد" : "Fertilizer label requirements",
-    summary: language === "ar" ? "ملصق السماد يجب أن يوضح بيانات المنتج الأساسية حتى يستطيع العميل والمختص معرفة التركيبة وطريقة الاستخدام وقابلية الخلط والسلامة." : "A fertilizer label should show the core product data so the customer and specialist can understand composition, use rate, compatibility, and safety.",
-    advice: language === "ar" ? ["أهم البيانات: الاسم التجاري، تركيز العناصر، وحدة القياس وزن/حجم أو وزن/وزن، مصدر العناصر، pH، والكثافة للسوائل والمعلقات والمعجون.", "يلزم ذكر طريقة ومعدل الإضافة، قابلية الخلط، التخزين، وزن أو حجم العبوة، بلد المنشأ، المنتج، المستورد، وتاريخ الإنتاج والانتهاء ورقم الدفعة.", "يلزم وجود علامات الأمن والسلامة وخانة رقم التسجيل، مع توافق بيانات الملصق العربي والإنجليزي عند وجودهما."] : ["Key data: trade name, nutrient concentrations, unit basis w/v or w/w, nutrient sources, pH, and density for liquids/suspensions/pastes.", "It should include application method/rate, compatibility, storage, pack size, origin, producer, importer, production/expiry date, and batch number.", "Safety symbols and registration number should be present, with Arabic/English label consistency when both exist."],
-    questions: language === "ar" ? ["هل تريد صياغة ملصق لمنتج معين أم مراجعة ملصق جاهز؟"] : ["Do you want to draft a label for a product or review an existing label?"],
-  });
-}
-
-function buildRouteDeterministicFertilizerResponse(params: {
-  message: string;
-  recentContext: string;
-  language: Language;
-  analysisSource: "text" | "image" | "image_and_text";
-  forceWhatsapp: boolean;
-}): JothrahChatResponse | null {
-  const text = normalizeFertilizerText(`${params.recentContext}\n${params.message}`);
-
-  if (!looksLikeFertilizerQuestion(text)) return null;
-
-  const mixing = buildFertilizerMixingResponse(params);
-  if (mixing) return mixing;
-
-  const ph = buildFertilizerPhResponse(params);
-  if (ph) return ph;
-
-  const rate = buildFertilizerRateResponse(params);
-  if (rate) return rate;
-
-  const label = buildFertilizerLabelResponse(params);
-  if (label) return label;
-
-  return null;
 }
 
 const responseSchema = {
@@ -1910,13 +1073,7 @@ export async function POST(req: NextRequest) {
         })
       : null;
 
-    const recentChatContext = await loadRecentConversationContext(
-      conversation.id,
-      language,
-    );
-
     const matchingText = [
-      recentChatContext,
       message,
       visionAnalysis?.detected_problem || "",
       visionAnalysis?.visual_notes || "",
@@ -1940,16 +1097,9 @@ export async function POST(req: NextRequest) {
       language,
     );
 
-    const fertilizerMode = isFertilizerKnowledgeHit(knowledgeHits);
-    const forceWhatsappByFertilizerSelection =
-      fertilizerMode && isFertilizerProductSelectionRequest(message);
-
     const forceWhatsappByText = needsWhatsapp(message);
     const forceWhatsappByVision = shouldForceWhatsappFromVision(visionAnalysis);
-    const forceWhatsapp =
-      forceWhatsappByText ||
-      forceWhatsappByVision ||
-      forceWhatsappByFertilizerSelection;
+    const forceWhatsapp = forceWhatsappByText || forceWhatsappByVision;
 
     const visionContext = buildVisionContext(
       imageDataUrl,
@@ -1968,9 +1118,6 @@ export async function POST(req: NextRequest) {
         ? `
 رسالة العميل:
 ${message || "لم يكتب العميل رسالة، أرسل صورة فقط."}
-
-آخر سياق من نفس المحادثة:
-${recentChatContext || "لا يوجد سياق سابق."}
 
 مصدر التحليل:
 ${analysisSource}
@@ -1998,17 +1145,11 @@ ${knowledgeContext}
 هل يجب التحويل إلى واتساب؟
 ${forceWhatsapp}
 
-وضع الأسمدة العام:
-${fertilizerMode}
-
 أجب للعميل بصيغة مختصرة ومفيدة داخل شات متجر إلكتروني.
 `
         : `
 Customer message:
 ${message || "The customer did not write a message and only sent an image."}
-
-Recent context from the same chat:
-${recentChatContext || "No previous context."}
 
 Analysis source:
 ${analysisSource}
@@ -2036,91 +1177,50 @@ ${knowledgeContext}
 Should WhatsApp escalation be enabled?
 ${forceWhatsapp}
 
-General fertilizer mode:
-${fertilizerMode}
-
 Reply in a short, useful ecommerce chat style.
 `;
 
-    const deterministicFertilizerResponse =
-      buildRouteDeterministicFertilizerResponse({
-        message,
-        recentContext: recentChatContext,
-        language,
-        analysisSource,
-        forceWhatsapp: forceWhatsappByFertilizerSelection,
-      }) ||
-      buildExternalDeterministicFertilizerResponse({
-        message,
-        recentContext: recentChatContext,
-        language,
-        analysisSource,
-        forceWhatsapp: forceWhatsappByFertilizerSelection,
-      });
-
-    const effectiveFertilizerMode = fertilizerMode || Boolean(deterministicFertilizerResponse);
-
-    let data: any = deterministicFertilizerResponse;
-
-    if (!data) {
-      const completion = await client.chat.completions.create({
-        model: getModel(),
-        messages: [
-          {
-            role: "system",
-            content: jothrahSystemPrompt,
-          },
-          {
-            role: "system",
-            content: `
-You are the primary intelligent agricultural and public health expert for Jothrah store.
-Your expertise covers: Fertilizers, Seeds, Agricultural Pesticides, Public Health Pesticides, Agricultural Pests, and General Public Health.
+    const completion = await client.chat.completions.create({
+      model: getModel(),
+      messages: [
+        {
+          role: "system",
+          content: jothrahSystemPrompt,
+        },
+        {
+          role: "system",
+          content: `
 Important Jothrah response rules:
 - The image analysis, if available, was performed first.
-- Use the image analysis result, the customer text, recent chat context, matched categories, and knowledge context.
-- Provide highly accurate, professional advice regarding seeds planting, pest control, and public health, using the provided knowledge.
+- Use the image analysis result, the customer text, matched categories, and knowledge context.
 - Do not claim certainty from an unclear image.
 - If confidence is low, image is unclear, or the case needs direct diagnosis, set whatsapp_needed to true.
-- Do not invent pesticide dosage, dilution, mixing ratios, or safety claims. Rely strictly on label information or knowledge context.
+- Do not invent pesticide dosage, dilution, mixing ratios, or safety claims.
 - Do not recommend a specific product unless the product exists in provided knowledge or matched category data.
-- If fertilizerMode is true or matched knowledge files are under data/knowledge/fertilizers, do not recommend product names, do not add product links, and keep product_suggestions empty.
-- In fertilizer mode, calculate fertilizer rates only when the unit and application method are clear; otherwise ask one focused follow-up question.
-- In fertilizer mode, if the customer asks what product to buy, set whatsapp_needed to true and invite them to contact a Jothrah specialist.
-- In fertilizer follow-up messages, use the recent chat context. Example: if the customer first asks about NPK dose and then replies "خيار", treat it as the crop type and complete the calculation.
 - product_suggestions may be an empty array.
 - Keep advice to maximum 3 items.
 - Keep questions to maximum 2 items.
 - Return only valid JSON matching the schema.
 `,
-          },
-          {
-            role: "user",
-            content: userPrompt,
-          },
-        ],
-        response_format: {
-          type: "json_schema",
-          json_schema: responseSchema,
         },
-        max_completion_tokens: 1000,
-      });
+        {
+          role: "user",
+          content: userPrompt,
+        },
+      ],
+      response_format: {
+        type: "json_schema",
+        json_schema: responseSchema,
+      },
+      max_completion_tokens: 1000,
+    });
 
-      const raw = completion.choices[0]?.message?.content || "{}";
-      data = JSON.parse(raw);
-    }
-
-    if (effectiveFertilizerMode) {
-      data.product_suggestions = [];
-
-      if (forceWhatsappByFertilizerSelection) {
-        data.whatsapp_needed = true;
-      }
-    }
-
+    const raw = completion.choices[0]?.message?.content || "{}";
+    const data = JSON.parse(raw);
     await saveChatMessage({
       conversationId: conversation.id,
       senderType: "ai",
-      message: buildStoredAiMessage(data, language),
+      message: data.summary || "",
       aiDetectedProblem: data.detected_problem || null,
       aiConfidence: data.confidence || null,
       aiWhatsappNeeded: Boolean(data.whatsapp_needed || forceWhatsapp),
