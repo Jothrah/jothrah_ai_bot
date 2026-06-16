@@ -21,12 +21,12 @@ function getSupabaseAdmin() {
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json().catch(() => ({}));
+    const body = await req.json();
     const endpoint = String(body?.endpoint || "").trim();
 
     if (!endpoint) {
       return NextResponse.json(
-        { ok: false, error: "Missing subscription endpoint" },
+        { ok: false, error: "Missing endpoint" },
         { status: 400 },
       );
     }
