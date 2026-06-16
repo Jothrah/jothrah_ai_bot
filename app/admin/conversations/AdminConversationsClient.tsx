@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-// Jothrah Admin Conversations V117 - rating visibility + smart image gallery
+// Jothrah Admin Conversations V118 - emoji rating visibility
 
 type Conversation = Record<string, any>;
 type ChatMessage = Record<string, any>;
@@ -193,9 +193,26 @@ function getConversationRating(conversation?: Conversation | null) {
   return Math.max(1, Math.min(5, Math.round(rating)));
 }
 
-function ratingStars(rating: number) {
-  if (!rating) return "لم يتم التقييم بعد";
-  return "★".repeat(rating) + "☆".repeat(5 - rating);
+function ratingEmoji(rating: number) {
+  const map: Record<number, string> = {
+    1: "😡",
+    2: "🙁",
+    3: "😐",
+    4: "🙂",
+    5: "😍",
+  };
+  return map[rating] || "—";
+}
+
+function ratingLabel(rating: number) {
+  const map: Record<number, string> = {
+    1: "سيئة",
+    2: "غير راضٍ",
+    3: "عادية",
+    4: "جيدة",
+    5: "ممتازة",
+  };
+  return map[rating] || "لم يتم التقييم بعد";
 }
 
 function ratingText(conversation?: Conversation | null) {
@@ -1073,7 +1090,7 @@ export default function AdminConversationsClient({ initialData }: Props) {
                         </small>
                         {getConversationRating(conversation) ? (
                           <small className="mini-pill rating">
-                            ★ {ratingText(conversation)}
+                            {ratingEmoji(getConversationRating(conversation))} {ratingText(conversation)}
                           </small>
                         ) : null}
                         <small>
@@ -1430,8 +1447,8 @@ export default function AdminConversationsClient({ initialData }: Props) {
                 {getConversationRating(selectedConversation) ? (
                   <>
                     <div className="rating-score">
-                      <span>{ratingStars(getConversationRating(selectedConversation))}</span>
-                      <b>{ratingText(selectedConversation)}</b>
+                      <span>{ratingEmoji(getConversationRating(selectedConversation))}</span>
+                      <b>{ratingText(selectedConversation)} · {ratingLabel(getConversationRating(selectedConversation))}</b>
                     </div>
                     <p>
                       {selectedConversation.rating_note || "لا توجد ملاحظة مكتوبة من العميل."}
@@ -2614,7 +2631,8 @@ const styles = `
   }
   .rating-score span {
     letter-spacing: 1px;
-    font-size: 17px;
+    font-size: 32px;
+    line-height: 1;
   }
   .rating-score b {
     font-size: 14px;

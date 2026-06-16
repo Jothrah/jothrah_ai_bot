@@ -7,8 +7,15 @@ export const dynamic = "force-dynamic";
 
 function corsHeaders(origin?: string | null) {
   const rawAllowedOrigins = process.env.ALLOWED_ORIGIN || "https://jothrah.com";
-  const allowedOrigins = rawAllowedOrigins.split(",").map((item) => item.trim()).filter(Boolean);
-  const allowedOrigin = origin && allowedOrigins.includes(origin) ? origin : allowedOrigins[0] || "https://jothrah.com";
+  const allowedOrigins = rawAllowedOrigins
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  const allowedOrigin =
+    origin && allowedOrigins.includes(origin)
+      ? origin
+      : allowedOrigins[0] || "https://jothrah.com";
 
   return {
     "Access-Control-Allow-Origin": allowedOrigin,
@@ -28,7 +35,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const conversationId = String(body.conversation_id || body.conversationId || "").trim();
     const rating = Math.max(1, Math.min(5, Number(body.rating || 0)));
-    const note = String(body.note || "").trim().slice(0, 1000);
+    const note = String(body.note || "").replace(/[<>]/g, "").replace(/\s+/g, " ").trim().slice(0, 1000);
 
     if (!conversationId || !rating) {
       return NextResponse.json(
@@ -37,11 +44,38 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const existing = await supabaseAdmin
+      .from("chat_conversations")
+      .select("id,rating,rated_at")
+      .eq("id", conversationId)
+      .maybeSingle();
+
+    if (existing.error) throw existing.error;
+
+    if (!existing.data?.id) {
+      return NextResponse.json(
+        { error: "conversation not found" },
+        { status: 404, headers: corsHeaders(origin) }
+      );
+    }
+
+    // V118: التقييم مرة واحدة فقط. لا نسمح بتغيير التقييم بعد حفظه.
+    if (existing.data.rating || existing.data.rated_at) {
+      return NextResponse.json(
+        { ok: true, alreadyRated: true },
+        { headers: corsHeaders(origin) }
+      );
+    }
+
     const now = new Date().toISOString();
 
     const { error } = await supabaseAdmin
       .from("chat_conversations")
-      .update({ rating, rating_note: note || null, rated_at: now })
+      .update({
+        rating,
+        rating_note: note || null,
+        rated_at: now
+      })
       .eq("id", conversationId);
 
     if (error) throw error;
@@ -52,7 +86,10 @@ export async function POST(req: NextRequest) {
       eventData: { rating, hasNote: Boolean(note) }
     });
 
-    return NextResponse.json({ ok: true }, { headers: corsHeaders(origin) });
+    return NextResponse.json(
+      { ok: true, alreadyRated: false },
+      { headers: corsHeaders(origin) }
+    );
   } catch (error) {
     console.error("POST /api/chat/rating error:", error);
     return NextResponse.json(
