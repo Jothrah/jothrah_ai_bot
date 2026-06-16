@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-// Jothrah Admin Conversations V118 - WhatsApp mobile + persistent push toggle + no autoback
+// Jothrah Admin Conversations V119 - WhatsApp mobile + push toggle + force open chat
 
 type Conversation = Record<string, any>;
 type ChatMessage = Record<string, any>;
@@ -928,6 +928,11 @@ export default function AdminConversationsClient({ initialData }: Props) {
         const nextConversations = data.conversations || [];
         const nextMessages = data.messages || [];
         const nextSelected = data.selectedConversation || null;
+        const fallbackSelected = id
+          ? nextConversations.find(
+              (item: Conversation) => String(item.id) === String(id),
+            ) || null
+          : null;
         const nextTotalUnread = nextConversations.reduce(
           (sum: number, item: Conversation) =>
             sum + (Number(item.unread_admin_count || 0) || 0),
@@ -958,13 +963,18 @@ export default function AdminConversationsClient({ initialData }: Props) {
 
         setConversations(nextConversations);
 
-        // إذا لا توجد محادثة مختارة محليًا، لا نسمح للـ API بفتح آخر محادثة تلقائيًا،
-        // خصوصًا في الجوال عند الرجوع لقائمة المحادثات.
         if (id) {
-          // لا نرجع لقائمة المحادثات أثناء التحديث الدوري إذا تأخر الـ API
-          // أو رجع selectedConversation فارغًا لحظة. نبقي شاشة المحادثة مفتوحة.
-          if (nextSelected) {
-            setSelectedConversation(nextSelected);
+          // طالما عندنا selectedId لا نرجع لقائمة المحادثات نهائيًا بسبب refresh.
+          // إذا الـ API تأخر أو رجع selectedConversation فاضي، نثبت بيانات البطاقة الحالية بدل الإغلاق.
+          const safeSelected = nextSelected || fallbackSelected;
+
+          if (safeSelected) {
+            setSelectedConversation(safeSelected);
+          } else {
+            setSelectedConversation((current) => current);
+          }
+
+          if (nextSelected || nextMessages.length > 0) {
             setMessages(nextMessages);
             scrollToBottom();
           }
@@ -999,9 +1009,23 @@ export default function AdminConversationsClient({ initialData }: Props) {
 
   async function selectConversation(id: string) {
     // قفل اختيار المحادثة فورًا قبل أي تحديث تلقائي
-    // حتى لا يرجع النظام لقائمة المحادثات أثناء فتح المحادثة.
+    // ونفتح شاشة المحادثة فورًا ببيانات البطاقة حتى لا تظهر صفحة فاضية في الجوال.
+    const cachedConversation =
+      conversations.find((item) => String(item.id) === String(id)) || null;
+
     selectedIdRef.current = id;
     setSelectedId(id);
+    setSelectedConversation(
+      cachedConversation || {
+        id,
+        customer_name: "زائر بدون اسم",
+        status: "needs_human",
+        needs_human: true,
+        language: "ar",
+        last_message_at: new Date().toISOString(),
+      },
+    );
+    setMessages([]);
     setDetailsOpen(false);
     shouldStickToBottomRef.current = true;
     setShowJumpToBottom(false);
@@ -1015,7 +1039,7 @@ export default function AdminConversationsClient({ initialData }: Props) {
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "تعذر فتح المحادثة");
       setConversations(data.conversations || []);
-      setSelectedConversation(data.selectedConversation || null);
+      setSelectedConversation(data.selectedConversation || cachedConversation || null);
       setMessages(data.messages || []);
       const newestCustomer = [...(data.messages || [])]
         .reverse()
@@ -1388,7 +1412,31 @@ export default function AdminConversationsClient({ initialData }: Props) {
         </aside>
 
         <section className="chat-panel">
-          {selectedConversation ? (
+          {selectedId && !selectedConversation ? (
+            <>
+              <div className="chat-head">
+                <button
+                  type="button"
+                  className="mobile-back"
+                  onClick={clearMobileSelection}
+                  aria-label="رجوع إلى قائمة المحادثات"
+                  title="رجوع"
+                >
+                  ›
+                </button>
+                <div className="chat-user">
+                  <span className="avatar lg">ج</span>
+                  <div>
+                    <h2>جاري فتح المحادثة…</h2>
+                    <p>يتم تحميل الرسائل الآن</p>
+                  </div>
+                </div>
+              </div>
+              <div className="messages-panel">
+                <div className="empty center">جاري فتح المحادثة…</div>
+              </div>
+            </>
+          ) : selectedConversation ? (
             <>
               <div className="chat-head">
                 <button
