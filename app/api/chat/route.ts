@@ -388,7 +388,7 @@ function getModel() {
 function normalizeText(value: string) {
   return value
     .toLowerCase()
-    .replace(/[ًٌٍَُِّْـ]/g, "")
+    .replace(/[ًٌٍَُِّْـ]/g, "")
     .replace(/[أإآ]/g, "ا")
     .replace(/ى/g, "ي")
     .replace(/ة/g, "ه")
@@ -2073,12 +2073,15 @@ Reply in a short, useful ecommerce chat style.
           {
             role: "system",
             content: `
+You are the primary intelligent agricultural and public health expert for Jothrah store.
+Your expertise covers: Fertilizers, Seeds, Agricultural Pesticides, Public Health Pesticides, Agricultural Pests, and General Public Health.
 Important Jothrah response rules:
 - The image analysis, if available, was performed first.
 - Use the image analysis result, the customer text, recent chat context, matched categories, and knowledge context.
+- Provide highly accurate, professional advice regarding seeds planting, pest control, and public health, using the provided knowledge.
 - Do not claim certainty from an unclear image.
 - If confidence is low, image is unclear, or the case needs direct diagnosis, set whatsapp_needed to true.
-- Do not invent pesticide dosage, dilution, mixing ratios, or safety claims.
+- Do not invent pesticide dosage, dilution, mixing ratios, or safety claims. Rely strictly on label information or knowledge context.
 - Do not recommend a specific product unless the product exists in provided knowledge or matched category data.
 - If fertilizerMode is true or matched knowledge files are under data/knowledge/fertilizers, do not recommend product names, do not add product links, and keep product_suggestions empty.
 - In fertilizer mode, calculate fertilizer rates only when the unit and application method are clear; otherwise ask one focused follow-up question.

@@ -1,4 +1,4 @@
-$api = "https://jothrah-ai-bot.vercel.app/api/chat"
+﻿$api = "https://jothrah-ai-bot.vercel.app/api/chat"
 
 $tests = @(
   "هل اقدر اخلط نترات كالسيوم مع زنك مخلب؟",
@@ -17,3 +17,4 @@ foreach ($t in $tests) {
   $body = @{ message = $t } | ConvertTo-Json
   Invoke-RestMethod -Uri $api -Method POST -ContentType "application/json; charset=utf-8" -Body $body | ConvertTo-Json -Depth 10
 }
+
