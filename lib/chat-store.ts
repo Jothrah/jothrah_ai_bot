@@ -106,18 +106,21 @@ export async function upsertConversation(input: UpsertConversationInput) {
     customerName,
     customerPhone,
     customerEmail,
+    customerKey,
     metadata
   } = input;
 
   const cleanName = cleanText(customerName, 80);
   const cleanPhone = cleanText(customerPhone, 40);
   const cleanEmail = cleanText(customerEmail, 120);
+  const cleanCustomerKey = cleanText(customerKey, 120).replace(/[^a-zA-Z0-9_\-:.]/g, "");
+  const identityVisitorId = cleanCustomerKey || visitorId;
   const now = new Date().toISOString();
 
   const existing = await supabaseAdmin
     .from("chat_conversations")
     .select("*")
-    .eq("visitor_id", visitorId)
+    .eq("visitor_id", identityVisitorId)
     .order("last_message_at", { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -149,7 +152,9 @@ export async function upsertConversation(input: UpsertConversationInput) {
           (Number(existing.data.unread_admin_count || 0) || 0) + (message ? 1 : 0),
         metadata: {
           ...(existing.data.metadata || {}),
-          ...(metadata || {})
+          ...(metadata || {}),
+          customerKey: cleanCustomerKey || (metadata as any)?.customerKey || null,
+          identityMode: cleanCustomerKey ? "logged_customer" : ((metadata as any)?.identityMode || "visitor")
         }
       })
       .eq("id", existing.data.id)
@@ -163,7 +168,7 @@ export async function upsertConversation(input: UpsertConversationInput) {
   const { data, error } = await supabaseAdmin
     .from("chat_conversations")
     .insert({
-      visitor_id: visitorId,
+      visitor_id: identityVisitorId,
       customer_name: cleanName || null,
       customer_phone: cleanPhone || null,
       customer_email: cleanEmail || null,
@@ -178,7 +183,11 @@ export async function upsertConversation(input: UpsertConversationInput) {
       unread_admin_count: message ? 1 : 0,
       page_url: pageUrl || null,
       user_agent: userAgent || null,
-      metadata: metadata || {}
+      metadata: {
+        ...(metadata || {}),
+        customerKey: cleanCustomerKey || (metadata as any)?.customerKey || null,
+        identityMode: cleanCustomerKey ? "logged_customer" : ((metadata as any)?.identityMode || "visitor")
+      }
     })
     .select("*")
     .single();

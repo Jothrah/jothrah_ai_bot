@@ -950,6 +950,7 @@ export async function POST(req: NextRequest) {
       customerName,
       customerPhone,
       customerEmail,
+      customerKey: safeCustomerKey,
       metadata: {
         customerNameSource: customerName ? "salla_account" : "visitor",
         customerKey: safeCustomerKey || null,
