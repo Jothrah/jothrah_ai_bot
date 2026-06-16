@@ -198,6 +198,104 @@ const KNOWLEDGE_RULES: KnowledgeRule[] = [
     file: "plant-diseases/root-rot.json",
     terms: ["عفن جذور", "تعفن الجذور", "root rot"],
   },
+
+  {
+    id: "fertilizer-operating-rules",
+    file: "fertilizers/00_fertilizer_operating_rules.json",
+    terms: [
+      "سماد", "اسمده", "أسمدة", "تسميد", "محسن تربة", "محسنات التربة",
+      "fertilizer", "fertiliser", "fertilizers", "soil amendment"
+    ],
+  },
+  {
+    id: "fertilizer-npk-rates",
+    file: "fertilizers/fertilizer_rates_npk.json",
+    terms: [
+      "npk", "NPK", "20-20-20", "٢٠-٢٠-٢٠", "العناصر الكبرى", "سماد مركب",
+      "كم احط", "كم أحط", "كم اضع", "كم أضع", "جرعة", "جرعه", "معدل", "معدل استخدام",
+      "مساحة", "مساحه", "متر", "هكتار", "بيت محمي", "بيوت محمية", "1000 متر", "رش ورقي", "ماء الري"
+    ],
+  },
+  {
+    id: "fertilizer-micronutrients-rates",
+    file: "fertilizers/fertilizer_rates_micronutrients.json",
+    terms: [
+      "عناصر صغرى", "العناصر الصغرى", "حديد", "نقص الحديد", "زنك", "منجنيز", "منغنيز",
+      "نحاس", "بورون", "موليبدنم", "مخلب", "مخلبية", "edta", "eddha", "ortho", "رش ورقي"
+    ],
+  },
+  {
+    id: "fertilizer-humic-amino-seaweed-rates",
+    file: "fertilizers/fertilizer_rates_humic_fulvic_amino_seaweed.json",
+    terms: [
+      "هيوميك", "هيومك", "فولفيك", "فلفيك", "احماض امينية", "أحماض أمينية",
+      "امينو", "أمينو", "طحالب", "طحالب بحرية", "سي ويد", "seaweed", "humic", "fulvic", "amino"
+    ],
+  },
+  {
+    id: "fertilizer-single-rates",
+    file: "fertilizers/fertilizer_rates_single_fertilizers.json",
+    terms: [
+      "يوريا", "نترات البوتاسيوم", "نترات كالسيوم", "نترات الكالسيوم", "سلفات بوتاسيوم",
+      "سلفات أمونيوم", "سلفات الماغنيسيوم", "سلفات مغنيسيوم", "map", "mkp", "سترات البوتاسيوم", "ثيو سلفات البوتاسيوم"
+    ],
+  },
+  {
+    id: "fertilizer-soil-amendments-rates",
+    file: "fertilizers/fertilizer_rates_soil_amendments.json",
+    terms: [
+      "محسنات التربة", "محسن تربة", "كبريت زراعي", "جبس زراعي", "سماد عضوي", "اسمدة عضوية",
+      "أسمدة عضوية", "نثرا", "نثر", "محبب", "حبيبات", "بيتموس", "بوتنج سويل", "كوكوبيت"
+    ],
+  },
+  {
+    id: "fertilizer-mixing-rules",
+    file: "fertilizers/fertilizer_mixing_rules.json",
+    terms: [
+      "خلط", "اخلط", "أخلط", "اخلطه", "أخلطه", "ينخلط", "قابلية الخلط", "تجربة خلط",
+      "كالسيوم مع فوسفور", "نترات الكالسيوم مع", "فوسفور مع كالسيوم", "هيوميك مع", "سماد مع مبيد", "زيت معدني"
+    ],
+  },
+  {
+    id: "fertilizer-yellowing-diagnosis",
+    file: "fertilizers/fertilizer_diagnosis_yellowing.json",
+    terms: [
+      "اصفرار", "اصفر", "صفراء", "ورق اصفر", "الاوراق صفراء", "الأوراق صفراء",
+      "اصفرار الورق", "اصفرار الأوراق", "yellow leaves", "chlorosis"
+    ],
+  },
+  {
+    id: "fertilizer-general-diagnosis",
+    file: "fertilizers/fertilizer_diagnosis_general.json",
+    terms: [
+      "النبات تعبان", "نباتي تعبان", "ضعف نمو", "ما ينمو", "تساقط", "احتراق حواف",
+      "ذبول", "اجهاد", "إجهاد", "حر", "حرارة", "تزهير", "اثمار", "إثمار", "عفن الطرف الزهري"
+    ],
+  },
+  {
+    id: "fertilizer-label-reading",
+    file: "fertilizers/fertilizer_label_reading.json",
+    terms: [
+      "ملصق", "اللصق", "جدول الاستخدام", "مكتوب على العبوة", "العبوة مكتوب", "صورة سماد",
+      "كم لكل لتر", "جم لكل لتر", "مل لكل لتر", "رشاشة", "خزان", "لتر ماء"
+    ],
+  },
+  {
+    id: "fertilizer-compliance-limits",
+    file: "fertilizers/fertilizer_compliance_limits.json",
+    terms: [
+      "ph", "pH", "الرقم الهيدروجيني", "صوديوم", "كلور", "كلوريد", "بيوريت", "ملوثات",
+      "عناصر ثقيلة", "كادميوم", "رصاص", "زئبق", "نانو", "تسجيل سماد", "مسموح"
+    ],
+  },
+  {
+    id: "fertilizer-specialist-handoff",
+    file: "fertilizers/fertilizer_specialist_handoff.json",
+    terms: [
+      "وش اشتري", "وش أشتري", "اي منتج", "أي منتج", "ارشح", "رشح", "افضل سماد", "أفضل سماد",
+      "ابغى منتج", "أبغى منتج", "اعطني منتج", "عطني منتج", "برنامج تسميد", "خطة تسميد"
+    ],
+  },
   {
     id: "yellowing",
     file: "nutrition/yellowing.json",
@@ -328,7 +426,37 @@ function selectKnowledgeFiles(
   }))
     .filter((rule) => rule.score > 0)
     .sort((a, b) => b.score - a.score)
-    .slice(0, 2);
+    .slice(0, 3);
+}
+
+function isFertilizerKnowledgeHit(hits: KnowledgeHit[]) {
+  return hits.some((hit) => hit.file.startsWith("fertilizers/"));
+}
+
+function isFertilizerProductSelectionRequest(message: string) {
+  const text = normalizeText(message);
+
+  if (!text) return false;
+
+  const terms = [
+    "وش اشتري",
+    "اي منتج",
+    "ارشح",
+    "رشح",
+    "افضل سماد",
+    "ابغي منتج",
+    "ابي منتج",
+    "اعطني منتج",
+    "عطني منتج",
+    "برنامج تسميد",
+    "خطه تسميد",
+    "خطة تسميد",
+    "what should i buy",
+    "recommend product",
+    "best fertilizer",
+  ];
+
+  return terms.some((term) => text.includes(normalizeText(term)));
 }
 
 function shouldUseObjectKey(key: string, language: Language) {
@@ -520,9 +648,11 @@ async function analyzeImageFirst(params: {
 
 المطلوب:
 - حدد ما الذي يظهر بالصورة إن أمكن.
-- هل هي حشرة منزلية؟ آفة نباتية؟ مرض نبات؟ أثر قارض؟ أم غير واضح؟
+- هل هي حشرة منزلية؟ آفة نباتية؟ مرض نبات؟ أثر قارض؟ ملصق سماد/جدول استخدام؟ أم غير واضح؟
+- إذا كانت الصورة ملصق سماد أو جدول استخدام، استخرج نوع السماد والتركيبة ومعدل الاستخدام ووحدة القياس إن ظهرت.
 - لا تجزم إذا الصورة غير واضحة.
 - لا تعطي جرعات مبيدات.
+- لا تحسب جرعة سماد نهائية في تحليل الصورة الأولي إذا كان سطر المعدل غير واضح.
 - إذا كانت الصورة غير واضحة أو الحالة خطرة أو تحتاج تشخيص مباشر، اجعل whatsapp_needed = true.
 
 رسالة العميل:
@@ -535,9 +665,11 @@ Analyze the image as an initial public-health and agricultural pest assistant fo
 
 Required:
 - Identify what appears in the image if possible.
-- Is it a household insect, plant pest, plant disease, rodent sign, or unclear?
+- Is it a household insect, plant pest, plant disease, rodent sign, fertilizer label/rate table, or unclear?
+- If it is a fertilizer label or rate table, extract fertilizer type, composition, application rate, and unit if visible.
 - Do not be overconfident if the image is unclear.
 - Do not provide pesticide dosage.
+- Do not calculate a final fertilizer dose in the initial image analysis if the rate line is unclear.
 - If the image is unclear, risky, or needs direct review, set whatsapp_needed = true.
 
 Customer message:
@@ -1097,9 +1229,16 @@ export async function POST(req: NextRequest) {
       language,
     );
 
+    const fertilizerMode = isFertilizerKnowledgeHit(knowledgeHits);
+    const forceWhatsappByFertilizerSelection =
+      fertilizerMode && isFertilizerProductSelectionRequest(message);
+
     const forceWhatsappByText = needsWhatsapp(message);
     const forceWhatsappByVision = shouldForceWhatsappFromVision(visionAnalysis);
-    const forceWhatsapp = forceWhatsappByText || forceWhatsappByVision;
+    const forceWhatsapp =
+      forceWhatsappByText ||
+      forceWhatsappByVision ||
+      forceWhatsappByFertilizerSelection;
 
     const visionContext = buildVisionContext(
       imageDataUrl,
@@ -1145,6 +1284,9 @@ ${knowledgeContext}
 هل يجب التحويل إلى واتساب؟
 ${forceWhatsapp}
 
+وضع الأسمدة العام:
+${fertilizerMode}
+
 أجب للعميل بصيغة مختصرة ومفيدة داخل شات متجر إلكتروني.
 `
         : `
@@ -1177,6 +1319,9 @@ ${knowledgeContext}
 Should WhatsApp escalation be enabled?
 ${forceWhatsapp}
 
+General fertilizer mode:
+${fertilizerMode}
+
 Reply in a short, useful ecommerce chat style.
 `;
 
@@ -1197,6 +1342,9 @@ Important Jothrah response rules:
 - If confidence is low, image is unclear, or the case needs direct diagnosis, set whatsapp_needed to true.
 - Do not invent pesticide dosage, dilution, mixing ratios, or safety claims.
 - Do not recommend a specific product unless the product exists in provided knowledge or matched category data.
+- If fertilizerMode is true or matched knowledge files are under data/knowledge/fertilizers, do not recommend product names, do not add product links, and keep product_suggestions empty.
+- In fertilizer mode, calculate fertilizer rates only when the unit and application method are clear; otherwise ask one focused follow-up question.
+- In fertilizer mode, if the customer asks what product to buy, set whatsapp_needed to true and invite them to contact a Jothrah specialist.
 - product_suggestions may be an empty array.
 - Keep advice to maximum 3 items.
 - Keep questions to maximum 2 items.
@@ -1217,6 +1365,15 @@ Important Jothrah response rules:
 
     const raw = completion.choices[0]?.message?.content || "{}";
     const data = JSON.parse(raw);
+
+    if (fertilizerMode) {
+      data.product_suggestions = [];
+
+      if (forceWhatsappByFertilizerSelection) {
+        data.whatsapp_needed = true;
+      }
+    }
+
     await saveChatMessage({
       conversationId: conversation.id,
       senderType: "ai",
