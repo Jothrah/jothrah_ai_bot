@@ -658,6 +658,32 @@ export default function AdminConversationsClient({ initialData }: Props) {
     setTimeout(() => setToast(""), 2800);
   }, []);
 
+  const clearMobileSelection = useCallback(() => {
+    selectedIdRef.current = null;
+    setSelectedId(null);
+    setSelectedConversation(null);
+    setMessages([]);
+    setDetailsOpen(false);
+    shouldStickToBottomRef.current = true;
+    setShowJumpToBottom(false);
+    if (typeof window !== "undefined") {
+      window.history.replaceState(null, "", "/admin/conversations");
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search || "");
+    const hasExplicitConversation = Boolean(params.get("id"));
+    const isMobileViewport = window.matchMedia("(max-width: 760px)").matches;
+
+    // في الجوال، إذا دخل الأدمن صفحة المحادثات بدون id واضح، نبدأ بقائمة المحادثات فقط
+    // ولا نفتح آخر محادثة تلقائيًا.
+    if (!hasExplicitConversation && isMobileViewport) {
+      clearMobileSelection();
+    }
+  }, [clearMobileSelection]);
+
   const refresh = useCallback(
     async (options?: { silent?: boolean }) => {
       const id = selectedIdRef.current;
@@ -702,9 +728,19 @@ export default function AdminConversationsClient({ initialData }: Props) {
         lastTotalUnreadRef.current = nextTotalUnread;
 
         setConversations(nextConversations);
-        setSelectedConversation(nextSelected);
-        setMessages(nextMessages);
-        scrollToBottom();
+
+        // إذا لا توجد محادثة مختارة محليًا، لا نسمح للـ API بفتح آخر محادثة تلقائيًا،
+        // خصوصًا في الجوال عند الرجوع لقائمة المحادثات.
+        if (id) {
+          setSelectedConversation(nextSelected);
+          setMessages(nextMessages);
+          scrollToBottom();
+        } else {
+          setSelectedConversation(null);
+          setMessages([]);
+          setDetailsOpen(false);
+          selectedIdRef.current = null;
+        }
       } catch (error) {
         if (!options?.silent)
           flashToast(
@@ -830,7 +866,10 @@ export default function AdminConversationsClient({ initialData }: Props) {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "تعذر حذف المحادثة");
       flashToast("تم حذف المحادثة نهائيًا 🗑️");
+      selectedIdRef.current = null;
       setSelectedId(null);
+      setSelectedConversation(null);
+      setMessages([]);
       window.history.replaceState(null, "", "/admin/conversations");
       await refresh({ silent: true });
     } catch (error) {
@@ -1098,16 +1137,11 @@ export default function AdminConversationsClient({ initialData }: Props) {
                 <button
                   type="button"
                   className="mobile-back"
-                  onClick={() => {
-                    setSelectedId(null);
-                    setSelectedConversation(null);
-                    setMessages([]);
-                    setDetailsOpen(false);
-                    window.history.replaceState(null, "", "/admin/conversations");
-                  }}
+                  onClick={clearMobileSelection}
                   aria-label="رجوع إلى قائمة المحادثات"
+                  title="رجوع"
                 >
-                  ‹ المحادثات
+                  ›
                 </button>
 
                 <div className="chat-user">
@@ -2928,33 +2962,41 @@ const styles = `
       background: #005f5d !important;
       color: #ffffff !important;
       box-shadow: 0 1px 4px rgba(0,0,0,.12) !important;
-      display: grid !important;
-      grid-template-columns: auto minmax(0, 1fr) auto !important;
+      display: flex !important;
+      flex-direction: row !important;
       align-items: center !important;
       gap: 6px !important;
+      direction: rtl !important;
     }
 
     .mobile-back {
+      order: 2 !important;
       display: inline-flex !important;
       align-items: center !important;
       justify-content: center !important;
+      width: 34px !important;
       height: 40px !important;
-      min-width: 44px !important;
+      min-width: 34px !important;
       border: 0 !important;
       border-radius: 999px !important;
       background: transparent !important;
       color: #ffffff !important;
-      padding: 0 5px !important;
-      font-size: 25px !important;
+      padding: 0 !important;
+      font-size: 30px !important;
       font-weight: 900 !important;
+      line-height: 1 !important;
       cursor: pointer !important;
       white-space: nowrap !important;
     }
 
     .chat-user {
+      order: 1 !important;
       min-width: 0 !important;
-      gap: 9px !important;
+      flex: 1 1 auto !important;
+      gap: 8px !important;
       color: #ffffff !important;
+      display: flex !important;
+      align-items: center !important;
     }
 
     .chat-user .avatar.lg {
@@ -2967,7 +3009,7 @@ const styles = `
     }
 
     .chat-user h2 {
-      max-width: 42vw !important;
+      max-width: 38vw !important;
       color: #ffffff !important;
       font-size: 15.5px !important;
       font-weight: 900 !important;
@@ -2986,7 +3028,7 @@ const styles = `
       white-space: nowrap !important;
       overflow: hidden !important;
       text-overflow: ellipsis !important;
-      max-width: 45vw !important;
+      max-width: 40vw !important;
     }
 
     .chat-user .mini-pill.large {
@@ -2994,10 +3036,12 @@ const styles = `
     }
 
     .chat-actions {
+      order: 3 !important;
       display: flex !important;
       align-items: center !important;
       justify-content: flex-end !important;
       gap: 4px !important;
+      flex: 0 0 auto !important;
     }
 
     .chat-actions button {
