@@ -378,6 +378,8 @@ export default function AdminConversationsClient({ initialData }: Props) {
   const shouldStickToBottomRef = useRef(true);
   const lightboxDragRef = useRef<Record<string, any> | null>(null);
   const selectedIdRef = useRef<string | null>(selectedId);
+  const selectingIdRef = useRef<string | null>(null);
+  const refreshSeqRef = useRef(0);
 
   useEffect(() => {
     selectedIdRef.current = selectedId;
@@ -687,6 +689,7 @@ export default function AdminConversationsClient({ initialData }: Props) {
   const refresh = useCallback(
     async (options?: { silent?: boolean }) => {
       const id = selectedIdRef.current;
+      const requestSeq = ++refreshSeqRef.current;
       const url = id
         ? `/api/admin/conversations?id=${encodeURIComponent(id)}`
         : "/api/admin/conversations";
@@ -696,8 +699,11 @@ export default function AdminConversationsClient({ initialData }: Props) {
         const data = await res.json();
         if (!res.ok) throw new Error(data?.error || "تعذر تحديث المحادثات");
 
+        // تجاهل أي رد قديم وصل بعد اختيار محادثة جديدة أو رجوع للقائمة.
+        if (requestSeq !== refreshSeqRef.current) return;
+
         const nextConversations = data.conversations || [];
-        const nextMessages = data.messages || [];
+        const nextMessages = Array.isArray(data.messages) ? data.messages : [];
         const nextSelected = data.selectedConversation || null;
         const nextTotalUnread = nextConversations.reduce(
           (sum: number, item: Conversation) =>
@@ -729,18 +735,24 @@ export default function AdminConversationsClient({ initialData }: Props) {
 
         setConversations(nextConversations);
 
-        // إذا لا توجد محادثة مختارة محليًا، لا نسمح للـ API بفتح آخر محادثة تلقائيًا،
-        // خصوصًا في الجوال عند الرجوع لقائمة المحادثات.
+        // إذا فيه محادثة مختارة، لا نمسح الشاشة أبدًا بسبب رد API مؤقت أو فاضي.
+        // نمسح فقط إذا الإدمن ضغط رجوع للقائمة بنفسه.
         if (id) {
-          setSelectedConversation(nextSelected);
-          setMessages(nextMessages);
-          scrollToBottom();
-        } else {
-          setSelectedConversation(null);
-          setMessages([]);
-          setDetailsOpen(false);
-          selectedIdRef.current = null;
+          if (selectedIdRef.current !== id) return;
+
+          if (nextSelected?.id === id) {
+            setSelectedConversation(nextSelected);
+            setMessages(nextMessages);
+            scrollToBottom();
+          }
+
+          return;
         }
+
+        setSelectedConversation(null);
+        setMessages([]);
+        setDetailsOpen(false);
+        selectedIdRef.current = null;
       } catch (error) {
         if (!options?.silent)
           flashToast(
@@ -765,8 +777,28 @@ export default function AdminConversationsClient({ initialData }: Props) {
   }, [refresh]);
 
   async function selectConversation(id: string) {
+    if (!id) return;
+
+    // تثبيت الاختيار فورًا قبل أي refresh دوري.
+    selectedIdRef.current = id;
+    selectingIdRef.current = id;
+    refreshSeqRef.current += 1;
+
+    const cachedConversation =
+      conversations.find((conversation) => conversation.id === id) || null;
+
     setSelectedId(id);
+    if (cachedConversation) {
+      setSelectedConversation(cachedConversation);
+    }
+    setDetailsOpen(false);
+    setEmojiOpen(false);
+    shouldStickToBottomRef.current = true;
+    setShowJumpToBottom(false);
+
     window.history.replaceState(null, "", `/admin/conversations?id=${id}`);
+
+    const requestSeq = ++refreshSeqRef.current;
 
     try {
       const res = await fetch(
@@ -775,10 +807,27 @@ export default function AdminConversationsClient({ initialData }: Props) {
       );
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "تعذر فتح المحادثة");
-      setConversations(data.conversations || []);
-      setSelectedConversation(data.selectedConversation || null);
-      setMessages(data.messages || []);
-      const newestCustomer = [...(data.messages || [])]
+
+      // تجاهل رد قديم لو تغير الاختيار أثناء انتظار fetch.
+      if (selectedIdRef.current !== id || requestSeq !== refreshSeqRef.current) {
+        return;
+      }
+
+      const nextConversations = data.conversations || [];
+      const nextSelected = data.selectedConversation || cachedConversation;
+      const nextMessages = Array.isArray(data.messages) ? data.messages : [];
+
+      setConversations(nextConversations);
+
+      if (nextSelected?.id === id) {
+        setSelectedConversation(nextSelected);
+      } else if (cachedConversation) {
+        setSelectedConversation(cachedConversation);
+      }
+
+      setMessages(nextMessages);
+
+      const newestCustomer = [...nextMessages]
         .reverse()
         .find((msg: ChatMessage) => msg.sender_type === "customer");
       if (newestCustomer?.id) {
@@ -791,14 +840,20 @@ export default function AdminConversationsClient({ initialData }: Props) {
           setTypingUntil(Date.now() + 2200);
         }
       }
-      lastTotalUnreadRef.current = (data.conversations || []).reduce(
+
+      lastTotalUnreadRef.current = nextConversations.reduce(
         (sum: number, item: Conversation) =>
           sum + (Number(item.unread_admin_count || 0) || 0),
         0,
       );
       scrollToBottom(true);
     } catch (error) {
+      // لا نرجع للقائمة عند فشل مؤقت؛ نبقى داخل المحادثة ونظهر التنبيه فقط.
       flashToast(error instanceof Error ? error.message : "تعذر فتح المحادثة");
+    } finally {
+      if (selectingIdRef.current === id) {
+        selectingIdRef.current = null;
+      }
     }
   }
 
@@ -948,6 +1003,12 @@ export default function AdminConversationsClient({ initialData }: Props) {
     );
   }
 
+  const activeConversation =
+    selectedConversation ||
+    (selectedId
+      ? conversations.find((conversation) => conversation.id === selectedId) || null
+      : null);
+
   const replyLimit = 1200;
   const replyLength = reply.length;
   const replyCounterTone =
@@ -965,7 +1026,7 @@ export default function AdminConversationsClient({ initialData }: Props) {
   let lastDay = "";
 
   return (
-    <main className={selectedConversation ? "jth-desk has-chat" : "jth-desk no-chat"} dir="rtl">
+    <main className={activeConversation ? "jth-desk has-chat" : "jth-desk no-chat"} dir="rtl">
       <style jsx global>
         {styles}
       </style>
@@ -1131,7 +1192,7 @@ export default function AdminConversationsClient({ initialData }: Props) {
         </aside>
 
         <section className="chat-panel">
-          {selectedConversation ? (
+          {activeConversation ? (
             <>
               <div className="chat-head">
                 <button
@@ -1146,20 +1207,20 @@ export default function AdminConversationsClient({ initialData }: Props) {
 
                 <div className="chat-user">
                   <span className="avatar lg">
-                    {getCustomerInitial(selectedConversation)}
+                    {getCustomerInitial(activeConversation)}
                   </span>
                   <div>
-                    <h2>{getCustomerName(selectedConversation)}</h2>
+                    <h2>{getCustomerName(activeConversation)}</h2>
                     <p>
-                      {selectedConversation.language || "ar"} · رمز الجلسة {getCustomerSessionCode(selectedConversation)} ·{" "}
-                      {formatDateTime(selectedConversation.last_message_at) ||
+                      {activeConversation.language || "ar"} · رمز الجلسة {getCustomerSessionCode(activeConversation)} ·{" "}
+                      {formatDateTime(activeConversation.last_message_at) ||
                         "آخر نشاط غير متوفر"}
                     </p>
                   </div>
                   <span
-                    className={`mini-pill large ${statusTone(selectedConversation)}`}
+                    className={`mini-pill large ${statusTone(activeConversation)}`}
                   >
-                    {statusLabel(selectedConversation)}
+                    {statusLabel(activeConversation)}
                   </span>
                 </div>
 
@@ -1176,7 +1237,7 @@ export default function AdminConversationsClient({ initialData }: Props) {
                     className="finish"
                     onClick={closeConversation}
                     disabled={
-                      loading || selectedConversation.status === "closed"
+                      loading || activeConversation.status === "closed"
                     }
                   >
                     إنهاء
@@ -1209,7 +1270,7 @@ export default function AdminConversationsClient({ initialData }: Props) {
                       const imageUrls = groupMessages.map((item) => getImageUrl(item)).filter(Boolean);
                       const visibleImages = imageUrls.slice(0, 4);
                       const caption = groupMessages
-                        .map((item) => displayMessageText(item, selectedConversation))
+                        .map((item) => displayMessageText(item, activeConversation))
                         .find(Boolean);
                       const trailingTime =
                         groupMessages[groupMessages.length - 1]?.created_at ||
@@ -1224,7 +1285,7 @@ export default function AdminConversationsClient({ initialData }: Props) {
                             <article className="bubble image-bubble">
                               <header>
                                 <span>{senderIcon(leadMessage)}</span>
-                                <b>{senderLabel(leadMessage, selectedConversation)}</b>
+                                <b>{senderLabel(leadMessage, activeConversation)}</b>
                                 <em className="image-count">{imageUrls.length} صور</em>
                               </header>
 
@@ -1259,7 +1320,7 @@ export default function AdminConversationsClient({ initialData }: Props) {
 
                     const message = block.message as ChatMessage;
                     const imageUrl = getImageUrl(message);
-                    const visibleText = displayMessageText(message, selectedConversation);
+                    const visibleText = displayMessageText(message, activeConversation);
 
                     return (
                       <div key={block.key}>
@@ -1270,7 +1331,7 @@ export default function AdminConversationsClient({ initialData }: Props) {
                           <article className={imageUrl ? "bubble image-bubble" : "bubble"}>
                             <header>
                               <span>{senderIcon(message)}</span>
-                              <b>{senderLabel(message, selectedConversation)}</b>
+                              <b>{senderLabel(message, activeConversation)}</b>
                               {imageUrl ? <em className="image-count">1 صورة</em> : null}
                             </header>
                             {visibleText ? <p>{visibleText}</p> : null}
@@ -1301,7 +1362,7 @@ export default function AdminConversationsClient({ initialData }: Props) {
                     <span />
                     <span />
                     <span />
-                    <b>{typingLabel(selectedConversation)}</b>
+                    <b>{typingLabel(activeConversation)}</b>
                   </div>
                 ) : null}
                 {showJumpToBottom ? (
@@ -1340,7 +1401,7 @@ export default function AdminConversationsClient({ initialData }: Props) {
                     placeholder="اكتب الرد هنا… Enter للإرسال"
                     maxLength={replyLimit + 80}
                     disabled={
-                      loading || selectedConversation.status === "closed"
+                      loading || activeConversation.status === "closed"
                     }
                   />
                   <button
@@ -1351,7 +1412,7 @@ export default function AdminConversationsClient({ initialData }: Props) {
                       loading ||
                       !reply.trim() ||
                       replyLength > replyLimit ||
-                      selectedConversation.status === "closed"
+                      activeConversation.status === "closed"
                     }
                   >
                     إرسال
