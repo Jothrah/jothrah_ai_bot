@@ -286,6 +286,40 @@ function conversationMatches(conversation: Conversation, query: string) {
   return text.includes(query.trim().toLowerCase());
 }
 
+
+type PushStatus = "checking" | "granted" | "disabled" | "denied" | "unsupported" | "waiting" | "error";
+
+const ADMIN_PUSH_DISABLED_KEY = "jothrah_admin_push_disabled_v1";
+
+function base64UrlToUint8Array(base64String: string) {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = `${base64String}${padding}`
+    .replace(/-/g, "+")
+    .replace(/_/g, "/");
+
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+
+  for (let i = 0; i < rawData.length; i += 1) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+
+  return outputArray;
+}
+
+async function getAdminPushRegistration() {
+  if (typeof window === "undefined") return null;
+  if (!("serviceWorker" in navigator)) return null;
+  if (!("PushManager" in window)) return null;
+  if (!("Notification" in window)) return null;
+
+  const existing = await navigator.serviceWorker.getRegistration("/");
+  if (existing) return existing;
+
+  await navigator.serviceWorker.register("/sw.js");
+  return navigator.serviceWorker.ready;
+}
+
 function playLuxuryNotify() {
   try {
     const AudioContextCtor =
@@ -346,6 +380,8 @@ export default function AdminConversationsClient({ initialData }: Props) {
   const [reply, setReply] = useState("");
   const [loading, setLoading] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
+  const [pushStatus, setPushStatus] = useState<PushStatus>("checking");
+  const [pushBusy, setPushBusy] = useState(false);
   const [emojiOpen, setEmojiOpen] = useState(false);
   const [filter, setFilter] = useState<"all" | "waiting" | "open" | "closed">(
     "all",
@@ -378,6 +414,8 @@ export default function AdminConversationsClient({ initialData }: Props) {
   const shouldStickToBottomRef = useRef(true);
   const lightboxDragRef = useRef<Record<string, any> | null>(null);
   const selectedIdRef = useRef<string | null>(selectedId);
+  const pushInitAttemptedRef = useRef(false);
+  const pushBusyRef = useRef(false);
 
   useEffect(() => {
     selectedIdRef.current = selectedId;
@@ -658,31 +696,143 @@ export default function AdminConversationsClient({ initialData }: Props) {
     setTimeout(() => setToast(""), 2800);
   }, []);
 
-  const clearMobileSelection = useCallback(() => {
-    selectedIdRef.current = null;
-    setSelectedId(null);
-    setSelectedConversation(null);
-    setMessages([]);
-    setDetailsOpen(false);
-    shouldStickToBottomRef.current = true;
-    setShowJumpToBottom(false);
-    if (typeof window !== "undefined") {
-      window.history.replaceState(null, "", "/admin/conversations");
+
+  const enablePushNotifications = useCallback(
+    async (options?: { notify?: boolean }) => {
+      if (pushBusyRef.current) return;
+      pushBusyRef.current = true;
+      setPushBusy(true);
+
+      try {
+        if (window.localStorage.getItem(ADMIN_PUSH_DISABLED_KEY) === "1") {
+          setPushStatus("disabled");
+          return;
+        }
+
+        const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+        if (!publicKey) {
+          setPushStatus("unsupported");
+          return;
+        }
+
+        const registration = await getAdminPushRegistration();
+        if (!registration || !("Notification" in window)) {
+          setPushStatus("unsupported");
+          return;
+        }
+
+        let permission = Notification.permission;
+        if (permission === "denied") {
+          setPushStatus("denied");
+          return;
+        }
+
+        if (permission === "default") {
+          setPushStatus("waiting");
+          permission = await Notification.requestPermission();
+        }
+
+        if (permission !== "granted") {
+          setPushStatus(permission === "denied" ? "denied" : "waiting");
+          return;
+        }
+
+        const existing = await registration.pushManager.getSubscription();
+        const subscription =
+          existing ||
+          (await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: base64UrlToUint8Array(publicKey),
+          }));
+
+        const res = await fetch("/api/admin/push/subscribe", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(subscription.toJSON()),
+        });
+
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data?.ok) {
+          throw new Error(data?.error || "تعذر حفظ اشتراك الإشعارات");
+        }
+
+        window.localStorage.removeItem(ADMIN_PUSH_DISABLED_KEY);
+        setPushStatus("granted");
+        if (options?.notify) flashToast("إشعارات المحادثات مفعلة ✅");
+      } catch (error) {
+        setPushStatus("error");
+        if (options?.notify) {
+          flashToast(
+            error instanceof Error ? error.message : "تعذر تفعيل الإشعارات",
+          );
+        }
+      } finally {
+        pushBusyRef.current = false;
+        setPushBusy(false);
+      }
+    },
+    [flashToast],
+  );
+
+  const stopPushNotifications = useCallback(async () => {
+    if (pushBusyRef.current) return;
+    pushBusyRef.current = true;
+    setPushBusy(true);
+
+    try {
+      window.localStorage.setItem(ADMIN_PUSH_DISABLED_KEY, "1");
+
+      const registration = await getAdminPushRegistration();
+      const subscription = await registration?.pushManager.getSubscription();
+
+      if (subscription) {
+        await fetch("/api/admin/push/unsubscribe", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ endpoint: subscription.endpoint }),
+        }).catch(() => null);
+
+        await subscription.unsubscribe().catch(() => false);
+      }
+
+      setPushStatus("disabled");
+      flashToast("تم إيقاف إشعارات المحادثات 🔕");
+    } catch (error) {
+      flashToast(error instanceof Error ? error.message : "تعذر إيقاف الإشعارات");
+    } finally {
+      pushBusyRef.current = false;
+      setPushBusy(false);
     }
-  }, []);
+  }, [flashToast]);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    const params = new URLSearchParams(window.location.search || "");
-    const hasExplicitConversation = Boolean(params.get("id"));
-    const isMobileViewport = window.matchMedia("(max-width: 760px)").matches;
+    if (pushInitAttemptedRef.current) return;
+    pushInitAttemptedRef.current = true;
 
-    // في الجوال، إذا دخل الأدمن صفحة المحادثات بدون id واضح، نبدأ بقائمة المحادثات فقط
-    // ولا نفتح آخر محادثة تلقائيًا.
-    if (!hasExplicitConversation && isMobileViewport) {
-      clearMobileSelection();
-    }
-  }, [clearMobileSelection]);
+    enablePushNotifications({ notify: false });
+
+    const retryOnFirstInteraction = () => {
+      if (window.localStorage.getItem(ADMIN_PUSH_DISABLED_KEY) === "1") return;
+      if (!("Notification" in window)) return;
+      if (Notification.permission === "granted" || Notification.permission === "denied") return;
+      enablePushNotifications({ notify: false });
+    };
+
+    window.addEventListener("pointerdown", retryOnFirstInteraction, {
+      capture: true,
+      passive: true,
+    });
+    window.addEventListener("keydown", retryOnFirstInteraction, { capture: true });
+
+    return () => {
+      window.removeEventListener("pointerdown", retryOnFirstInteraction, {
+        capture: true,
+      } as any);
+      window.removeEventListener("keydown", retryOnFirstInteraction, {
+        capture: true,
+      } as any);
+    };
+  }, [enablePushNotifications]);
 
   const refresh = useCallback(
     async (options?: { silent?: boolean }) => {
@@ -728,19 +878,9 @@ export default function AdminConversationsClient({ initialData }: Props) {
         lastTotalUnreadRef.current = nextTotalUnread;
 
         setConversations(nextConversations);
-
-        // إذا لا توجد محادثة مختارة محليًا، لا نسمح للـ API بفتح آخر محادثة تلقائيًا،
-        // خصوصًا في الجوال عند الرجوع لقائمة المحادثات.
-        if (id) {
-          setSelectedConversation(nextSelected);
-          setMessages(nextMessages);
-          scrollToBottom();
-        } else {
-          setSelectedConversation(null);
-          setMessages([]);
-          setDetailsOpen(false);
-          selectedIdRef.current = null;
-        }
+        setSelectedConversation(nextSelected);
+        setMessages(nextMessages);
+        scrollToBottom();
       } catch (error) {
         if (!options?.silent)
           flashToast(
@@ -866,10 +1006,7 @@ export default function AdminConversationsClient({ initialData }: Props) {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "تعذر حذف المحادثة");
       flashToast("تم حذف المحادثة نهائيًا 🗑️");
-      selectedIdRef.current = null;
       setSelectedId(null);
-      setSelectedConversation(null);
-      setMessages([]);
       window.history.replaceState(null, "", "/admin/conversations");
       await refresh({ silent: true });
     } catch (error) {
@@ -965,7 +1102,7 @@ export default function AdminConversationsClient({ initialData }: Props) {
   let lastDay = "";
 
   return (
-    <main className={selectedConversation ? "jth-desk has-chat" : "jth-desk no-chat"} dir="rtl">
+    <main className="jth-desk" dir="rtl">
       <style jsx global>
         {styles}
       </style>
@@ -1011,6 +1148,16 @@ export default function AdminConversationsClient({ initialData }: Props) {
           >
             {soundEnabled ? "🔔 كتم الصوت" : "🔕 تشغيل الصوت"}
           </button>
+          {pushStatus === "granted" ? (
+            <button
+              type="button"
+              className="top-btn push-stop"
+              onClick={stopPushNotifications}
+              disabled={pushBusy}
+            >
+              إيقاف الإشعارات
+            </button>
+          ) : null}
           <button type="button" className="top-btn" onClick={() => refresh()}>
             تحديث
           </button>
@@ -1134,16 +1281,6 @@ export default function AdminConversationsClient({ initialData }: Props) {
           {selectedConversation ? (
             <>
               <div className="chat-head">
-                <button
-                  type="button"
-                  className="mobile-back"
-                  onClick={clearMobileSelection}
-                  aria-label="رجوع إلى قائمة المحادثات"
-                  title="رجوع"
-                >
-                  ›
-                </button>
-
                 <div className="chat-user">
                   <span className="avatar lg">
                     {getCustomerInitial(selectedConversation)}
@@ -1786,6 +1923,17 @@ const styles = `
     color: #fff;
     border-color: transparent;
     background: linear-gradient(135deg, var(--j-green), var(--j-green2));
+  }
+  .top-btn.push-stop {
+    color: #6b2a2a;
+    border-color: rgba(148, 36, 36, .18);
+    background: #fff7f5;
+  }
+  .top-btn:disabled {
+    opacity: .58;
+    cursor: not-allowed;
+    transform: none !important;
+    box-shadow: none !important;
   }
 
   .desk-grid {
@@ -2608,7 +2756,7 @@ const styles = `
     .brand-mini { border-radius: 16px; }
     .metric-strip span { font-size: 10.8px; }
     .metric-strip b { font-size: 16px; }
-    .top-actions { display: grid; grid-template-columns: 1fr 1fr; }
+    .top-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); }
     .top-btn { width: 100%; padding-inline: 8px; }
     .inbox-panel { height: 31dvh; min-height: 230px; border-radius: 18px; }
     .conversation-title strong { font-size: 15px; }
@@ -2667,644 +2815,6 @@ const styles = `
   }
   .rating-score b {
     font-size: 14px;
-  }
-
-
-  /* =========================================================
-     Mobile WhatsApp / Telegram Console
-     يحول صفحة الأدمن في الجوال إلى تجربة تطبيق محادثات:
-     قائمة محادثات كاملة، ثم شاشة محادثة كاملة مع زر رجوع.
-  ========================================================= */
-  .mobile-back { display: none; }
-
-  @media (max-width: 760px) {
-    html,
-    body {
-      width: 100% !important;
-      height: 100% !important;
-      overflow: hidden !important;
-      display: block !important;
-      background: #f0f2f5 !important;
-    }
-
-    .jth-desk {
-      width: 100vw !important;
-      max-width: none !important;
-      height: 100dvh !important;
-      max-height: 100dvh !important;
-      min-height: 100dvh !important;
-      margin: 0 !important;
-      padding: 0 !important;
-      display: block !important;
-      overflow: hidden !important;
-      background: #f0f2f5 !important;
-      color: #111b21 !important;
-      --j-green: #005f5d;
-      --j-green2: #007b78;
-      --j-line: rgba(17, 27, 33, .08);
-      --j-muted: #667781;
-      --j-shadow-soft: none;
-      --j-shadow: none;
-    }
-
-    .jth-desk::before,
-    .desk-top {
-      display: none !important;
-    }
-
-    .desk-grid,
-    .desk-grid.show-details {
-      display: block !important;
-      width: 100% !important;
-      height: 100dvh !important;
-      min-height: 100dvh !important;
-      overflow: hidden !important;
-    }
-
-    .jth-desk.no-chat .chat-panel,
-    .jth-desk.has-chat .inbox-panel {
-      display: none !important;
-    }
-
-    .jth-desk.no-chat .inbox-panel,
-    .jth-desk.has-chat .chat-panel {
-      display: grid !important;
-    }
-
-    /* شاشة قائمة المحادثات */
-    .inbox-panel {
-      width: 100% !important;
-      height: 100dvh !important;
-      min-height: 100dvh !important;
-      border: 0 !important;
-      border-radius: 0 !important;
-      box-shadow: none !important;
-      background: #ffffff !important;
-      backdrop-filter: none !important;
-      padding: 0 !important;
-      gap: 0 !important;
-      grid-template-rows: 64px 58px 48px minmax(0, 1fr) !important;
-      overflow: hidden !important;
-    }
-
-    .panel-head {
-      height: 64px !important;
-      padding: calc(env(safe-area-inset-top, 0px) + 10px) 16px 10px !important;
-      background: #005f5d !important;
-      color: #ffffff !important;
-      align-items: center !important;
-      border-bottom: 1px solid rgba(255,255,255,.08) !important;
-    }
-
-    .panel-head strong {
-      color: #ffffff !important;
-      font-size: 20px !important;
-      font-weight: 900 !important;
-      letter-spacing: -.03em !important;
-    }
-
-    .panel-head strong::before {
-      content: "واتساب جذرة";
-    }
-
-    .panel-head strong {
-      font-size: 0 !important;
-    }
-
-    .panel-head strong::before {
-      font-size: 20px !important;
-    }
-
-    .panel-head em {
-      min-width: 30px !important;
-      height: 30px !important;
-      border-radius: 999px !important;
-      background: rgba(255,255,255,.18) !important;
-      color: #ffffff !important;
-      box-shadow: none !important;
-    }
-
-    .search-line {
-      height: 44px !important;
-      margin: 7px 12px !important;
-      border: 0 !important;
-      border-radius: 999px !important;
-      background: #f0f2f5 !important;
-      box-shadow: none !important;
-    }
-
-    .search-line input {
-      font-size: 14px !important;
-      font-weight: 700 !important;
-      color: #111b21 !important;
-    }
-
-    .filters {
-      display: flex !important;
-      gap: 8px !important;
-      overflow-x: auto !important;
-      padding: 2px 12px 8px !important;
-      scrollbar-width: none !important;
-    }
-
-    .filters::-webkit-scrollbar { display: none !important; }
-
-    .filters button {
-      flex: 0 0 auto !important;
-      height: 34px !important;
-      min-width: 72px !important;
-      border-radius: 999px !important;
-      border: 0 !important;
-      padding: 0 14px !important;
-      background: #f0f2f5 !important;
-      color: #54656f !important;
-      font-size: 13px !important;
-      font-weight: 850 !important;
-    }
-
-    .filters button.active {
-      color: #005f5d !important;
-      background: #e7f7f4 !important;
-      box-shadow: inset 0 0 0 1px rgba(0,95,93,.10) !important;
-    }
-
-    .conversation-list {
-      padding: 0 !important;
-      overflow-y: auto !important;
-      background: #ffffff !important;
-    }
-
-    .conversation-card {
-      min-height: 72px !important;
-      margin: 0 !important;
-      padding: 11px 14px 11px 10px !important;
-      grid-template-columns: 52px minmax(0, 1fr) auto !important;
-      align-items: center !important;
-      gap: 11px !important;
-      border: 0 !important;
-      border-radius: 0 !important;
-      background: #ffffff !important;
-      box-shadow: none !important;
-      border-bottom: 1px solid rgba(17,27,33,.07) !important;
-      transform: none !important;
-    }
-
-    .conversation-card.active,
-    .conversation-card:hover {
-      background: #f5f7f8 !important;
-      box-shadow: none !important;
-      transform: none !important;
-    }
-
-    .conversation-card.active::before { display: none !important; }
-
-    .conversation-card .avatar {
-      width: 52px !important;
-      height: 52px !important;
-      border-radius: 50% !important;
-      background: linear-gradient(145deg, #0b7673, #005f5d) !important;
-      box-shadow: none !important;
-      font-size: 18px !important;
-    }
-
-    .status-dot {
-      top: auto !important;
-      bottom: 14px !important;
-      inset-inline-start: 48px !important;
-      z-index: 3 !important;
-      width: 11px !important;
-      height: 11px !important;
-      border: 2px solid #ffffff !important;
-      box-shadow: none !important;
-    }
-
-    .conversation-title strong {
-      font-size: 15.5px !important;
-      color: #111b21 !important;
-      font-weight: 850 !important;
-    }
-
-    .conversation-title time {
-      color: #667781 !important;
-      font-size: 11px !important;
-      font-weight: 700 !important;
-    }
-
-    .conversation-preview {
-      font-size: 13px !important;
-      color: #667781 !important;
-      font-weight: 700 !important;
-      line-height: 1.35 !important;
-    }
-
-    .conversation-meta {
-      justify-content: flex-start !important;
-      gap: 5px !important;
-      margin-top: 2px !important;
-    }
-
-    .conversation-meta small:last-child {
-      display: none !important;
-    }
-
-    .mini-pill {
-      height: 21px !important;
-      padding: 0 8px !important;
-      font-size: 10.5px !important;
-      font-weight: 850 !important;
-      border: 0 !important;
-      background: #eef2f3 !important;
-      color: #54656f !important;
-    }
-
-    .mini-pill.danger,
-    .mini-pill.large.danger {
-      color: #b4232a !important;
-      background: #fff0f1 !important;
-    }
-
-    .mini-pill.success,
-    .mini-pill.large.success {
-      color: #0b6b52 !important;
-      background: #e7f7f0 !important;
-    }
-
-    .unread {
-      min-width: 22px !important;
-      height: 22px !important;
-      border-radius: 999px !important;
-      background: #25d366 !important;
-      color: #ffffff !important;
-      box-shadow: none !important;
-      font-size: 11px !important;
-    }
-
-    /* شاشة المحادثة */
-    .chat-panel {
-      width: 100% !important;
-      height: 100dvh !important;
-      min-height: 100dvh !important;
-      border: 0 !important;
-      border-radius: 0 !important;
-      box-shadow: none !important;
-      background: #efe7dc !important;
-      backdrop-filter: none !important;
-      grid-template-rows: auto minmax(0, 1fr) auto !important;
-      overflow: hidden !important;
-    }
-
-    .chat-head {
-      min-height: 62px !important;
-      height: auto !important;
-      padding: calc(env(safe-area-inset-top, 0px) + 8px) 8px 8px !important;
-      border: 0 !important;
-      border-radius: 0 !important;
-      background: #005f5d !important;
-      color: #ffffff !important;
-      box-shadow: 0 1px 4px rgba(0,0,0,.12) !important;
-      display: flex !important;
-      flex-direction: row !important;
-      align-items: center !important;
-      gap: 6px !important;
-      direction: rtl !important;
-    }
-
-    .mobile-back {
-      order: 2 !important;
-      display: inline-flex !important;
-      align-items: center !important;
-      justify-content: center !important;
-      width: 34px !important;
-      height: 40px !important;
-      min-width: 34px !important;
-      border: 0 !important;
-      border-radius: 999px !important;
-      background: transparent !important;
-      color: #ffffff !important;
-      padding: 0 !important;
-      font-size: 30px !important;
-      font-weight: 900 !important;
-      line-height: 1 !important;
-      cursor: pointer !important;
-      white-space: nowrap !important;
-    }
-
-    .chat-user {
-      order: 1 !important;
-      min-width: 0 !important;
-      flex: 1 1 auto !important;
-      gap: 8px !important;
-      color: #ffffff !important;
-      display: flex !important;
-      align-items: center !important;
-    }
-
-    .chat-user .avatar.lg {
-      width: 40px !important;
-      height: 40px !important;
-      border-radius: 50% !important;
-      background: rgba(255,255,255,.20) !important;
-      box-shadow: none !important;
-      color: #ffffff !important;
-    }
-
-    .chat-user h2 {
-      max-width: 38vw !important;
-      color: #ffffff !important;
-      font-size: 15.5px !important;
-      font-weight: 900 !important;
-      line-height: 1.15 !important;
-      margin: 0 !important;
-      white-space: nowrap !important;
-      overflow: hidden !important;
-      text-overflow: ellipsis !important;
-    }
-
-    .chat-user p {
-      color: rgba(255,255,255,.72) !important;
-      font-size: 11px !important;
-      line-height: 1.35 !important;
-      margin: 2px 0 0 !important;
-      white-space: nowrap !important;
-      overflow: hidden !important;
-      text-overflow: ellipsis !important;
-      max-width: 40vw !important;
-    }
-
-    .chat-user .mini-pill.large {
-      display: none !important;
-    }
-
-    .chat-actions {
-      order: 3 !important;
-      display: flex !important;
-      align-items: center !important;
-      justify-content: flex-end !important;
-      gap: 4px !important;
-      flex: 0 0 auto !important;
-    }
-
-    .chat-actions button {
-      width: auto !important;
-      min-width: 40px !important;
-      height: 34px !important;
-      padding: 0 9px !important;
-      border: 1px solid rgba(255,255,255,.18) !important;
-      border-radius: 999px !important;
-      background: rgba(255,255,255,.12) !important;
-      color: #ffffff !important;
-      font-size: 11px !important;
-      font-weight: 900 !important;
-      box-shadow: none !important;
-    }
-
-    .chat-actions .danger {
-      background: rgba(255,255,255,.10) !important;
-      color: #ffd8dc !important;
-    }
-
-    .messages-panel {
-      min-height: 0 !important;
-      padding: 12px 10px 14px !important;
-      background:
-        radial-gradient(circle at 20% 10%, rgba(255,255,255,.22), transparent 28%),
-        linear-gradient(180deg, #efe7dc, #e8ddd1) !important;
-      overflow-y: auto !important;
-    }
-
-    .messages-panel::before {
-      content: "" !important;
-      position: fixed !important;
-      inset: 62px 0 74px !important;
-      pointer-events: none !important;
-      opacity: .22 !important;
-      background-image:
-        radial-gradient(circle at 12px 12px, rgba(0,95,93,.08) 1px, transparent 1.6px),
-        radial-gradient(circle at 34px 36px, rgba(0,0,0,.045) 1px, transparent 1.6px) !important;
-      background-size: 48px 48px !important;
-      z-index: 0 !important;
-      transform: none !important;
-      font-size: 0 !important;
-    }
-
-    .messages-panel > * {
-      position: relative !important;
-      z-index: 1 !important;
-    }
-
-    .day-separator {
-      width: max-content !important;
-      margin: 8px auto 12px !important;
-      padding: 5px 10px !important;
-      border: 0 !important;
-      border-radius: 999px !important;
-      background: rgba(255,255,255,.74) !important;
-      color: #667781 !important;
-      box-shadow: 0 1px 2px rgba(0,0,0,.05) !important;
-      font-size: 11px !important;
-      font-weight: 850 !important;
-    }
-
-    .message-row {
-      margin-bottom: 7px !important;
-      display: flex !important;
-    }
-
-    .message-row.customer,
-    .message-row.ai,
-    .message-row.system {
-      justify-content: flex-end !important;
-    }
-
-    .message-row.human {
-      justify-content: flex-start !important;
-    }
-
-    .bubble {
-      max-width: 82% !important;
-      padding: 8px 10px 6px !important;
-      border: 0 !important;
-      border-radius: 13px !important;
-      box-shadow: 0 1px 2px rgba(0,0,0,.08) !important;
-    }
-
-    .message-row.customer .bubble,
-    .message-row.ai .bubble,
-    .message-row.system .bubble {
-      background: #ffffff !important;
-      color: #111b21 !important;
-      border-bottom-left-radius: 4px !important;
-    }
-
-    .message-row.human .bubble {
-      background: #d9fdd3 !important;
-      color: #111b21 !important;
-      border-bottom-right-radius: 4px !important;
-    }
-
-    .bubble header {
-      margin-bottom: 4px !important;
-      color: #005f5d !important;
-      opacity: 1 !important;
-      font-size: 11px !important;
-      font-weight: 900 !important;
-    }
-
-    .message-row.human .bubble header {
-      color: #0b6b52 !important;
-    }
-
-    .bubble p {
-      font-size: 14.2px !important;
-      line-height: 1.62 !important;
-      font-weight: 650 !important;
-      color: inherit !important;
-    }
-
-    .bubble small,
-    .bubble time {
-      margin-top: 4px !important;
-      color: #667781 !important;
-      opacity: 1 !important;
-      font-size: 10.5px !important;
-      font-weight: 750 !important;
-      text-align: left !important;
-    }
-
-    .image-bubble {
-      min-width: min(280px, 82%) !important;
-    }
-
-    .single-image-thumb,
-    .image-thumb {
-      border-radius: 11px !important;
-    }
-
-    .single-image-thumb {
-      width: min(260px, 100%) !important;
-    }
-
-    .composer {
-      min-height: auto !important;
-      padding: 8px 8px calc(env(safe-area-inset-bottom, 0px) + 8px) !important;
-      border-top: 0 !important;
-      background: #f0f2f5 !important;
-      grid-template-rows: auto !important;
-      gap: 0 !important;
-      box-shadow: 0 -1px 4px rgba(0,0,0,.06) !important;
-    }
-
-    .composer-row {
-      grid-template-columns: 42px minmax(0, 1fr) 58px !important;
-      gap: 7px !important;
-      align-items: end !important;
-    }
-
-    .composer-row textarea {
-      height: 44px !important;
-      min-height: 44px !important;
-      max-height: 104px !important;
-      border: 0 !important;
-      border-radius: 22px !important;
-      background: #ffffff !important;
-      padding: 11px 14px !important;
-      font-size: 14.5px !important;
-      font-weight: 650 !important;
-      box-shadow: 0 1px 2px rgba(0,0,0,.05) !important;
-    }
-
-    .composer-row textarea:focus {
-      box-shadow: 0 0 0 2px rgba(0,95,93,.14), 0 1px 2px rgba(0,0,0,.05) !important;
-      border: 0 !important;
-    }
-
-    .emoji-btn,
-    .send-btn {
-      height: 44px !important;
-      border-radius: 50% !important;
-      box-shadow: none !important;
-    }
-
-    .emoji-btn {
-      width: 42px !important;
-      background: #ffffff !important;
-      border: 0 !important;
-      color: #54656f !important;
-    }
-
-    .send-btn {
-      width: 58px !important;
-      border-radius: 22px !important;
-      background: #005f5d !important;
-      color: #ffffff !important;
-      font-size: 12.8px !important;
-    }
-
-    .send-btn::after,
-    .composer-meta {
-      display: none !important;
-    }
-
-    .emoji-tray {
-      bottom: calc(env(safe-area-inset-bottom, 0px) + 62px) !important;
-      inset-inline-start: 8px !important;
-      border-radius: 18px !important;
-      border: 0 !important;
-      box-shadow: 0 8px 26px rgba(0,0,0,.16) !important;
-    }
-
-    .typing-indicator {
-      margin: 8px auto 10px 0 !important;
-      background: #ffffff !important;
-      box-shadow: 0 1px 2px rgba(0,0,0,.08) !important;
-      border: 0 !important;
-      border-radius: 13px !important;
-      color: #005f5d !important;
-    }
-
-    .jump-bottom {
-      bottom: 8px !important;
-      background: #005f5d !important;
-      box-shadow: 0 6px 16px rgba(0,95,93,.24) !important;
-    }
-
-    .details-panel {
-      position: fixed !important;
-      inset: auto 8px 8px 8px !important;
-      width: auto !important;
-      max-height: min(78dvh, 620px) !important;
-      border-radius: 22px 22px 18px 18px !important;
-      box-shadow: 0 -10px 34px rgba(0,0,0,.18) !important;
-      z-index: 50 !important;
-    }
-
-    .details-backdrop {
-      position: fixed !important;
-      inset: 0 !important;
-      background: rgba(17,27,33,.30) !important;
-      z-index: 45 !important;
-    }
-
-    .jth-toast {
-      left: 10px !important;
-      right: 10px !important;
-      bottom: calc(env(safe-area-inset-bottom, 0px) + 10px) !important;
-      text-align: center !important;
-      background: #005f5d !important;
-      border-radius: 16px !important;
-    }
-  }
-
-  @media (max-width: 380px) {
-    .chat-actions button {
-      min-width: 34px !important;
-      padding: 0 7px !important;
-      font-size: 10.5px !important;
-    }
-
-    .chat-user h2 { max-width: 36vw !important; }
-    .chat-user p { max-width: 38vw !important; }
-    .bubble { max-width: 86% !important; }
   }
 
 `;
