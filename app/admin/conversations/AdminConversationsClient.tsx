@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-// Jothrah Admin Conversations V119 - WhatsApp mobile + push toggle + force open chat
+// Jothrah Admin Conversations V120 - final hard lock chat + push toggle
 
 type Conversation = Record<string, any>;
 type ChatMessage = Record<string, any>;
@@ -286,6 +286,18 @@ function conversationMatches(conversation: Conversation, query: string) {
   return text.includes(query.trim().toLowerCase());
 }
 
+function makeFallbackConversation(id: string, source?: Conversation | null): Conversation {
+  return {
+    ...(source || {}),
+    id,
+    customer_name: source?.customer_name || "زائر بدون اسم",
+    status: source?.status || "needs_human",
+    needs_human: source?.needs_human ?? true,
+    language: source?.language || "ar",
+    last_message_at: source?.last_message_at || new Date().toISOString(),
+  };
+}
+
 type PushStatus =
   | "checking"
   | "granted"
@@ -420,12 +432,17 @@ export default function AdminConversationsClient({ initialData }: Props) {
   const shouldStickToBottomRef = useRef(true);
   const lightboxDragRef = useRef<Record<string, any> | null>(null);
   const selectedIdRef = useRef<string | null>(selectedId);
+  const selectedConversationRef = useRef<Conversation | null>(selectedConversation);
   const pushInitAttemptedRef = useRef(false);
   const pushBusyRef = useRef(false);
 
   useEffect(() => {
     selectedIdRef.current = selectedId;
   }, [selectedId]);
+
+  useEffect(() => {
+    selectedConversationRef.current = selectedConversation;
+  }, [selectedConversation]);
 
   useEffect(() => {
     function handleEscape(event: KeyboardEvent) {
@@ -964,17 +981,18 @@ export default function AdminConversationsClient({ initialData }: Props) {
         setConversations(nextConversations);
 
         if (id) {
-          // طالما عندنا selectedId لا نرجع لقائمة المحادثات نهائيًا بسبب refresh.
-          // إذا الـ API تأخر أو رجع selectedConversation فاضي، نثبت بيانات البطاقة الحالية بدل الإغلاق.
-          const safeSelected = nextSelected || fallbackSelected;
+          // قفل نهائي: طالما يوجد selectedId لا نعرض قائمة المحادثات ولا شاشة تحميل عالقة.
+          // نستخدم محادثة آمنة من: API ثم القائمة ثم آخر محادثة محفوظة ثم fallback.
+          const safeSelected =
+            nextSelected ||
+            fallbackSelected ||
+            selectedConversationRef.current ||
+            makeFallbackConversation(id);
 
-          if (safeSelected) {
-            setSelectedConversation(safeSelected);
-          } else {
-            setSelectedConversation((current) => current);
-          }
+          setSelectedConversation(makeFallbackConversation(id, safeSelected));
 
-          if (nextSelected || nextMessages.length > 0) {
+          // حتى لو رجع API رسائل فاضية، نحافظ على شاشة المحادثة مفتوحة.
+          if (Array.isArray(nextMessages)) {
             setMessages(nextMessages);
             scrollToBottom();
           }
@@ -1038,9 +1056,17 @@ export default function AdminConversationsClient({ initialData }: Props) {
       );
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "تعذر فتح المحادثة");
-      setConversations(data.conversations || []);
-      setSelectedConversation(data.selectedConversation || cachedConversation || null);
-      setMessages(data.messages || []);
+      const apiConversations = data.conversations || [];
+      const apiSelected = data.selectedConversation || null;
+      const apiFallback = apiConversations.find(
+        (item: Conversation) => String(item.id) === String(id),
+      ) || null;
+
+      setConversations(apiConversations);
+      setSelectedConversation(
+        makeFallbackConversation(id, apiSelected || apiFallback || cachedConversation),
+      );
+      setMessages(Array.isArray(data.messages) ? data.messages : []);
       const newestCustomer = [...(data.messages || [])]
         .reverse()
         .find((msg: ChatMessage) => msg.sender_type === "customer");
@@ -1061,6 +1087,7 @@ export default function AdminConversationsClient({ initialData }: Props) {
       );
       scrollToBottom(true);
     } catch (error) {
+      setSelectedConversation((current) => current || makeFallbackConversation(id, cachedConversation));
       flashToast(error instanceof Error ? error.message : "تعذر فتح المحادثة");
     }
   }
@@ -1226,6 +1253,12 @@ export default function AdminConversationsClient({ initialData }: Props) {
     selectedConversation?.status !== "closed";
 
   let lastDay = "";
+
+  const activeConversation = selectedId
+    ? selectedConversation ||
+      conversations.find((item) => String(item.id) === String(selectedId)) ||
+      makeFallbackConversation(selectedId)
+    : null;
 
   return (
     <main className={selectedId ? "jth-desk has-chat" : "jth-desk no-chat"} dir="rtl">
@@ -1412,31 +1445,7 @@ export default function AdminConversationsClient({ initialData }: Props) {
         </aside>
 
         <section className="chat-panel">
-          {selectedId && !selectedConversation ? (
-            <>
-              <div className="chat-head">
-                <button
-                  type="button"
-                  className="mobile-back"
-                  onClick={clearMobileSelection}
-                  aria-label="رجوع إلى قائمة المحادثات"
-                  title="رجوع"
-                >
-                  ›
-                </button>
-                <div className="chat-user">
-                  <span className="avatar lg">ج</span>
-                  <div>
-                    <h2>جاري فتح المحادثة…</h2>
-                    <p>يتم تحميل الرسائل الآن</p>
-                  </div>
-                </div>
-              </div>
-              <div className="messages-panel">
-                <div className="empty center">جاري فتح المحادثة…</div>
-              </div>
-            </>
-          ) : selectedConversation ? (
+          {activeConversation ? (
             <>
               <div className="chat-head">
                 <button
@@ -1451,20 +1460,20 @@ export default function AdminConversationsClient({ initialData }: Props) {
 
                 <div className="chat-user">
                   <span className="avatar lg">
-                    {getCustomerInitial(selectedConversation)}
+                    {getCustomerInitial(activeConversation)}
                   </span>
                   <div>
-                    <h2>{getCustomerName(selectedConversation)}</h2>
+                    <h2>{getCustomerName(activeConversation)}</h2>
                     <p>
-                      {selectedConversation.language || "ar"} · رمز الجلسة {getCustomerSessionCode(selectedConversation)} ·{" "}
-                      {formatDateTime(selectedConversation.last_message_at) ||
+                      {activeConversation.language || "ar"} · رمز الجلسة {getCustomerSessionCode(activeConversation)} ·{" "}
+                      {formatDateTime(activeConversation.last_message_at) ||
                         "آخر نشاط غير متوفر"}
                     </p>
                   </div>
                   <span
-                    className={`mini-pill large ${statusTone(selectedConversation)}`}
+                    className={`mini-pill large ${statusTone(activeConversation)}`}
                   >
-                    {statusLabel(selectedConversation)}
+                    {statusLabel(activeConversation)}
                   </span>
                 </div>
 
@@ -1481,7 +1490,7 @@ export default function AdminConversationsClient({ initialData }: Props) {
                     className="finish"
                     onClick={closeConversation}
                     disabled={
-                      loading || selectedConversation.status === "closed"
+                      loading || activeConversation.status === "closed"
                     }
                   >
                     إنهاء
@@ -1514,7 +1523,7 @@ export default function AdminConversationsClient({ initialData }: Props) {
                       const imageUrls = groupMessages.map((item) => getImageUrl(item)).filter(Boolean);
                       const visibleImages = imageUrls.slice(0, 4);
                       const caption = groupMessages
-                        .map((item) => displayMessageText(item, selectedConversation))
+                        .map((item) => displayMessageText(item, activeConversation))
                         .find(Boolean);
                       const trailingTime =
                         groupMessages[groupMessages.length - 1]?.created_at ||
@@ -1529,7 +1538,7 @@ export default function AdminConversationsClient({ initialData }: Props) {
                             <article className="bubble image-bubble">
                               <header>
                                 <span>{senderIcon(leadMessage)}</span>
-                                <b>{senderLabel(leadMessage, selectedConversation)}</b>
+                                <b>{senderLabel(leadMessage, activeConversation)}</b>
                                 <em className="image-count">{imageUrls.length} صور</em>
                               </header>
 
@@ -1564,7 +1573,7 @@ export default function AdminConversationsClient({ initialData }: Props) {
 
                     const message = block.message as ChatMessage;
                     const imageUrl = getImageUrl(message);
-                    const visibleText = displayMessageText(message, selectedConversation);
+                    const visibleText = displayMessageText(message, activeConversation);
 
                     return (
                       <div key={block.key}>
@@ -1575,7 +1584,7 @@ export default function AdminConversationsClient({ initialData }: Props) {
                           <article className={imageUrl ? "bubble image-bubble" : "bubble"}>
                             <header>
                               <span>{senderIcon(message)}</span>
-                              <b>{senderLabel(message, selectedConversation)}</b>
+                              <b>{senderLabel(message, activeConversation)}</b>
                               {imageUrl ? <em className="image-count">1 صورة</em> : null}
                             </header>
                             {visibleText ? <p>{visibleText}</p> : null}
@@ -1606,7 +1615,7 @@ export default function AdminConversationsClient({ initialData }: Props) {
                     <span />
                     <span />
                     <span />
-                    <b>{typingLabel(selectedConversation)}</b>
+                    <b>{typingLabel(activeConversation)}</b>
                   </div>
                 ) : null}
                 {showJumpToBottom ? (
@@ -1645,7 +1654,7 @@ export default function AdminConversationsClient({ initialData }: Props) {
                     placeholder="اكتب الرد هنا… Enter للإرسال"
                     maxLength={replyLimit + 80}
                     disabled={
-                      loading || selectedConversation.status === "closed"
+                      loading || activeConversation.status === "closed"
                     }
                   />
                   <button
@@ -1656,7 +1665,7 @@ export default function AdminConversationsClient({ initialData }: Props) {
                       loading ||
                       !reply.trim() ||
                       replyLength > replyLimit ||
-                      selectedConversation.status === "closed"
+                      activeConversation.status === "closed"
                     }
                   >
                     إرسال
