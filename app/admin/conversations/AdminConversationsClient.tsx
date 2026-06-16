@@ -707,6 +707,13 @@ export default function AdminConversationsClient({ initialData }: Props) {
           ? "السماح بالإشعارات"
           : "تفعيل الإشعارات";
 
+  const mobilePushButtonLabel =
+    pushStatus === "granted"
+      ? "إيقاف"
+      : pushStatus === "checking"
+        ? "فحص…"
+        : "تفعيل";
+
   const enablePushNotifications = useCallback(
     async (options?: { notify?: boolean; force?: boolean }) => {
       if (pushBusyRef.current) return;
@@ -1317,7 +1324,7 @@ export default function AdminConversationsClient({ initialData }: Props) {
                 onClick={togglePushNotifications}
                 disabled={pushBusy || pushStatus === "checking"}
               >
-                {pushButtonLabel}
+                {mobilePushButtonLabel}
               </button>
             </div>
           </div>
@@ -1462,15 +1469,6 @@ export default function AdminConversationsClient({ initialData }: Props) {
                 </div>
 
                 <div className="chat-actions">
-                  <button
-                    type="button"
-                    className="ghost push-chat-toggle"
-                    onClick={togglePushNotifications}
-                    disabled={pushBusy || pushStatus === "checking"}
-                    title={pushButtonLabel}
-                  >
-                    {pushStatus === "granted" ? "إيقاف" : "تفعيل"}
-                  </button>
                   <button
                     type="button"
                     className="ghost"
@@ -3148,6 +3146,70 @@ const styles = `
     .mobile-push-toggle:disabled {
       opacity: .65 !important;
       cursor: not-allowed !important;
+    }
+
+    /* إصلاح إجباري: زر الإشعارات لا يأخذ مساحة لمس خارج حجمه ولا يسبب تمدد عرضي */
+    .jth-desk,
+    .desk-grid,
+    .inbox-panel,
+    .chat-panel,
+    .chat-head,
+    .messages-panel,
+    .composer {
+      max-width: 100vw !important;
+      overflow-x: hidden !important;
+    }
+
+    .panel-actions {
+      position: relative !important;
+      z-index: 5 !important;
+      flex: 0 0 auto !important;
+      max-width: 116px !important;
+      overflow: visible !important;
+    }
+
+    .mobile-push-toggle {
+      position: relative !important;
+      z-index: 6 !important;
+      flex: 0 0 auto !important;
+      min-width: 56px !important;
+      max-width: 72px !important;
+      padding: 0 9px !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+      pointer-events: auto !important;
+      touch-action: manipulation !important;
+    }
+
+    .chat-head {
+      width: 100% !important;
+      max-width: 100vw !important;
+      overflow: hidden !important;
+    }
+
+    .chat-user {
+      min-width: 0 !important;
+      flex: 1 1 0 !important;
+      max-width: calc(100vw - 185px) !important;
+      overflow: hidden !important;
+    }
+
+    .chat-actions {
+      flex: 0 0 auto !important;
+      max-width: 150px !important;
+      overflow: hidden !important;
+      gap: 4px !important;
+    }
+
+    .chat-actions button {
+      min-width: 34px !important;
+      padding: 0 7px !important;
+      font-size: 10.5px !important;
+    }
+
+    .messages-panel,
+    .messages-panel * {
+      max-width: 100% !important;
     }
 
     .search-line {
