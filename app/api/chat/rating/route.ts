@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // V118: التقييم مرة واحدة فقط. لا نسمح بتغيير التقييم بعد حفظه.
+    // V123: قفل ذري. حتى لو ضغط العميل مرتين بسرعة، أول تحديث فقط ينجح.
     if (existing.data.rating || existing.data.rated_at) {
       return NextResponse.json(
         { ok: true, alreadyRated: true },
@@ -69,16 +69,27 @@ export async function POST(req: NextRequest) {
 
     const now = new Date().toISOString();
 
-    const { error } = await supabaseAdmin
+    const updated = await supabaseAdmin
       .from("chat_conversations")
       .update({
         rating,
         rating_note: note || null,
         rated_at: now
       })
-      .eq("id", conversationId);
+      .eq("id", conversationId)
+      .is("rating", null)
+      .is("rated_at", null)
+      .select("id")
+      .maybeSingle();
 
-    if (error) throw error;
+    if (updated.error) throw updated.error;
+
+    if (!updated.data?.id) {
+      return NextResponse.json(
+        { ok: true, alreadyRated: true },
+        { headers: corsHeaders(origin) }
+      );
+    }
 
     await saveChatEvent({
       conversationId,
