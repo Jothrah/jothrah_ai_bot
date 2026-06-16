@@ -8,6 +8,8 @@ type PageProps = {
 };
 
 async function getInitialData(selectedId?: string) {
+  const cleanSelectedId = String(selectedId || "").trim();
+
   const { data: conversations, error: conversationsError } = await supabaseAdmin
     .from("chat_conversations")
     .select("*")
@@ -16,10 +18,36 @@ async function getInitialData(selectedId?: string) {
 
   if (conversationsError) throw conversationsError;
 
-  const selectedConversation =
-    (selectedId && conversations?.find((item) => item.id === selectedId)) ||
-    conversations?.[0] ||
-    null;
+  let selectedConversation: any = null;
+
+  /**
+   * مهم:
+   * لا نفتح أول محادثة تلقائيًا.
+   * إذا ما فيه id في الرابط، نخلي selectedConversation = null
+   * عشان الجوال يعرض قائمة المحادثات فقط.
+   */
+  if (cleanSelectedId) {
+    selectedConversation =
+      conversations?.find((item) => item.id === cleanSelectedId) || null;
+
+    /**
+     * حماية إضافية:
+     * لو المحادثة المطلوبة ليست ضمن أول 100 محادثة،
+     * نجيبها مباشرة من قاعدة البيانات بدل ما نرجع لأول محادثة بالغلط.
+     */
+    if (!selectedConversation) {
+      const { data: directConversation, error: directConversationError } =
+        await supabaseAdmin
+          .from("chat_conversations")
+          .select("*")
+          .eq("id", cleanSelectedId)
+          .maybeSingle();
+
+      if (directConversationError) throw directConversationError;
+
+      selectedConversation = directConversation || null;
+    }
+  }
 
   let messages: any[] = [];
 
@@ -39,7 +67,7 @@ async function getInitialData(selectedId?: string) {
     conversations: conversations || [],
     selectedConversation,
     messages,
-    selectedId: selectedConversation?.id || selectedId || null
+    selectedId: selectedConversation?.id || null,
   };
 }
 
