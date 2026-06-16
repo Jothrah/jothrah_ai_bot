@@ -1,53 +1,63 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase-admin";
-import { saveChatEvent, saveChatMessage } from "@/lib/chat-store";
+
+type RouteContext = {
+  params: Promise<{ id: string }>;
+};
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-type Params = { params: Promise<{ id: string }> };
-
-export async function POST(req: NextRequest, props: Params) {
+export async function POST(_req: Request, context: RouteContext) {
   try {
-    const { id } = await props.params;
-    const body = await req.json().catch(() => ({}));
-    const note = String(body.note || "").trim();
-    const message = note || "تم إنهاء المحادثة من قبل مختص جذرة. نسعد بتقييم تجربتك.";
+    const { id } = await context.params;
+    const conversationId = String(id || "").trim();
+
+    if (!conversationId) {
+      return NextResponse.json(
+        { ok: false, error: "conversation id is required" },
+        { status: 400 },
+      );
+    }
+
     const now = new Date().toISOString();
 
-    await saveChatMessage({
-      conversationId: id,
-      senderType: "system",
-      message,
-      metadata: { event: "conversation_closed", ratingPrompt: true }
-    });
-
-    const { error } = await supabaseAdmin
+    const { error: conversationError } = await supabaseAdmin
       .from("chat_conversations")
       .update({
         status: "closed",
         needs_human: false,
-        closed_at: now,
-        closed_by: "admin",
-        last_message: message,
-        last_message_at: now
+        last_message_at: now,
+        unread_admin_count: 0,
       })
-      .eq("id", id);
+      .eq("id", conversationId);
 
-    if (error) throw error;
+    if (conversationError) {
+      return NextResponse.json(
+        { ok: false, error: conversationError.message },
+        { status: 500 },
+      );
+    }
 
-    await saveChatEvent({
-      conversationId: id,
-      eventName: "conversation_closed",
-      eventData: { closedBy: "admin" }
-    });
+    await supabaseAdmin
+      .from("chat_messages")
+      .insert({
+        conversation_id: conversationId,
+        sender_type: "system",
+        message: "تم إنهاء المحادثة من لوحة الإدارة.",
+        metadata: { event: "conversation_closed_by_admin" },
+      })
+      .then(() => null);
 
     return NextResponse.json({ ok: true });
   } catch (error) {
-    console.error("POST admin close error:", error);
+    console.error("POST /api/admin/conversations/[id]/close error:", error);
     return NextResponse.json(
-      { error: "Failed to close conversation" },
-      { status: 500 }
+      {
+        ok: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 },
     );
   }
 }

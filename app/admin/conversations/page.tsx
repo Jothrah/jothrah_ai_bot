@@ -1,8 +1,11 @@
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import AdminConversationsClient from "./AdminConversationsClient";
 
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+// Next 15 يمرر searchParams كـ Promise في بعض الإعدادات
+// نخلي النوع متوافقًا مع الموجود عندك.
 type PageProps = {
   searchParams?: Promise<{ id?: string }>;
 };
@@ -20,21 +23,13 @@ async function getInitialData(selectedId?: string) {
 
   let selectedConversation: any = null;
 
-  /**
-   * مهم:
-   * لا نفتح أول محادثة تلقائيًا.
-   * إذا ما فيه id في الرابط، نخلي selectedConversation = null
-   * عشان الجوال يعرض قائمة المحادثات فقط.
-   */
+  // مهم: لا نفتح أول محادثة تلقائيًا إذا ما فيه id.
+  // واجهة الجوال لازم تبدأ بقائمة المحادثات فقط.
   if (cleanSelectedId) {
     selectedConversation =
       conversations?.find((item) => item.id === cleanSelectedId) || null;
 
-    /**
-     * حماية إضافية:
-     * لو المحادثة المطلوبة ليست ضمن أول 100 محادثة،
-     * نجيبها مباشرة من قاعدة البيانات بدل ما نرجع لأول محادثة بالغلط.
-     */
+    // حماية: لو المحادثة ليست ضمن أول 100 نتيجة، نسحبها مباشرة بالـ id.
     if (!selectedConversation) {
       const { data: directConversation, error: directConversationError } =
         await supabaseAdmin
@@ -44,7 +39,6 @@ async function getInitialData(selectedId?: string) {
           .maybeSingle();
 
       if (directConversationError) throw directConversationError;
-
       selectedConversation = directConversation || null;
     }
   }

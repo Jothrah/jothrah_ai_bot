@@ -1,60 +1,79 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase-admin";
-import { saveChatEvent, saveChatMessage } from "@/lib/chat-store";
+
+type RouteContext = {
+  params: Promise<{ id: string }>;
+};
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-type Params = { params: Promise<{ id: string }> };
-
-export async function POST(req: NextRequest, props: Params) {
+export async function POST(req: NextRequest, context: RouteContext) {
   try {
-    const { id } = await props.params;
-    const body = await req.json();
-    const message = String(body.message || "").trim();
+    const { id } = await context.params;
+    const conversationId = String(id || "").trim();
+    const body = await req.json().catch(() => ({}));
+    const message = String(body?.message || "").trim();
 
-    if (!id || !message) {
+    if (!conversationId) {
       return NextResponse.json(
-        { error: "conversation id and message are required" },
-        { status: 400 }
+        { ok: false, error: "conversation id is required" },
+        { status: 400 },
       );
     }
 
-    const saved = await saveChatMessage({
-      conversationId: id,
-      senderType: "human",
-      message,
-      metadata: { fromAdminPanel: true, senderLabel: "مختص جذرة" }
-    });
+    if (!message) {
+      return NextResponse.json(
+        { ok: false, error: "message is required" },
+        { status: 400 },
+      );
+    }
 
     const now = new Date().toISOString();
 
-    const { error } = await supabaseAdmin
+    const { error: messageError } = await supabaseAdmin
+      .from("chat_messages")
+      .insert({
+        conversation_id: conversationId,
+        sender_type: "human",
+        message,
+        metadata: { source: "admin_panel" },
+      });
+
+    if (messageError) {
+      return NextResponse.json(
+        { ok: false, error: messageError.message },
+        { status: 500 },
+      );
+    }
+
+    const { error: conversationError } = await supabaseAdmin
       .from("chat_conversations")
       .update({
         status: "human_replied",
         needs_human: false,
-        unread_admin_count: 0,
         last_message: message,
         last_message_at: now,
-        last_human_reply_at: now
+        unread_admin_count: 0,
       })
-      .eq("id", id);
+      .eq("id", conversationId);
 
-    if (error) throw error;
+    if (conversationError) {
+      return NextResponse.json(
+        { ok: false, error: conversationError.message },
+        { status: 500 },
+      );
+    }
 
-    await saveChatEvent({
-      conversationId: id,
-      eventName: "human_reply_sent",
-      eventData: { messageId: saved.id }
-    });
-
-    return NextResponse.json({ ok: true, message: saved });
+    return NextResponse.json({ ok: true });
   } catch (error) {
-    console.error("POST admin reply error:", error);
+    console.error("POST /api/admin/conversations/[id]/reply error:", error);
     return NextResponse.json(
-      { error: "Failed to send reply" },
-      { status: 500 }
+      {
+        ok: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 },
     );
   }
 }
