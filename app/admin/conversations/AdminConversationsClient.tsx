@@ -286,39 +286,6 @@ function conversationMatches(conversation: Conversation, query: string) {
   return text.includes(query.trim().toLowerCase());
 }
 
-type PushStatus = "checking" | "granted" | "disabled" | "denied" | "unsupported" | "waiting" | "error";
-
-const ADMIN_PUSH_DISABLED_KEY = "jothrah_admin_push_disabled_v1";
-
-function base64UrlToUint8Array(base64String: string) {
-  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = `${base64String}${padding}`
-    .replace(/-/g, "+")
-    .replace(/_/g, "/");
-
-  const rawData = window.atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
-
-  for (let i = 0; i < rawData.length; i += 1) {
-    outputArray[i] = rawData.charCodeAt(i);
-  }
-
-  return outputArray;
-}
-
-async function getAdminPushRegistration() {
-  if (typeof window === "undefined") return null;
-  if (!("serviceWorker" in navigator)) return null;
-  if (!("PushManager" in window)) return null;
-  if (!("Notification" in window)) return null;
-
-  const existing = await navigator.serviceWorker.getRegistration("/");
-  if (existing) return existing;
-
-  await navigator.serviceWorker.register("/sw.js");
-  return navigator.serviceWorker.ready;
-}
-
 function playLuxuryNotify() {
   try {
     const AudioContextCtor =
@@ -379,8 +346,6 @@ export default function AdminConversationsClient({ initialData }: Props) {
   const [reply, setReply] = useState("");
   const [loading, setLoading] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
-  const [pushStatus, setPushStatus] = useState<PushStatus>("checking");
-  const [pushBusy, setPushBusy] = useState(false);
   const [emojiOpen, setEmojiOpen] = useState(false);
   const [filter, setFilter] = useState<"all" | "waiting" | "open" | "closed">(
     "all",
@@ -413,8 +378,6 @@ export default function AdminConversationsClient({ initialData }: Props) {
   const shouldStickToBottomRef = useRef(true);
   const lightboxDragRef = useRef<Record<string, any> | null>(null);
   const selectedIdRef = useRef<string | null>(selectedId);
-  const pushInitAttemptedRef = useRef(false);
-  const pushBusyRef = useRef(false);
 
   useEffect(() => {
     selectedIdRef.current = selectedId;
@@ -694,187 +657,6 @@ export default function AdminConversationsClient({ initialData }: Props) {
     setToast(message);
     setTimeout(() => setToast(""), 2800);
   }, []);
-
-  const pushButtonLabel =
-    pushStatus === "granted"
-      ? "إيقاف الإشعارات"
-      : pushStatus === "checking"
-        ? "فحص الإشعارات…"
-        : pushStatus === "waiting"
-          ? "السماح بالإشعارات"
-          : "تفعيل الإشعارات";
-
-  const enablePushNotifications = useCallback(
-    async (options?: { notify?: boolean; force?: boolean }) => {
-      if (pushBusyRef.current) return;
-      pushBusyRef.current = true;
-      setPushBusy(true);
-
-      try {
-        if (options?.force) {
-          window.localStorage.removeItem(ADMIN_PUSH_DISABLED_KEY);
-        }
-
-        if (!options?.force && window.localStorage.getItem(ADMIN_PUSH_DISABLED_KEY) === "1") {
-          setPushStatus("disabled");
-          return;
-        }
-
-        const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-        if (!publicKey) {
-          setPushStatus("unsupported");
-          if (options?.notify) flashToast("مفتاح الإشعارات غير موجود في البيئة");
-          return;
-        }
-
-        const registration = await getAdminPushRegistration();
-        if (!registration || !("Notification" in window)) {
-          setPushStatus("unsupported");
-          if (options?.notify) flashToast("هذا المتصفح لا يدعم إشعارات التطبيق");
-          return;
-        }
-
-        let permission = Notification.permission;
-        if (permission === "denied") {
-          setPushStatus("denied");
-          if (options?.notify) {
-            flashToast("الإشعارات مرفوضة من إعدادات الآيفون. فعّلها من الإعدادات > الإشعارات > جذرة المحادثات");
-          }
-          return;
-        }
-
-        if (permission === "default") {
-          setPushStatus("waiting");
-          permission = await Notification.requestPermission();
-        }
-
-        if (permission !== "granted") {
-          setPushStatus(permission === "denied" ? "denied" : "waiting");
-          if (options?.notify) flashToast("لم يتم السماح بالإشعارات بعد");
-          return;
-        }
-
-        let subscription = await registration.pushManager.getSubscription();
-        if (!subscription) {
-          subscription = await registration.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: base64UrlToUint8Array(publicKey),
-          });
-        }
-
-        const res = await fetch("/api/admin/push/subscribe", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(subscription.toJSON()),
-        });
-
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok || !data?.ok) {
-          throw new Error(data?.error || "تعذر حفظ اشتراك الإشعارات");
-        }
-
-        window.localStorage.removeItem(ADMIN_PUSH_DISABLED_KEY);
-        setPushStatus("granted");
-        if (options?.notify) flashToast("إشعارات المحادثات مفعلة ✅");
-      } catch (error) {
-        setPushStatus("error");
-        if (options?.notify) {
-          flashToast(error instanceof Error ? error.message : "تعذر تفعيل الإشعارات");
-        }
-      } finally {
-        pushBusyRef.current = false;
-        setPushBusy(false);
-      }
-    },
-    [flashToast],
-  );
-
-  const stopPushNotifications = useCallback(async () => {
-    if (pushBusyRef.current) return;
-    pushBusyRef.current = true;
-    setPushBusy(true);
-
-    try {
-      window.localStorage.setItem(ADMIN_PUSH_DISABLED_KEY, "1");
-
-      const registration = await getAdminPushRegistration();
-      const subscription = await registration?.pushManager.getSubscription();
-
-      if (subscription) {
-        await fetch("/api/admin/push/unsubscribe", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ endpoint: subscription.endpoint }),
-        }).catch(() => null);
-
-        await subscription.unsubscribe().catch(() => false);
-      }
-
-      setPushStatus("disabled");
-      flashToast("تم إيقاف إشعارات المحادثات 🔕");
-    } catch (error) {
-      flashToast(error instanceof Error ? error.message : "تعذر إيقاف الإشعارات");
-    } finally {
-      pushBusyRef.current = false;
-      setPushBusy(false);
-    }
-  }, [flashToast]);
-
-  const togglePushNotifications = useCallback(() => {
-    if (pushStatus === "granted") {
-      stopPushNotifications();
-      return;
-    }
-
-    enablePushNotifications({ notify: true, force: true });
-  }, [enablePushNotifications, pushStatus, stopPushNotifications]);
-
-  useEffect(() => {
-    if (pushInitAttemptedRef.current) return;
-    pushInitAttemptedRef.current = true;
-
-    if (typeof window === "undefined") return;
-
-    if (!("Notification" in window)) {
-      setPushStatus("unsupported");
-      return;
-    }
-
-    if (window.localStorage.getItem(ADMIN_PUSH_DISABLED_KEY) === "1") {
-      setPushStatus("disabled");
-    } else {
-      enablePushNotifications({ notify: false });
-    }
-
-    const retryOnFirstInteraction = () => {
-      if (window.localStorage.getItem(ADMIN_PUSH_DISABLED_KEY) === "1") return;
-      if (!("Notification" in window)) return;
-      if (Notification.permission === "denied") {
-        setPushStatus("denied");
-        return;
-      }
-      if (Notification.permission === "granted") {
-        enablePushNotifications({ notify: false });
-        return;
-      }
-      enablePushNotifications({ notify: false });
-    };
-
-    window.addEventListener("pointerdown", retryOnFirstInteraction, {
-      capture: true,
-      passive: true,
-    });
-    window.addEventListener("keydown", retryOnFirstInteraction, { capture: true });
-
-    return () => {
-      window.removeEventListener("pointerdown", retryOnFirstInteraction, {
-        capture: true,
-      } as any);
-      window.removeEventListener("keydown", retryOnFirstInteraction, {
-        capture: true,
-      } as any);
-    };
-  }, [enablePushNotifications]);
 
   const clearMobileSelection = useCallback(() => {
     selectedIdRef.current = null;
@@ -1229,14 +1011,6 @@ export default function AdminConversationsClient({ initialData }: Props) {
           >
             {soundEnabled ? "🔔 كتم الصوت" : "🔕 تشغيل الصوت"}
           </button>
-          <button
-            type="button"
-            className={pushStatus === "granted" ? "top-btn push-stop" : "top-btn push-start"}
-            onClick={togglePushNotifications}
-            disabled={pushBusy || pushStatus === "checking"}
-          >
-            {pushButtonLabel}
-          </button>
           <button type="button" className="top-btn" onClick={() => refresh()}>
             تحديث
           </button>
@@ -1247,17 +1021,7 @@ export default function AdminConversationsClient({ initialData }: Props) {
         <aside className="inbox-panel">
           <div className="panel-head">
             <strong>صندوق المحادثات</strong>
-            <div className="panel-actions">
-              {stats.waiting > 0 ? <em>{stats.waiting}</em> : null}
-              <button
-                type="button"
-                className={pushStatus === "granted" ? "mobile-push-toggle on" : "mobile-push-toggle"}
-                onClick={togglePushNotifications}
-                disabled={pushBusy || pushStatus === "checking"}
-              >
-                {pushButtonLabel}
-              </button>
-            </div>
+            {stats.waiting > 0 ? <em>{stats.waiting}</em> : null}
           </div>
 
           <label className="search-line">
@@ -1400,15 +1164,6 @@ export default function AdminConversationsClient({ initialData }: Props) {
                 </div>
 
                 <div className="chat-actions">
-                  <button
-                    type="button"
-                    className="ghost push-chat-toggle"
-                    onClick={togglePushNotifications}
-                    disabled={pushBusy || pushStatus === "checking"}
-                    title={pushButtonLabel}
-                  >
-                    {pushStatus === "granted" ? "إيقاف" : "تفعيل"}
-                  </button>
                   <button
                     type="button"
                     className="ghost"
@@ -2032,30 +1787,6 @@ const styles = `
     border-color: transparent;
     background: linear-gradient(135deg, var(--j-green), var(--j-green2));
   }
-  .top-btn.push-start {
-    color: #005f5d;
-    border-color: rgba(0,95,93,.18);
-    background: #eefbf8;
-  }
-  .top-btn.push-stop {
-    color: #7a2a2a;
-    border-color: rgba(148, 36, 36, .18);
-    background: #fff7f5;
-  }
-  .top-btn:disabled {
-    opacity: .58;
-    cursor: not-allowed;
-    transform: none !important;
-    box-shadow: none !important;
-  }
-  .panel-actions {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .mobile-push-toggle {
-    display: none;
-  }
 
   .desk-grid {
     min-height: 0;
@@ -2305,7 +2036,6 @@ const styles = `
   }
   .chat-actions button:hover { transform: translateY(-1px); box-shadow: 0 8px 18px rgba(15,36,48,.08); }
   .chat-actions .ghost { color: var(--j-ink); background: #fff; border: 1px solid var(--j-line); }
-  .chat-actions .push-chat-toggle { color: #005f5d; background: #eefbf8; border: 1px solid rgba(0,95,93,.18); }
   .chat-actions .finish { color: #fff; background: linear-gradient(135deg, var(--j-green), var(--j-green2)); }
   .chat-actions .danger { color: #fff; background: linear-gradient(135deg, #a51f27, #ef4444); }
   .chat-actions button:disabled { opacity: .45; cursor: not-allowed; transform: none; }
@@ -3054,40 +2784,6 @@ const styles = `
       box-shadow: none !important;
     }
 
-    .panel-actions {
-      display: flex !important;
-      align-items: center !important;
-      gap: 8px !important;
-    }
-
-    .mobile-push-toggle {
-      display: inline-flex !important;
-      align-items: center !important;
-      justify-content: center !important;
-      min-width: 72px !important;
-      height: 30px !important;
-      border: 1px solid rgba(255,255,255,.22) !important;
-      border-radius: 999px !important;
-      background: rgba(255,255,255,.16) !important;
-      color: #ffffff !important;
-      padding: 0 10px !important;
-      font: inherit !important;
-      font-size: 11px !important;
-      font-weight: 900 !important;
-      cursor: pointer !important;
-      white-space: nowrap !important;
-    }
-
-    .mobile-push-toggle.on {
-      background: rgba(255,255,255,.26) !important;
-      color: #ffffff !important;
-    }
-
-    .mobile-push-toggle:disabled {
-      opacity: .65 !important;
-      cursor: not-allowed !important;
-    }
-
     .search-line {
       height: 44px !important;
       margin: 7px 12px !important;
@@ -3365,12 +3061,6 @@ const styles = `
     .chat-actions .danger {
       background: rgba(255,255,255,.10) !important;
       color: #ffd8dc !important;
-    }
-
-    .chat-actions .push-chat-toggle {
-      background: rgba(255,255,255,.22) !important;
-      color: #ffffff !important;
-      border-color: rgba(255,255,255,.24) !important;
     }
 
     .messages-panel {
