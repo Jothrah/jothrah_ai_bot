@@ -756,7 +756,7 @@ export default function AdminConversationsClient({ initialData }: Props) {
 
   const pushButtonLabel =
     pushStatus === "granted"
-      ? "إيقاف الإشعارات"
+      ? "الإشعارات مفعلة"
       : pushStatus === "checking"
         ? "فحص الإشعارات…"
         : pushStatus === "waiting"
@@ -765,7 +765,7 @@ export default function AdminConversationsClient({ initialData }: Props) {
 
   const mobilePushButtonLabel =
     pushStatus === "granted"
-      ? "إيقاف"
+      ? "مفعلة"
       : pushStatus === "checking"
         ? "فحص…"
         : "تفعيل";
@@ -891,13 +891,11 @@ export default function AdminConversationsClient({ initialData }: Props) {
   }, [flashToast]);
 
   const togglePushNotifications = useCallback(() => {
-    if (pushStatus === "granted") {
-      stopPushNotifications();
-      return;
-    }
-
+    // حماية نهائية للجوال: لا يوجد زر إيقاف داخل الواجهة.
+    // أي ضغط في مساحة فارغة لن يستطيع إلغاء الاشتراك أو تغيير حالة الإشعارات.
+    if (pushStatus === "granted" || pushBusyRef.current) return;
     enablePushNotifications({ notify: true, force: true });
-  }, [enablePushNotifications, pushStatus, stopPushNotifications]);
+  }, [enablePushNotifications, pushStatus]);
 
   useEffect(() => {
     if (pushInitAttemptedRef.current) return;
@@ -912,34 +910,22 @@ export default function AdminConversationsClient({ initialData }: Props) {
 
     if (window.localStorage.getItem(ADMIN_PUSH_DISABLED_KEY) === "1") {
       setPushStatus("disabled");
-    } else {
-      enablePushNotifications({ notify: false });
+      return;
     }
 
-    const retryOnFirstInteraction = () => {
-      if (window.localStorage.getItem(ADMIN_PUSH_DISABLED_KEY) === "1") return;
-      if (!("Notification" in window)) return;
-      if (Notification.permission === "denied") {
-        setPushStatus("denied");
-        return;
-      }
+    // لا نربط أي مستمع عام على الصفحة مثل pointerdown/keydown.
+    // التفعيل يتم فقط من زر الإشعارات، حتى لا يشعر الجوال أن الضغط الفارغ ضغط على الزر.
+    if (Notification.permission === "granted") {
       enablePushNotifications({ notify: false });
-    };
+      return;
+    }
 
-    window.addEventListener("pointerdown", retryOnFirstInteraction, {
-      capture: true,
-      passive: true,
-    });
-    window.addEventListener("keydown", retryOnFirstInteraction, { capture: true });
+    if (Notification.permission === "denied") {
+      setPushStatus("denied");
+      return;
+    }
 
-    return () => {
-      window.removeEventListener("pointerdown", retryOnFirstInteraction, {
-        capture: true,
-      } as any);
-      window.removeEventListener("keydown", retryOnFirstInteraction, {
-        capture: true,
-      } as any);
-    };
+    setPushStatus("waiting");
   }, [enablePushNotifications]);
 
   const clearMobileSelection = useCallback(() => {
@@ -1358,7 +1344,7 @@ export default function AdminConversationsClient({ initialData }: Props) {
             type="button"
             className={pushStatus === "granted" ? "top-btn push-stop" : "top-btn push-start"}
             onClick={togglePushNotifications}
-            disabled={pushBusy || pushStatus === "checking"}
+            disabled={pushBusy || pushStatus === "checking" || pushStatus === "granted"}
           >
             {pushButtonLabel}
           </button>
@@ -1378,7 +1364,7 @@ export default function AdminConversationsClient({ initialData }: Props) {
                 type="button"
                 className={pushStatus === "granted" ? "mobile-push-toggle on" : "mobile-push-toggle"}
                 onClick={togglePushNotifications}
-                disabled={pushBusy || pushStatus === "checking"}
+                disabled={pushBusy || pushStatus === "checking" || pushStatus === "granted"}
               >
                 {mobilePushButtonLabel}
               </button>
@@ -2169,6 +2155,7 @@ const styles = `
   .top-btn:disabled {
     opacity: .58;
     cursor: not-allowed;
+    pointer-events: none;
     transform: none !important;
     box-shadow: none !important;
   }
@@ -3210,6 +3197,7 @@ const styles = `
     .mobile-push-toggle:disabled {
       opacity: .65 !important;
       cursor: not-allowed !important;
+      pointer-events: none !important;
     }
 
     /* إصلاح إجباري: زر الإشعارات لا يأخذ مساحة لمس خارج حجمه ولا يسبب تمدد عرضي */
