@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-// Jothrah Admin Conversations V120 - final hard lock chat + push toggle
+// Jothrah Admin Conversations V121 - stable mobile scroll + hard chat lock + push toggle
 
 type Conversation = Record<string, any>;
 type ChatMessage = Record<string, any>;
@@ -429,6 +429,8 @@ export default function AdminConversationsClient({ initialData }: Props) {
   );
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const messagesPanelRef = useRef<HTMLDivElement | null>(null);
+  const messagesRef = useRef<ChatMessage[]>(messages);
+  const lastUserScrollAtRef = useRef(0);
   const shouldStickToBottomRef = useRef(true);
   const lightboxDragRef = useRef<Record<string, any> | null>(null);
   const selectedIdRef = useRef<string | null>(selectedId);
@@ -443,6 +445,10 @@ export default function AdminConversationsClient({ initialData }: Props) {
   useEffect(() => {
     selectedConversationRef.current = selectedConversation;
   }, [selectedConversation]);
+
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
 
   useEffect(() => {
     function handleEscape(event: KeyboardEvent) {
@@ -677,6 +683,7 @@ export default function AdminConversationsClient({ initialData }: Props) {
   }, []);
 
   const updateScrollState = useCallback(() => {
+    lastUserScrollAtRef.current = Date.now();
     const nearBottom = isNearBottom();
     shouldStickToBottomRef.current = nearBottom;
     setShowJumpToBottom(!nearBottom);
@@ -908,6 +915,7 @@ export default function AdminConversationsClient({ initialData }: Props) {
     selectedIdRef.current = null;
     setSelectedId(null);
     setSelectedConversation(null);
+    messagesRef.current = [];
     setMessages([]);
     setDetailsOpen(false);
     shouldStickToBottomRef.current = true;
@@ -991,13 +999,20 @@ export default function AdminConversationsClient({ initialData }: Props) {
 
           setSelectedConversation(makeFallbackConversation(id, safeSelected));
 
-          // حتى لو رجع API رسائل فاضية، نحافظ على شاشة المحادثة مفتوحة.
-          if (Array.isArray(nextMessages)) {
+          // تثبيت الرسائل أثناء السكرول: لا نمسح الرسائل إذا رجع الـ API فاضي لحظة.
+          const isManualScrolling = Date.now() - lastUserScrollAtRef.current < 1200;
+          const currentMessages = messagesRef.current;
+          const hasIncomingMessages = Array.isArray(nextMessages) && nextMessages.length > 0;
+          const canAcceptEmptyMessages = Array.isArray(nextMessages) && currentMessages.length === 0;
+
+          if (!isManualScrolling && (hasIncomingMessages || canAcceptEmptyMessages)) {
+            messagesRef.current = nextMessages;
             setMessages(nextMessages);
             scrollToBottom();
           }
         } else {
           setSelectedConversation(null);
+          messagesRef.current = [];
           setMessages([]);
           setDetailsOpen(false);
           selectedIdRef.current = null;
@@ -1066,7 +1081,9 @@ export default function AdminConversationsClient({ initialData }: Props) {
       setSelectedConversation(
         makeFallbackConversation(id, apiSelected || apiFallback || cachedConversation),
       );
-      setMessages(Array.isArray(data.messages) ? data.messages : []);
+      const openedMessages = Array.isArray(data.messages) ? data.messages : [];
+      messagesRef.current = openedMessages;
+      setMessages(openedMessages);
       const newestCustomer = [...(data.messages || [])]
         .reverse()
         .find((msg: ChatMessage) => msg.sender_type === "customer");
@@ -1159,6 +1176,7 @@ export default function AdminConversationsClient({ initialData }: Props) {
       selectedIdRef.current = null;
       setSelectedId(null);
       setSelectedConversation(null);
+      messagesRef.current = [];
       setMessages([]);
       window.history.replaceState(null, "", "/admin/conversations");
       await refresh({ silent: true });
@@ -3320,7 +3338,8 @@ const styles = `
       box-shadow: none !important;
       background: #efe7dc !important;
       backdrop-filter: none !important;
-      grid-template-rows: auto minmax(0, 1fr) auto !important;
+      display: flex !important;
+      flex-direction: column !important;
       overflow: hidden !important;
     }
 
@@ -3338,6 +3357,7 @@ const styles = `
       align-items: center !important;
       gap: 6px !important;
       direction: rtl !important;
+      flex: 0 0 auto !important;
     }
 
     .mobile-back {
@@ -3435,32 +3455,36 @@ const styles = `
     }
 
     .messages-panel {
+      position: relative !important;
+      z-index: 1 !important;
+      flex: 1 1 auto !important;
+      height: auto !important;
       min-height: 0 !important;
       padding: 12px 10px 14px !important;
-      background:
-        radial-gradient(circle at 20% 10%, rgba(255,255,255,.22), transparent 28%),
-        linear-gradient(180deg, #efe7dc, #e8ddd1) !important;
+      background: linear-gradient(180deg, #efe7dc, #e8ddd1) !important;
       overflow-y: auto !important;
+      overflow-x: hidden !important;
+      -webkit-overflow-scrolling: touch !important;
+      overscroll-behavior: contain !important;
+      transform: translateZ(0) !important;
+      backface-visibility: hidden !important;
     }
 
     .messages-panel::before {
-      content: "" !important;
-      position: fixed !important;
-      inset: 62px 0 74px !important;
-      pointer-events: none !important;
-      opacity: .22 !important;
-      background-image:
-        radial-gradient(circle at 12px 12px, rgba(0,95,93,.08) 1px, transparent 1.6px),
-        radial-gradient(circle at 34px 36px, rgba(0,0,0,.045) 1px, transparent 1.6px) !important;
-      background-size: 48px 48px !important;
-      z-index: 0 !important;
-      transform: none !important;
-      font-size: 0 !important;
+      content: none !important;
+      display: none !important;
     }
 
     .messages-panel > * {
       position: relative !important;
       z-index: 1 !important;
+    }
+
+
+    .composer {
+      flex: 0 0 auto !important;
+      position: relative !important;
+      z-index: 3 !important;
     }
 
     .day-separator {
