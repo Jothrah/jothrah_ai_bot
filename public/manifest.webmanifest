@@ -1,6 +1,6 @@
 {
   "name": "جذرة المحادثات",
-  "short_name": "محادثات جذرة",
+  "short_name": "جذرة",
   "description": "لوحة إدارة محادثات عملاء جذرة",
   "start_url": "/admin/conversations",
   "scope": "/",
