@@ -1,0 +1,168 @@
+{
+  "version": "2026-06-16-v2-generalized",
+  "title_ar": "محرك معرفة الأسمدة ومحسنات التربة — جذرة",
+  "source_note_ar": "مبني على ملف شروط ومتطلبات تسجيل الأسمدة ومحسنات التربة والدليل الإرشادي للملصق المرفق. الأرقام استرشادية ولا تغني عن ملصق المنتج أو تحليل التربة والمياه.",
+  "recommended_categories": [
+    { "title": "الأسمدة والتربة", "url": "https://jothrah.com/" },
+    { "title": "محسنات التربة", "url": "https://jothrah.com/" }
+  ],
+  "global_rules_ar": [
+    "لا تعطِ معدل استخدام نهائي إذا لم يذكر العميل نوع السماد: ذواب، سائل، محبب، معلق، معجون.",
+    "لا تعطِ معدل استخدام نهائي إذا لم يذكر العميل طريقة الإضافة: مع ماء الري، رش ورقي، نثر للتربة، حول الشجرة، أو داخل بيت محمي.",
+    "لا تعطِ حساب كمية إذا لم يذكر العميل المساحة أو عدد الأشجار أو حجم خزان الرش/الري عند الحاجة.",
+    "أي معدل استخدام يجب وصفه بأنه استرشادي ويختلف حسب تحليل التربة والمياه ونوع المحصول والصنف ومرحلة النمو.",
+    "في أسئلة الخلط: لا تجزم بالسماح إلا إذا كان ملصق المنتج يسمح صراحة، واطلب صورة الملصق أو اسم المنتج وصيغته ومصدر العنصر.",
+    "في حال وجود أطفال أو حيوانات أو استخدام داخل المنزل أو قرب الطعام: حوّل إلى مختص/واتساب قبل أي استخدام لمبيد، أما الأسمدة فاطلب ملصق المنتج ومكان الاستخدام."
+  ],
+  "term_corrections_ar": [
+    { "wrong": "نترت كلسيوم", "right": "نترات كالسيوم" },
+    { "wrong": "نترت كالسيوم", "right": "نترات كالسيوم" },
+    { "wrong": "نترات كلسيوم", "right": "نترات كالسيوم" },
+    { "wrong": "سماد كلسيوم", "right": "سماد كالسيوم" },
+    { "wrong": "كالسيم", "right": "كالسيوم" },
+    { "wrong": "بي اتش", "right": "pH" },
+    { "wrong": "البي اتش", "right": "pH" },
+    { "wrong": "هيومك", "right": "هيوميك" },
+    { "wrong": "هيوماك", "right": "هيوميك" },
+    { "wrong": "فلفيك", "right": "فولفيك" },
+    { "wrong": "فلفك", "right": "فولفيك" },
+    { "wrong": "بورين", "right": "بورون" },
+    { "wrong": "برون", "right": "بورون" }
+  ],
+  "intent_keywords_ar": {
+    "mixing": ["اخلط", "خلط", "ينخلط", "اخلطها", "اخلطهم", "قابلية الخلط", "التوافق", "ينفع مع", "مع بعض"],
+    "usage_rate": ["طريقة الاستخدام", "طريقة استعمال", "استخدم", "استعمال", "جرعة", "جرعه", "معدل", "كم احط", "كم أضع", "الكمية", "مساحة", "متر", "هكتار", "خزان", "رش", "ري"],
+    "ph_limit": ["pH", "ph", "الرقم الهيدروجيني", "بي اتش", "حموضة", "قلوية"],
+    "label_or_registration": ["تسجيل", "ملصق", "رقم التسجيل", "بيانات الملصق", "تحليل", "شهادة", "وزارة", "نما"],
+    "safety_storage": ["تخزين", "يحفظ", "سلامة", "اطفال", "أطفال", "حيوانات", "كمامة", "قفازات"],
+    "composition": ["تركيبة", "تركيز", "نسبة", "مصدر", "مخلب", "EDTA", "EDDHA", "عنصر", "عناصر"]
+  },
+  "forms_ar": [
+    { "key": "water_soluble", "title": "ذواب", "aliases": ["ذواب", "ذوّاب", "يذوب", "قابل للذوبان", "بودر ذواب", "مسحوق ذواب", "soluble"] },
+    { "key": "liquid", "title": "سائل", "aliases": ["سائل", "لتر", "liquid"] },
+    { "key": "granular", "title": "محبب", "aliases": ["محبب", "حبيبات", "نثر", "للتربة", "granular", "حبوب"] },
+    { "key": "suspension", "title": "معلق", "aliases": ["معلق", "سسبنشن", "suspension"] },
+    { "key": "paste", "title": "معجون", "aliases": ["معجون", "paste"] }
+  ],
+  "applications_ar": [
+    { "key": "irrigation", "title": "مع ماء الري", "aliases": ["ماء الري", "مع الري", "تنقيط", "شبكة الري", "ري", "drip", "irrigation"] },
+    { "key": "foliar", "title": "رش ورقي", "aliases": ["رش ورقي", "رش على الورق", "على الاوراق", "على الأوراق", "رش", "foliar"] },
+    { "key": "broadcast", "title": "نثر للتربة", "aliases": ["نثر", "ينثر", "نثرا", "على التربة", "للتربة", "broadcast"] },
+    { "key": "tree", "title": "حول الشجرة", "aliases": ["شجرة", "اشجار", "أشجار", "نخلة", "نخيل"] },
+    { "key": "greenhouse", "title": "بيت محمي", "aliases": ["بيت محمي", "بيوت محمية", "محمي", "greenhouse"] }
+  ],
+  "crops_ar": [
+    { "key": "greenhouse", "title": "بيوت محمية", "aliases": ["بيت محمي", "بيوت محمية", "محمي"] },
+    { "key": "vegetables", "title": "محاصيل خضار", "aliases": ["خضار", "طماطم", "خيار", "فلفل", "باذنجان", "كوسا"] },
+    { "key": "field_crops", "title": "محاصيل حقلية", "aliases": ["حقل", "حقلية", "قمح", "شعير", "برسيم"] },
+    { "key": "fruit", "title": "محاصيل فاكهة", "aliases": ["فاكهة", "حمضيات", "ليمون", "برتقال", "عنب", "رمان"] },
+    { "key": "palms", "title": "النخيل", "aliases": ["نخيل", "نخلة", "تمر"] },
+    { "key": "ornamentals", "title": "نباتات زينة", "aliases": ["زينة", "نبات زينة", "ورد", "زهور"] }
+  ],
+  "materials_ar": [
+    { "key": "calcium_nitrate", "title": "نترات الكالسيوم", "topics": ["calcium_nitrate", "calcium", "nitrate"], "aliases": ["نترات الكالسيوم", "نترات كالسيوم", "كالسيوم نترات", "calcium nitrate"] },
+    { "key": "calcium", "title": "كالسيوم", "topics": ["calcium"], "aliases": ["كالسيوم", "ca", "كالسيوم مخلب", "سماد كالسيوم"] },
+    { "key": "zinc", "title": "زنك", "topics": ["zinc", "micronutrients"], "aliases": ["زنك", "zn", "زنك مخلب", "زنك EDTA", "زنك ايديتا", "كبريتات زنك"] },
+    { "key": "boron", "title": "بورون", "topics": ["boron", "micronutrients", "strict_micronutrient"], "aliases": ["بورون", "بورن", "b", "boron"] },
+    { "key": "molybdenum", "title": "موليبدنم", "topics": ["molybdenum", "micronutrients", "strict_micronutrient"], "aliases": ["موليبدنم", "موليبدينم", "mo", "molybdenum"] },
+    { "key": "copper", "title": "نحاس", "topics": ["copper", "micronutrients"], "aliases": ["نحاس", "cu", "copper"] },
+    { "key": "iron", "title": "حديد", "topics": ["iron", "micronutrients"], "aliases": ["حديد", "fe", "iron", "EDDHA", "EDTA"] },
+    { "key": "manganese", "title": "منجنيز", "topics": ["manganese", "micronutrients"], "aliases": ["منجنيز", "منغنيز", "mn", "manganese"] },
+    { "key": "phosphorus", "title": "فوسفور", "topics": ["phosphorus"], "aliases": ["فوسفور", "فوسفات", "فسفور", "p", "MAP", "MKP", "حمض الفوسفوريك"] },
+    { "key": "sulfur", "title": "كبريت", "topics": ["sulfur"], "aliases": ["كبريت", "سلفات", "كبريتات", "s", "sulfur", "sulphur"] },
+    { "key": "magnesium", "title": "مغنيسيوم", "topics": ["magnesium"], "aliases": ["مغنيسيوم", "ماغنيسيوم", "mg", "magnesium"] },
+    { "key": "urea", "title": "يوريا", "topics": ["urea", "nitrogen"], "aliases": ["يوريا", "urea", "46"] },
+    { "key": "humic", "title": "هيوميك", "topics": ["humic", "organic_acids"], "aliases": ["هيوميك", "هيوميك أسيد", "هيومات", "humic"] },
+    { "key": "fulvic", "title": "فولفيك", "topics": ["fulvic", "organic_acids"], "aliases": ["فولفيك", "فولفيك أسيد", "fulvic"] },
+    { "key": "amino_acids", "title": "أحماض أمينية", "topics": ["amino_acids", "organic"], "aliases": ["أحماض أمينية", "احماض امينية", "امينو", "amino"] },
+    { "key": "seaweed", "title": "طحالب بحرية", "topics": ["seaweed", "organic"], "aliases": ["طحالب", "طحالب بحرية", "seaweed", "algae"] },
+    { "key": "npk", "title": "NPK", "topics": ["npk", "macro_elements"], "aliases": ["npk", "NPK", "15-15-15", "20-20-20", "10-10-10", "عناصر كبرى", "سماد مركب"] }
+  ],
+  "compatibility_rules_ar": [
+    { "id": "phosphorus_calcium", "required_topics": ["phosphorus", "calcium"], "severity": "avoid", "rule": "الفوسفور لا يقبل الخلط مع الكالسيوم." },
+    { "id": "phosphorus_magnesium", "required_topics": ["phosphorus", "magnesium"], "severity": "avoid", "rule": "الفوسفور لا يقبل الخلط مع المغنيسيوم." },
+    { "id": "phosphorus_copper", "required_topics": ["phosphorus", "copper"], "severity": "avoid", "rule": "الفوسفور لا يقبل الخلط مع النحاس." },
+    { "id": "phosphorus_sulfur", "required_topics": ["phosphorus", "sulfur"], "severity": "avoid", "rule": "الفوسفور لا يقبل الخلط مع الكبريت." },
+    { "id": "calcium_sulfur", "required_topics": ["calcium", "sulfur"], "severity": "avoid", "rule": "الكالسيوم لا يقبل الخلط مع الكبريت." },
+    { "id": "humic_acids_or_high_calcium", "required_topics": ["humic", "calcium"], "severity": "avoid_or_separate", "rule": "الهيوميك لا يقبل الخلط مع الأحماض أو التركيز العالي من الكالسيوم؛ الفصل غالبًا أكثر أمانًا إذا لم يسمح الملصق." },
+    { "id": "fulvic_high_ph", "required_topics": ["fulvic"], "severity": "caution", "rule": "الفولفيك لا يقبل الخلط مع المركبات ذات الرقم الهيدروجيني العالي." },
+    { "id": "micronutrients_calcium", "required_topics": ["micronutrients", "calcium"], "severity": "avoid_or_separate", "rule": "العناصر الصغرى لا تقبل الخلط عادةً مع الكالسيوم، ويجب الرجوع لملصق المنتج أو فصل الإضافة." },
+    { "id": "copper_calcium_phosphorus", "required_topics": ["copper", "calcium"], "severity": "avoid", "rule": "إذا كان ضمن العناصر الصغرى نحاس فلا يخلط مع الكالسيوم، وكذلك لا يخلط مع الفوسفور." },
+    { "id": "strict_micronutrients", "required_topics": ["strict_micronutrient"], "severity": "avoid_general_mixing", "rule": "البورون والموليبدنم من العناصر التي لا تقبل الخلط مع جميع الأسمدة؛ يلزم الفصل أو الرجوع لملصق المنتج." },
+    { "id": "calcium_nitrate_phosphorus_sulfur_urea", "required_topics": ["calcium_nitrate"], "severity": "caution", "rule": "نترات الكالسيوم لا تقبل الخلط مع الفوسفور والكبريت واليوريا." }
+  ],
+  "usage_rates_ar": [
+    {
+      "id": "npk_soluble_irrigation_greenhouse",
+      "family_topic": "npk",
+      "form": "water_soluble",
+      "application": "irrigation",
+      "crop": "greenhouse",
+      "rate": { "min": 1, "max": 2, "unit": "كجم", "per_area_m2": 1000 },
+      "label_ar": "العناصر الكبرى المركبة الذوابة NPK مع ماء الري للبيوت المحمية"
+    },
+    {
+      "id": "npk_granular_greenhouse",
+      "family_topic": "npk",
+      "form": "granular",
+      "application": "broadcast",
+      "crop": "greenhouse",
+      "rate": { "min": 15, "max": 30, "unit": "كجم", "per_area_m2": 1000 },
+      "label_ar": "الأسمدة المحببة الصلبة للتربة في البيوت المحمية"
+    },
+    {
+      "id": "npk_soluble_foliar_general",
+      "family_topic": "npk",
+      "form": "water_soluble",
+      "application": "foliar",
+      "rate": { "min": 2, "max": 3, "unit": "كجم", "per_water_liter": 1000, "per_area_ha": 1 },
+      "label_ar": "العناصر الكبرى المركبة الذوابة NPK للرش الورقي"
+    },
+    {
+      "id": "calcium_nitrate_irrigation_general",
+      "family_topic": "calcium_nitrate",
+      "application": "irrigation",
+      "rate": { "min": 3, "max": 5, "unit": "كجم", "per_area_ha": 1 },
+      "label_ar": "نترات الكالسيوم مع ماء الري"
+    },
+    {
+      "id": "humic_granular_greenhouse",
+      "family_topic": "humic",
+      "form": "granular",
+      "application": "broadcast",
+      "crop": "greenhouse",
+      "rate": { "min": 5, "max": 5, "unit": "كجم", "per_area_m2": 1000 },
+      "label_ar": "الهيوميك المحبب غير الذواب للبيوت المحمية"
+    }
+  ],
+  "ph_limits_ar": [
+    { "topic": "seaweed", "title": "طحالب بحرية", "solid": 8, "liquid": 7 },
+    { "topic": "amino_acids", "title": "أحماض أمينية", "solid": 7, "liquid": 7 },
+    { "topic": "humic", "title": "هيوميك/فولفيك", "solid": 11, "liquid": 8.5 },
+    { "topic": "fulvic", "title": "هيوميك/فولفيك", "solid": 11, "liquid": 8.5 },
+    { "topic": "npk", "title": "أسمدة العناصر الكبرى", "solid": 7, "liquid": 7 }
+  ],
+  "label_requirements_ar": [
+    "اسم المنتج التجاري باللغة العربية كحد أدنى",
+    "تركيز العناصر السمادية بالسماد",
+    "وحدة القياس وزن/حجم أو وزن/وزن",
+    "مصدر كل عنصر من العناصر المعلنة باللغة العربية في الملصق العربي",
+    "الرقم الهيدروجيني pH",
+    "الكثافة للأسمدة السائلة والمعلقة والمعجون",
+    "طريقة ومعدل الإضافة حسب نوع المحصول مع الجملة الاسترشادية",
+    "القابلية للخلط مع الأسمدة الأخرى والمبيدات",
+    "طريقة التخزين",
+    "وزن أو حجم العبوة",
+    "الشركة المنتجة وبلد الإنتاج وبيانات التواصل",
+    "الشركة المستوردة أو الوكيل المحلي وبيانات التواصل",
+    "تاريخ الإنتاج والانتهاء ورقم الدفعة",
+    "بلد المنشأ",
+    "العلامات الدولية للأمن والسلامة",
+    "رقم التسجيل"
+  ],
+  "storage_ar": [
+    "يحفظ في عبوته الأصلية محكمة الإغلاق.",
+    "يحفظ بعيدًا عن متناول الأطفال وعن الطعام والشراب.",
+    "يخزن في مكان جاف جيد التهوية وبعيدًا عن أشعة الشمس المباشرة."
+  ]
+}
