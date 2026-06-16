@@ -8,6 +8,7 @@ import { buildWhatsappUrl } from "@/lib/whatsapp";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { detectLanguage, matchCategories } from "@/lib/matcher";
 import { needsWhatsapp } from "@/lib/safety";
+import { buildDeterministicFertilizerResponse } from "@/lib/fertilizer-calculator";
 import {
   saveChatAttachment,
   saveChatEvent,
@@ -585,6 +586,45 @@ async function buildKnowledgeContext(hits: KnowledgeHit[], language: Language) {
   return context;
 }
 
+async function loadRecentConversationContext(
+  conversationId: string,
+  language: Language,
+) {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("chat_messages")
+      .select("sender_type,message,created_at")
+      .eq("conversation_id", conversationId)
+      .order("created_at", { ascending: false })
+      .limit(8);
+
+    if (error || !data?.length) return "";
+
+    return data
+      .slice()
+      .reverse()
+      .map((item: any) => {
+        const sender = String(item.sender_type || "");
+        const label =
+          sender === "customer"
+            ? language === "ar"
+              ? "العميل"
+              : "Customer"
+            : language === "ar"
+              ? "المساعد"
+              : "Assistant";
+        const body = String(item.message || "").replace(/\s+/g, " ").trim();
+        return body ? `${label}: ${body}` : "";
+      })
+      .filter(Boolean)
+      .join("\n")
+      .slice(-3000);
+  } catch (error) {
+    console.warn("Recent chat context not loaded:", error);
+    return "";
+  }
+}
+
 async function imageFileToDataUrl(file: File) {
   const arrayBuffer = await file.arrayBuffer();
   const base64 = Buffer.from(arrayBuffer).toString("base64");
@@ -835,6 +875,52 @@ function shouldForceWhatsappFromVision(visionAnalysis: VisionAnalysis | null) {
   ];
 
   return sensitiveTerms.some((term) => sensitive.includes(normalizeText(term)));
+}
+
+
+function buildStoredAiMessage(data: any, language: Language) {
+  const parts: string[] = [];
+  const summary = String(data?.summary || "").trim();
+
+  if (summary) parts.push(summary);
+
+  if (Array.isArray(data?.advice) && data.advice.length) {
+    const advice = data.advice
+      .map((item: unknown) => String(item || "").trim())
+      .filter(Boolean);
+
+    if (advice.length) {
+      parts.push(
+        `${language === "ar" ? "نصائح مباشرة" : "Direct advice"}:\n${advice.join("\n")}`,
+      );
+    }
+  }
+
+  if (Array.isArray(data?.questions) && data.questions.length) {
+    const questions = data.questions
+      .map((item: unknown) => String(item || "").trim())
+      .filter(Boolean);
+
+    if (questions.length) {
+      parts.push(
+        `${language === "ar" ? "أسئلة متابعة" : "Follow-up questions"}:\n${questions.join("\n")}`,
+      );
+    }
+  }
+
+  if (Array.isArray(data?.categories) && data.categories.length) {
+    const categories = data.categories
+      .map((item: any) => String(item?.title || "").trim())
+      .filter(Boolean);
+
+    if (categories.length) {
+      parts.push(
+        `${language === "ar" ? "تصنيفات مناسبة" : "Suitable categories"}:\n${categories.join("\n")}`,
+      );
+    }
+  }
+
+  return parts.join("\n\n").slice(0, 3500) || summary;
 }
 
 const responseSchema = {
@@ -1205,7 +1291,13 @@ export async function POST(req: NextRequest) {
         })
       : null;
 
+    const recentChatContext = await loadRecentConversationContext(
+      conversation.id,
+      language,
+    );
+
     const matchingText = [
+      recentChatContext,
       message,
       visionAnalysis?.detected_problem || "",
       visionAnalysis?.visual_notes || "",
@@ -1258,6 +1350,9 @@ export async function POST(req: NextRequest) {
 رسالة العميل:
 ${message || "لم يكتب العميل رسالة، أرسل صورة فقط."}
 
+آخر سياق من نفس المحادثة:
+${recentChatContext || "لا يوجد سياق سابق."}
+
 مصدر التحليل:
 ${analysisSource}
 
@@ -1293,6 +1388,9 @@ ${fertilizerMode}
 Customer message:
 ${message || "The customer did not write a message and only sent an image."}
 
+Recent context from the same chat:
+${recentChatContext || "No previous context."}
+
 Analysis source:
 ${analysisSource}
 
@@ -1325,19 +1423,30 @@ ${fertilizerMode}
 Reply in a short, useful ecommerce chat style.
 `;
 
-    const completion = await client.chat.completions.create({
-      model: getModel(),
-      messages: [
-        {
-          role: "system",
-          content: jothrahSystemPrompt,
-        },
-        {
-          role: "system",
-          content: `
+    const deterministicFertilizerResponse = buildDeterministicFertilizerResponse({
+      message,
+      recentContext: recentChatContext,
+      language,
+      analysisSource,
+      forceWhatsapp: forceWhatsappByFertilizerSelection,
+    });
+
+    let data: any = deterministicFertilizerResponse;
+
+    if (!data) {
+      const completion = await client.chat.completions.create({
+        model: getModel(),
+        messages: [
+          {
+            role: "system",
+            content: jothrahSystemPrompt,
+          },
+          {
+            role: "system",
+            content: `
 Important Jothrah response rules:
 - The image analysis, if available, was performed first.
-- Use the image analysis result, the customer text, matched categories, and knowledge context.
+- Use the image analysis result, the customer text, recent chat context, matched categories, and knowledge context.
 - Do not claim certainty from an unclear image.
 - If confidence is low, image is unclear, or the case needs direct diagnosis, set whatsapp_needed to true.
 - Do not invent pesticide dosage, dilution, mixing ratios, or safety claims.
@@ -1345,26 +1454,28 @@ Important Jothrah response rules:
 - If fertilizerMode is true or matched knowledge files are under data/knowledge/fertilizers, do not recommend product names, do not add product links, and keep product_suggestions empty.
 - In fertilizer mode, calculate fertilizer rates only when the unit and application method are clear; otherwise ask one focused follow-up question.
 - In fertilizer mode, if the customer asks what product to buy, set whatsapp_needed to true and invite them to contact a Jothrah specialist.
+- In fertilizer follow-up messages, use the recent chat context. Example: if the customer first asks about NPK dose and then replies "خيار", treat it as the crop type and complete the calculation.
 - product_suggestions may be an empty array.
 - Keep advice to maximum 3 items.
 - Keep questions to maximum 2 items.
 - Return only valid JSON matching the schema.
 `,
+          },
+          {
+            role: "user",
+            content: userPrompt,
+          },
+        ],
+        response_format: {
+          type: "json_schema",
+          json_schema: responseSchema,
         },
-        {
-          role: "user",
-          content: userPrompt,
-        },
-      ],
-      response_format: {
-        type: "json_schema",
-        json_schema: responseSchema,
-      },
-      max_completion_tokens: 1000,
-    });
+        max_completion_tokens: 1000,
+      });
 
-    const raw = completion.choices[0]?.message?.content || "{}";
-    const data = JSON.parse(raw);
+      const raw = completion.choices[0]?.message?.content || "{}";
+      data = JSON.parse(raw);
+    }
 
     if (fertilizerMode) {
       data.product_suggestions = [];
@@ -1377,7 +1488,7 @@ Important Jothrah response rules:
     await saveChatMessage({
       conversationId: conversation.id,
       senderType: "ai",
-      message: data.summary || "",
+      message: buildStoredAiMessage(data, language),
       aiDetectedProblem: data.detected_problem || null,
       aiConfidence: data.confidence || null,
       aiWhatsappNeeded: Boolean(data.whatsapp_needed || forceWhatsapp),
