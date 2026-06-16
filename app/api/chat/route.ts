@@ -8,6 +8,7 @@ import { buildWhatsappUrl } from "@/lib/whatsapp";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { detectLanguage, matchCategories } from "@/lib/matcher";
 import { needsWhatsapp } from "@/lib/safety";
+import { sendAdminPushNotification } from "@/lib/admin-push";
 import {
   saveChatAttachment,
   saveChatEvent,
@@ -45,6 +46,62 @@ type VisionAnalysis = {
   whatsapp_needed: boolean;
   whatsapp_reason: string;
 };
+
+
+function trimPushText(value: unknown, max = 120) {
+  const text = String(value || "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!text) return "";
+  return text.length > max ? `${text.slice(0, max - 1)}…` : text;
+}
+
+function getPushCustomerLabel(...values: unknown[]) {
+  for (const value of values) {
+    const text = trimPushText(value, 60);
+    if (text) return text;
+  }
+
+  return "زائر بدون اسم";
+}
+
+async function notifyAdminNewCustomerMessage(params: {
+  conversationId: string;
+  message?: string;
+  hasImage?: boolean;
+  customerName?: string;
+  customerPhone?: string;
+  customerEmail?: string;
+  isHumanRequest?: boolean;
+  currentStatus?: string;
+}) {
+  try {
+    const customerLabel = getPushCustomerLabel(
+      params.customerName,
+      params.customerPhone,
+      params.customerEmail,
+    );
+
+    const preview =
+      trimPushText(params.message, 110) ||
+      (params.hasImage ? "أرسل العميل صورة مرفقة." : "وصلت رسالة جديدة.");
+
+    const title = params.isHumanRequest
+      ? "طلب مختص جديد في جذرة"
+      : params.currentStatus === "needs_human" || params.currentStatus === "human_replied"
+        ? "رسالة جديدة داخل محادثة مختص"
+        : "رسالة جديدة من عميل جذرة";
+
+    await sendAdminPushNotification({
+      title,
+      body: `${customerLabel}: ${preview}`,
+      url: `/admin/conversations?id=${encodeURIComponent(params.conversationId)}`,
+    });
+  } catch (error) {
+    console.error("Admin push notification failed:", error);
+  }
+}
 
 const MAX_IMAGE_SIZE = 4 * 1024 * 1024;
 
@@ -1019,6 +1076,17 @@ export async function POST(req: NextRequest) {
     }
 
     const currentStatus = String(conversation.status || "ai");
+
+    await notifyAdminNewCustomerMessage({
+      conversationId: conversation.id,
+      message,
+      hasImage: Boolean(imageDataUrl),
+      customerName: customerName || conversation.customer_name || "",
+      customerPhone: customerPhone || conversation.customer_phone || "",
+      customerEmail: customerEmail || conversation.customer_email || "",
+      isHumanRequest: shouldRequestHuman,
+      currentStatus,
+    });
 
     if (shouldRequestHuman || isHumanHandoffStatus(currentStatus)) {
       if (shouldRequestHuman && currentStatus !== "needs_human") {

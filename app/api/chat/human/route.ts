@@ -1,11 +1,55 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { saveChatEvent, saveChatMessage, upsertConversation } from "@/lib/chat-store";
+import { sendAdminPushNotification } from "@/lib/admin-push";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 type Language = "ar" | "en";
+
+
+function trimPushText(value: unknown, max = 120) {
+  const text = String(value || "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!text) return "";
+  return text.length > max ? `${text.slice(0, max - 1)}…` : text;
+}
+
+function getPushCustomerLabel(...values: unknown[]) {
+  for (const value of values) {
+    const text = trimPushText(value, 60);
+    if (text) return text;
+  }
+
+  return "زائر بدون اسم";
+}
+
+async function notifyAdminHumanRequest(params: {
+  conversationId: string;
+  message: string;
+  customerName?: string;
+  customerPhone?: string;
+  customerEmail?: string;
+}) {
+  try {
+    const customerLabel = getPushCustomerLabel(
+      params.customerName,
+      params.customerPhone,
+      params.customerEmail,
+    );
+
+    await sendAdminPushNotification({
+      title: "طلب مختص جديد في جذرة",
+      body: `${customerLabel}: ${trimPushText(params.message, 110) || "العميل طلب مختص داخل الدردشة."}`,
+      url: `/admin/conversations?id=${encodeURIComponent(params.conversationId)}`,
+    });
+  } catch (error) {
+    console.error("Admin human push notification failed:", error);
+  }
+}
 
 function corsHeaders(origin?: string | null) {
   const rawAllowedOrigins = process.env.ALLOWED_ORIGIN || "https://jothrah.com";
@@ -84,6 +128,14 @@ export async function POST(req: NextRequest) {
         human_requested_at: new Date().toISOString()
       })
       .eq("id", conversation.id);
+
+    await notifyAdminHumanRequest({
+      conversationId: conversation.id,
+      message,
+      customerName,
+      customerPhone,
+      customerEmail,
+    });
 
     return NextResponse.json(
       {
