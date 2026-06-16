@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // V123: قفل ذري. حتى لو ضغط العميل مرتين بسرعة، أول تحديث فقط ينجح.
+    // V123.1: قفل ذري. حتى لو ضغط العميل مرتين بسرعة، أول تحديث فقط ينجح.
     if (existing.data.rating || existing.data.rated_at) {
       return NextResponse.json(
         { ok: true, alreadyRated: true },
