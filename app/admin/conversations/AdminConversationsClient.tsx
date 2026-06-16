@@ -410,6 +410,7 @@ export default function AdminConversationsClient({ initialData }: Props) {
   );
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const messagesPanelRef = useRef<HTMLDivElement | null>(null);
+  const replyTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const shouldStickToBottomRef = useRef(true);
   const lightboxDragRef = useRef<Record<string, any> | null>(null);
   const selectedIdRef = useRef<string | null>(selectedId);
@@ -421,6 +422,61 @@ export default function AdminConversationsClient({ initialData }: Props) {
   useEffect(() => {
     selectedIdRef.current = selectedId;
   }, [selectedId]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const root = document.documentElement;
+
+    const updateMobileViewport = () => {
+      const viewport = window.visualViewport;
+      const height = Math.max(320, Math.floor(viewport?.height || window.innerHeight || 0));
+      root.style.setProperty("--jth-admin-vvh", `${height}px`);
+    };
+
+    updateMobileViewport();
+
+    window.addEventListener("resize", updateMobileViewport);
+    window.addEventListener("orientationchange", updateMobileViewport);
+    window.visualViewport?.addEventListener("resize", updateMobileViewport);
+    window.visualViewport?.addEventListener("scroll", updateMobileViewport);
+
+    return () => {
+      window.removeEventListener("resize", updateMobileViewport);
+      window.removeEventListener("orientationchange", updateMobileViewport);
+      window.visualViewport?.removeEventListener("resize", updateMobileViewport);
+      window.visualViewport?.removeEventListener("scroll", updateMobileViewport);
+    };
+  }, []);
+
+  const resizeReplyTextarea = useCallback(() => {
+    const textarea = replyTextareaRef.current;
+    if (!textarea) return;
+
+    textarea.style.height = "auto";
+    const nextHeight = Math.min(Math.max(textarea.scrollHeight, 44), 116);
+    textarea.style.height = `${nextHeight}px`;
+  }, []);
+
+  const keepComposerVisible = useCallback(() => {
+    resizeReplyTextarea();
+    shouldStickToBottomRef.current = true;
+
+    setTimeout(() => {
+      resizeReplyTextarea();
+      messagesEndRef.current?.scrollIntoView({ block: "end" });
+      replyTextareaRef.current?.scrollIntoView({ block: "nearest" });
+    }, 80);
+
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ block: "end" });
+      replyTextareaRef.current?.scrollIntoView({ block: "nearest" });
+    }, 330);
+  }, [resizeReplyTextarea]);
+
+  useEffect(() => {
+    resizeReplyTextarea();
+  }, [reply, resizeReplyTextarea]);
 
   useEffect(() => {
     function handleEscape(event: KeyboardEvent) {
@@ -1634,8 +1690,15 @@ export default function AdminConversationsClient({ initialData }: Props) {
                     🙂
                   </button>
                   <textarea
+                    ref={replyTextareaRef}
+                    rows={1}
                     value={reply}
-                    onChange={(event) => setReply(event.target.value)}
+                    onFocus={keepComposerVisible}
+                    onInput={resizeReplyTextarea}
+                    onChange={(event) => {
+                      setReply(event.target.value);
+                      requestAnimationFrame(resizeReplyTextarea);
+                    }}
                     onKeyDown={(event) => {
                       if (event.key === "Enter" && !event.shiftKey) {
                         event.preventDefault();
@@ -1929,6 +1992,7 @@ const styles = `
     --j-blue: #2676a8;
     --j-shadow: 0 18px 52px rgba(15, 36, 48, .11);
     --j-shadow-soft: 0 8px 24px rgba(15, 36, 48, .075);
+    --jth-admin-vvh: 100dvh;
   }
 
   html, body {
@@ -3720,6 +3784,111 @@ const styles = `
       text-align: center !important;
       background: #005f5d !important;
       border-radius: 16px !important;
+    }
+  }
+
+
+  /* =========================================================
+     iPhone keyboard / WhatsApp composer fix
+     يعتمد على visualViewport لمنع اختفاء مستطيل الكتابة مع لوحة المفاتيح.
+  ========================================================= */
+  @media (max-width: 760px) {
+    html,
+    body {
+      height: var(--jth-admin-vvh, 100dvh) !important;
+      min-height: var(--jth-admin-vvh, 100dvh) !important;
+      max-height: var(--jth-admin-vvh, 100dvh) !important;
+      overflow: hidden !important;
+      overscroll-behavior: none !important;
+      -webkit-text-size-adjust: 100% !important;
+    }
+
+    .jth-desk,
+    .desk-grid,
+    .desk-grid.show-details,
+    .inbox-panel,
+    .chat-panel {
+      width: 100vw !important;
+      max-width: 100vw !important;
+      height: var(--jth-admin-vvh, 100dvh) !important;
+      min-height: var(--jth-admin-vvh, 100dvh) !important;
+      max-height: var(--jth-admin-vvh, 100dvh) !important;
+      overflow: hidden !important;
+      overflow-x: hidden !important;
+    }
+
+    .jth-desk.has-chat .chat-panel {
+      display: flex !important;
+      flex-direction: column !important;
+      grid-template-rows: none !important;
+    }
+
+    .chat-head {
+      flex: 0 0 auto !important;
+      min-height: 58px !important;
+      max-width: 100vw !important;
+    }
+
+    .messages-panel {
+      flex: 1 1 auto !important;
+      min-height: 0 !important;
+      height: auto !important;
+      max-height: none !important;
+      overflow-y: auto !important;
+      overflow-x: hidden !important;
+      -webkit-overflow-scrolling: touch !important;
+      overscroll-behavior: contain !important;
+      padding-bottom: 14px !important;
+    }
+
+    .messages-panel::before {
+      position: absolute !important;
+      inset: 0 !important;
+      height: auto !important;
+      z-index: 0 !important;
+    }
+
+    .composer {
+      flex: 0 0 auto !important;
+      position: relative !important;
+      z-index: 40 !important;
+      width: 100% !important;
+      max-width: 100vw !important;
+      min-height: 60px !important;
+      padding: 8px 8px calc(env(safe-area-inset-bottom, 0px) + 8px) !important;
+      background: #f0f2f5 !important;
+      transform: translateZ(0) !important;
+      will-change: auto !important;
+    }
+
+    .composer-row {
+      width: 100% !important;
+      max-width: 100% !important;
+      display: grid !important;
+      grid-template-columns: 42px minmax(0, 1fr) 58px !important;
+      align-items: end !important;
+    }
+
+    .composer-row textarea {
+      height: auto !important;
+      min-height: 44px !important;
+      max-height: 116px !important;
+      overflow-y: auto !important;
+      line-height: 1.55 !important;
+      resize: none !important;
+      -webkit-overflow-scrolling: touch !important;
+      touch-action: manipulation !important;
+      font-size: 16px !important;
+    }
+
+    .composer-row textarea:focus {
+      outline: none !important;
+    }
+
+    .emoji-btn,
+    .send-btn {
+      flex: 0 0 auto !important;
+      align-self: end !important;
     }
   }
 
