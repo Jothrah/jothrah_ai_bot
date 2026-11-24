@@ -401,7 +401,7 @@
         S.cursor = "";
         return;
       }
-      if (full && conv.status === "closed" && (conv.rating || Date.now() - ts(conv.closed_at || conv.last_message_at) > 864e5)) {
+      if (full && conv.status === "closed" && conv.rating) {
         store(LS.dismissed, conv.id);
         store(LS.conv, null);
         S.conv = null;
@@ -1363,7 +1363,7 @@
       .then(function () {
         S.lastHumanCount = S.msgs.filter(function (m) { return m.sender_type === "human"; }).length;
         render();
-        if (store(LS.open) === "1" && (mode() === "human" || window.innerWidth > 520)) setOpen(true);
+        if (store(LS.open) === "1") setOpen(true);
         schedulePoll();
       })
       .catch(function () {});
