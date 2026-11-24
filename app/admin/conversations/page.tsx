@@ -1,5 +1,5 @@
 import { supabaseAdmin } from "@/lib/supabase-admin";
-import AdminConversationsClient from "./AdminConversationsClient";
+import InboxClient from "./InboxClient";
 
 export const dynamic = "force-dynamic";
 
@@ -75,5 +75,5 @@ export default async function ConversationsPage(props: PageProps) {
   const searchParams = await props.searchParams;
   const initialData = await getInitialData(searchParams?.id);
 
-  return <AdminConversationsClient initialData={initialData} />;
+  return <InboxClient initialData={initialData} />;
 }
