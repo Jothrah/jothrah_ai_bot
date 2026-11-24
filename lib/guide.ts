@@ -50,6 +50,30 @@ function tokens(text: string) {
     .filter((w) => w.length >= 3 && !STOP.has(w));
 }
 
+/** هيكل صوتي مشترك للعربي واللاتيني: يطابق "الكلوربيريفوس" مع Chlorpyrifos. */
+function skel(word: string) {
+  let w = String(word || "").toLowerCase();
+  if (/[a-z]/.test(w)) {
+    w = w
+      .replace(/ph/g, "f").replace(/th/g, "t").replace(/ch/g, "k").replace(/sh/g, "s").replace(/kh/g, "k")
+      .replace(/[cq]/g, "k").replace(/p/g, "b").replace(/v/g, "f").replace(/x/g, "ks").replace(/g/g, "j")
+      .replace(/[^a-z]/g, "").replace(/[aeiouywh]/g, "");
+  } else {
+    w = w.replace(/^(وال|بال|لل|ال)/, "");
+    const map: Record<string, string> = { "ك": "k", "ق": "k", "خ": "k", "ل": "l", "ر": "r", "ب": "b", "ف": "f", "س": "s", "ص": "s", "ث": "s", "ش": "s", "ت": "t", "ط": "t", "د": "d", "ض": "d", "ذ": "z", "ز": "z", "ظ": "z", "ج": "j", "غ": "j", "م": "m", "ن": "n" };
+    w = [...w].map((c) => map[c] ?? "").join("");
+  }
+  return w.replace(/(.)\1+/g, "$1");
+}
+function skelHit(textSkels: string[], name: string) {
+  const k = skel(norm(name).split(/[\s(\[\d%-]/)[0]);
+  if (k.length < 5) return false;
+  return textSkels.some((t) => t.length >= 5 && (t === k || (t.length >= 6 && (k.startsWith(t) || t.startsWith(k)))));
+}
+function textSkels(text: string) {
+  return String(text || "").split(/[\s،,.؟?!]+/).filter((w) => w.length >= 4).map(skel);
+}
+
 const indexed = guide.map((e) => ({
   e,
   hayUses: norm(e.uses.map((u) => `${u.crops} ${u.pests}`).join(" ")),
@@ -64,9 +88,16 @@ export function searchGuide(text: string, limit = 6) {
   if (FERT_RE.test(text) && !PEST_RE.test(text)) return [];
   const toks = tokens(text);
   if (!toks.length) return [];
+  const sk = textSkels(text);
+  const nt = ` ${norm(text)} `;
+  const shortPests = [
+    /\s(لل|ال|وال|بال)من\s/.test(nt) ? "المن" : "",
+    /\s(لل|ال|ل|و)?بق\s/.test(nt) ? "البق" : "",
+  ].filter(Boolean);
   return indexed
     .map((x) => {
-      let score = 0;
+      let score = skelHit(sk, x.e.ai_en) ? 8 : 0;
+      for (const sp of shortPests) if (x.hayUses.includes(sp)) score += 5;
       for (const t of toks) {
         if (x.hayName.includes(t)) score += 6;
         if (x.hayUses.includes(t)) score += 3;
@@ -105,9 +136,10 @@ const LEGAL_RE = /محظور|ممنوع|مقيد|مسموح|مسجل|غير مس
 /** المبيدات المقيدة والمحظورة: تُرسل للنموذج عند السؤال عن الحظر/التقييد أو عند ذكر مادة موجودة في القوائم. */
 export function listsContext(text: string) {
   const n = norm(text);
+  const sk = textSkels(text);
   const hit = (item: ListItem) => {
     const first = norm(item.name).split(/[\s(\[]/)[0];
-    return first.length >= 4 && n.includes(first);
+    return (first.length >= 4 && n.includes(first)) || skelHit(sk, item.name);
   };
   const r = lists.restricted.filter(hit);
   const b = lists.banned.filter(hit);
@@ -116,6 +148,10 @@ export function listsContext(text: string) {
 
   const parts: string[] = [];
   if (r.length || b.length) {
+    parts.push(
+      "الحكم الصحيح (مطابق من القوائم، اعتمده حرفياً): " +
+        [...r.map((x) => `${x.name} = مقيد وليس محظوراً`), ...b.map((x) => `${x.name} = محظور`)].join("؛ "),
+    );
     if (r.length) parts.push("مواد مذكورة في قائمة المبيدات المقيدة:\n" + r.map((x) => `- ${x.name} (${x.use}): ${x.restriction || "استخدام مقيد بموافقة وإشراف السلطة المختصة"}`).join("\n"));
     if (b.length) parts.push("مواد مذكورة في قائمة المبيدات المحظورة في المملكة:\n" + b.map((x) => `- ${x.name} (${x.use})`).join("\n"));
   }
