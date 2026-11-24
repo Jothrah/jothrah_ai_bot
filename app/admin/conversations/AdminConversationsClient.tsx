@@ -20,6 +20,35 @@ type Props = {
 
 const QUICK_EMOJIS = ["✅", "🌿", "📷", "🙏", "👍", "😊", "✨", "💬"];
 
+const QUICK_REPLIES: Array<[string, string]> = [
+  ["👋 ترحيب", "حيّاك الله، معك مختص جذرة 🌿 كيف أقدر أخدمك؟"],
+  ["📷 صورة", "ممكن ترسل لي صورة واضحة للمشكلة أو للآفة عشان أشخّصها لك بدقة؟"],
+  ["📍 المكان", "المشكلة داخل البيت أو في الحديقة/المزرعة؟ وكم تقريباً المساحة؟"],
+  ["🧴 الاستخدام", "اقرأ ملصق العبوة قبل الاستخدام، والبس قفازات وكمامة، وأبعد الأطفال والحيوانات عن المكان أثناء الرش وبعده لين يجف."],
+  ["🚚 الشحن", "نوصل لجميع مدن المملكة عبر شركات الشحن المعتمدة، ويوصلك رقم التتبع برسالة بعد شحن الطلب."],
+  ["🎟️ خصم", "تقدر تستخدم كود الخصم JOTH10 عند إتمام الطلب 🌿"],
+  ["⏳ لحظة", "لحظات وأرجع لك بالتفاصيل 🙏"],
+  ["🙏 ختام", "سعدنا بخدمتك 🌿 إذا احتجت أي شي ثاني أنا موجود هنا."],
+];
+
+function linkifyText(text: string) {
+  const parts = String(text || "").split(/(https?:\/\/[^\s]+)/g);
+  return parts.map((part, index) =>
+    /^https?:\/\//.test(part) ? (
+      <a key={index} href={part} target="_blank" rel="noopener noreferrer" style={{ color: "inherit", fontWeight: 700, textDecoration: "underline", wordBreak: "break-all" }}>
+        {part.includes("maps.google") ? "📍 فتح الموقع على الخريطة" : part}
+      </a>
+    ) : (
+      part
+    ),
+  );
+}
+
+function isRecentIso(value: unknown, ms: number) {
+  const t = Date.parse(String(value || ""));
+  return Number.isFinite(t) && Date.now() - t < ms;
+}
+
 function formatDateTime(value?: string) {
   if (!value) return "";
 
@@ -114,7 +143,9 @@ function getCleanCustomerNameOrVisitor(conversation?: Conversation | null) {
 
 function cleanMessageText(value?: unknown) {
   let text = String(value || "")
-    .replace(/\s+/g, " ")
+    .replace(/[^\S\n]+/g, " ")
+    .replace(/ *\n */g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
     .trim();
 
   if (!text) return "";
@@ -400,6 +431,10 @@ export default function AdminConversationsClient({ initialData }: Props) {
   const [lightboxZoom, setLightboxZoom] = useState(1);
   const [lightboxOffset, setLightboxOffset] = useState({ x: 0, y: 0 });
   const [, setClockTick] = useState(0);
+  const [productPickerOpen, setProductPickerOpen] = useState(false);
+  const [productQuery, setProductQuery] = useState("");
+  const [productResults, setProductResults] = useState<Array<Record<string, string>>>([]);
+  const lastAdminTypingRef = useRef(0);
 
   const lastSeenCustomerMessageId = useRef<string | null>(null);
   const lastTotalUnreadRef = useRef<number>(
@@ -1010,7 +1045,14 @@ export default function AdminConversationsClient({ initialData }: Props) {
 
           if (nextSelected?.id === id) {
             setSelectedConversation(nextSelected);
-            setMessages(nextMessages);
+            setMessages((current) => {
+            const pending = current.filter(
+              (item) =>
+                item?.metadata?.pending &&
+                !nextMessages.some((next: ChatMessage) => next.sender_type === "human" && next.message === item.message),
+            );
+            return pending.length ? [...nextMessages, ...pending] : nextMessages;
+          });
             scrollToBottom();
           }
 
@@ -1093,7 +1135,14 @@ export default function AdminConversationsClient({ initialData }: Props) {
         setSelectedConversation(cachedConversation);
       }
 
-      setMessages(nextMessages);
+      setMessages((current) => {
+            const pending = current.filter(
+              (item) =>
+                item?.metadata?.pending &&
+                !nextMessages.some((next: ChatMessage) => next.sender_type === "human" && next.message === item.message),
+            );
+            return pending.length ? [...nextMessages, ...pending] : nextMessages;
+          });
 
       const newestCustomer = [...nextMessages]
         .reverse()
@@ -1127,11 +1176,30 @@ export default function AdminConversationsClient({ initialData }: Props) {
 
   async function sendReply() {
     const message = reply.trim();
-    if (!selectedId || !message || loading || reply.length > 1200) return;
+    if (!selectedId || !message || reply.length > 1200) return;
 
-    setLoading(true);
+    // إرسال فوري: تظهر الرسالة مباشرة ثم تتأكد من الخادم
+    const tempId = `temp-${Date.now()}`;
+    const conversationId = selectedId;
+    setReply("");
+    setEmojiOpen(false);
+    setProductPickerOpen(false);
+    shouldStickToBottomRef.current = true;
+    setMessages((current) => [
+      ...current,
+      {
+        id: tempId,
+        conversation_id: conversationId,
+        sender_type: "human",
+        message,
+        created_at: new Date().toISOString(),
+        metadata: { pending: true },
+      },
+    ]);
+    requestAnimationFrame(() => scrollToBottom(true));
+
     try {
-      const res = await fetch(`/api/admin/conversations/${selectedId}/reply`, {
+      const res = await fetch(`/api/admin/conversations/${conversationId}/reply`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message }),
@@ -1139,15 +1207,14 @@ export default function AdminConversationsClient({ initialData }: Props) {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "تعذر إرسال الرد");
 
-      setReply("");
-      setEmojiOpen(false);
-      shouldStickToBottomRef.current = true;
-      await refresh({ silent: true });
-      scrollToBottom(true);
+      setMessages((current) =>
+        current.map((item) => (item.id === tempId && data?.message ? data.message : item)),
+      );
+      refresh({ silent: true });
     } catch (error) {
+      setMessages((current) => current.filter((item) => item.id !== tempId));
+      setReply(message);
       flashToast(error instanceof Error ? error.message : "تعذر إرسال الرد");
-    } finally {
-      setLoading(false);
     }
   }
 
@@ -1287,9 +1354,34 @@ export default function AdminConversationsClient({ initialData }: Props) {
         : "";
   const customerTyping =
     Boolean(selectedId) &&
-    typingConversationId === selectedId &&
-    Date.now() < typingUntil &&
-    selectedConversation?.status !== "closed";
+    selectedConversation?.status !== "closed" &&
+    ((typingConversationId === selectedId && Date.now() < typingUntil) ||
+      isRecentIso((selectedConversation as any)?.metadata?.customer_typing_at, 6000));
+
+  function pingAdminTyping() {
+    if (!selectedId) return;
+    const now = Date.now();
+    if (now - lastAdminTypingRef.current < 3000) return;
+    lastAdminTypingRef.current = now;
+    fetch(`/api/admin/conversations/${selectedId}/typing`, { method: "POST" }).catch(() => {});
+  }
+
+  async function searchStoreProducts(value: string) {
+    setProductQuery(value);
+    try {
+      const res = await fetch(`/api/admin/products?q=${encodeURIComponent(value)}`);
+      const data = await res.json();
+      setProductResults(Array.isArray(data?.items) ? data.items : []);
+    } catch {
+      setProductResults([]);
+    }
+  }
+
+  function insertProduct(item: Record<string, string>) {
+    setReply((current) => `${current ? current.trimEnd() + "\n" : ""}${item.name}\n${item.url}`);
+    setProductPickerOpen(false);
+    requestAnimationFrame(() => replyTextareaRef.current?.focus());
+  }
 
   let lastDay = "";
 
@@ -1620,7 +1712,7 @@ export default function AdminConversationsClient({ initialData }: Props) {
                               <b>{senderLabel(message, activeConversation)}</b>
                               {imageUrl ? <em className="image-count">1 صورة</em> : null}
                             </header>
-                            {visibleText ? <p>{visibleText}</p> : null}
+                            {visibleText ? <p>{linkifyText(visibleText)}</p> : null}
                             {imageUrl ? (
                               <button
                                 type="button"
@@ -1667,6 +1759,56 @@ export default function AdminConversationsClient({ initialData }: Props) {
               </div>
 
               <footer className="composer">
+                {activeConversation.status !== "closed" ? (
+                  <div className="quick-replies">
+                    <button
+                      type="button"
+                      className="qr qr-product"
+                      onClick={() => {
+                        setProductPickerOpen((value) => !value);
+                        if (!productResults.length) searchStoreProducts(productQuery);
+                      }}
+                    >
+                      🛒 منتج
+                    </button>
+                    {QUICK_REPLIES.map(([label, text]) => (
+                      <button
+                        type="button"
+                        key={label}
+                        className="qr"
+                        title={text}
+                        onClick={() => {
+                          setReply((current) => (current.trim() ? `${current.trimEnd()} ${text}` : text));
+                          requestAnimationFrame(() => {
+                            resizeReplyTextarea();
+                            replyTextareaRef.current?.focus();
+                          });
+                        }}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+                {productPickerOpen ? (
+                  <div className="product-picker">
+                    <input
+                      autoFocus
+                      value={productQuery}
+                      placeholder="ابحث باسم المنتج أو الآفة أو المادة الفعالة…"
+                      onChange={(event) => searchStoreProducts(event.target.value)}
+                    />
+                    <div className="product-results">
+                      {productResults.map((item) => (
+                        <button type="button" key={item.id} onClick={() => insertProduct(item)}>
+                          {item.image ? <img src={item.image} alt="" loading="lazy" /> : <span />}
+                          <b>{item.name}</b>
+                        </button>
+                      ))}
+                      {!productResults.length ? <em>لا توجد نتائج</em> : null}
+                    </div>
+                  </div>
+                ) : null}
                 <div className="composer-row">
                   <button
                     type="button"
@@ -1683,6 +1825,7 @@ export default function AdminConversationsClient({ initialData }: Props) {
                     onInput={resizeReplyTextarea}
                     onChange={(event) => {
                       setReply(event.target.value);
+                      pingAdminTyping();
                       requestAnimationFrame(resizeReplyTextarea);
                     }}
                     onKeyDown={(event) => {
@@ -1693,16 +1836,13 @@ export default function AdminConversationsClient({ initialData }: Props) {
                     }}
                     placeholder="اكتب الرد هنا… Enter للإرسال"
                     maxLength={replyLimit + 80}
-                    disabled={
-                      loading || activeConversation.status === "closed"
-                    }
+                    disabled={activeConversation.status === "closed"}
                   />
                   <button
                     type="button"
                     className="send-btn"
                     onClick={sendReply}
                     disabled={
-                      loading ||
                       !reply.trim() ||
                       replyLength > replyLimit ||
                       activeConversation.status === "closed"
@@ -2754,6 +2894,20 @@ const styles = `
     gap: 4px;
   }
   .composer-row { display: grid; grid-template-columns: 46px minmax(0, 1fr) 82px; gap: 8px; width: 100%; }
+  .bubble p { white-space: pre-line; }
+  .quick-replies { display: flex; gap: 6px; overflow-x: auto; padding: 0 0 8px; scrollbar-width: none; }
+  .quick-replies::-webkit-scrollbar { display: none; }
+  .quick-replies .qr { flex: none; border: 1px solid rgba(0,95,93,.22); background: #fff; color: #0b4f4c; border-radius: 999px; padding: 6px 11px; font-size: 12.5px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+  .quick-replies .qr:hover { background: #eef6f4; }
+  .quick-replies .qr-product { background: #0b4f4c; color: #fff; border-color: #0b4f4c; }
+  .product-picker { border: 1px solid rgba(0,95,93,.2); border-radius: 14px; background: #fff; padding: 8px; margin-bottom: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.08); }
+  .product-picker input { width: 100%; border: 1px solid rgba(0,95,93,.25); border-radius: 10px; padding: 9px 11px; font: inherit; font-size: 14px; outline: none; }
+  .product-results { display: grid; gap: 4px; max-height: 230px; overflow-y: auto; margin-top: 6px; }
+  .product-results button { display: flex; align-items: center; gap: 9px; text-align: right; border: 0; background: #f6f9f8; border-radius: 10px; padding: 6px 8px; cursor: pointer; font: inherit; color: #15302d; }
+  .product-results button:hover { background: #e7f2ef; }
+  .product-results img, .product-results span { width: 38px; height: 38px; object-fit: contain; background: #fff; border-radius: 8px; flex: none; }
+  .product-results b { font-size: 13px; font-weight: 700; line-height: 1.4; }
+  .product-results em { color: #6b7b77; font-size: 13px; padding: 6px; }
   .composer-row textarea {
     width: 100%; height: 50px; min-height: 50px; max-height: 78px;
     resize: none; overflow: auto;
