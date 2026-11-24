@@ -948,6 +948,10 @@ async function readRequestBody(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const origin = req.headers.get("origin");
+  const wantStream = req.nextUrl.searchParams.get("stream") === "1";
+  const t0 = Date.now();
+  const timings: Record<string, number> = {};
+  const mark = (k: string) => { timings[k] = Date.now() - t0; };
 
   try {
     const {
@@ -996,6 +1000,7 @@ export async function POST(req: NextRequest) {
 
     const shouldRequestHuman = requestHuman || isHumanRequestMessage(message);
 
+    mark("parsed");
     const conversation = await upsertConversation({
       visitorId: safeVisitorId,
       language,
@@ -1043,6 +1048,17 @@ export async function POST(req: NextRequest) {
         console.warn("Failed to upload chat image:", error);
       }
     }
+
+    mark("conversation");
+    const historyPromise = supabaseAdmin
+      .from("chat_messages")
+      .select("sender_type, message, created_at")
+      .eq("conversation_id", conversation.id)
+      .eq("visible_to_customer", true)
+      .in("sender_type", ["customer", "ai", "human"])
+      .order("created_at", { ascending: false })
+      .limit(11)
+      .then((r: any) => r, () => ({ data: [] as any[] }));
 
     const customerMessageRecord = await saveChatMessage({
       conversationId: conversation.id,
@@ -1251,18 +1267,14 @@ VERY IMPORTANT: write summary, advice, questions and product reasons in the exac
 IMPORTANT: if a fitting product exists in the Jothrah catalog, put 1–4 of them in product_suggestions by their catalog line number instead of only naming a category.
 `;
 
-    const { data: historyRows } = await supabaseAdmin
-      .from("chat_messages")
-      .select("sender_type, message, created_at")
-      .eq("conversation_id", conversation.id)
-      .eq("visible_to_customer", true)
-      .in("sender_type", ["customer", "ai", "human"])
-      .order("created_at", { ascending: false })
-      .limit(11);
+    const { data: historyRowsRaw } = await historyPromise;
+    mark("history");
+    const historyRows = ((historyRowsRaw || []) as any[]).filter((row: any) => row.message);
+    // الاستعلام قد يرجع رسالة العميل الحالية (لو انحفظت قبله) — نشيلها حتى لا تتكرر
+    if (historyRows[0] && historyRows[0].sender_type === "customer" && String(historyRows[0].message).trim() === String(message).trim()) historyRows.shift();
+    else if (historyRows.length > 10) historyRows.pop();
 
-    const historyText = (historyRows || [])
-      .filter((row: any) => row.message)
-      .slice(1)
+    const historyText = historyRows
       .reverse()
       .map((row: any) =>
         `${row.sender_type === "customer" ? "العميل" : row.sender_type === "human" ? "مختص جذرة" : "المساعد"}: ${String(row.message).slice(0, 400)}`,
@@ -1284,7 +1296,7 @@ IMPORTANT: if a fitting product exists in the Jothrah catalog, put 1–4 of them
       .filter(Boolean)
       .join("\n\n");
 
-    const completion = await client.chat.completions.create({
+    const completionParams: OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming = {
       model: getModel(),
       messages: [
         {
@@ -1305,6 +1317,23 @@ Product rules:
 - If nothing in the catalog fits, return an empty array and say so honestly — never invent products.
 - Each reason: one short line in the customer's language explaining why it fits.
 - Do not write product URLs or prices in the summary; the store shows product cards automatically.
+`,
+        },
+        {
+          role: "system",
+          content: `
+Important Jothrah response rules:
+- The image analysis, if available, was performed first.
+- Use the image analysis result, the customer text, matched categories, and knowledge context.
+- Do not claim certainty from an unclear image.
+- If confidence is low, image is unclear, or the case needs direct diagnosis, set whatsapp_needed to true.
+- Do not invent pesticide dosage, dilution, mixing ratios, or safety claims.
+- Only recommend products from the provided catalog, by catalog line number.
+- product_suggestions may be an empty array.
+- Keep advice to maximum 3 items.
+- Keep questions to maximum 2 items.
+- Return only valid JSON matching the schema.
+- SPEED: be brief. summary max 35 words, each advice max 12 words, each product reason max 8 words, categories may be [] when products are suggested.
 `,
         },
         {
@@ -1337,23 +1366,6 @@ ${historyText || "(none)"}
 `,
         },
         {
-          role: "system",
-          content: `
-Important Jothrah response rules:
-- The image analysis, if available, was performed first.
-- Use the image analysis result, the customer text, matched categories, and knowledge context.
-- Do not claim certainty from an unclear image.
-- If confidence is low, image is unclear, or the case needs direct diagnosis, set whatsapp_needed to true.
-- Do not invent pesticide dosage, dilution, mixing ratios, or safety claims.
-- Only recommend products from the provided catalog, by catalog line number.
-- product_suggestions may be an empty array.
-- Keep advice to maximum 3 items.
-- Keep questions to maximum 2 items.
-- Return only valid JSON matching the schema.
-- SPEED: be brief. summary max 35 words, each advice max 12 words, each product reason max 8 words, categories may be [] when products are suggested.
-`,
-        },
-        {
           role: "user",
           content: userPrompt,
         },
@@ -1363,10 +1375,10 @@ Important Jothrah response rules:
         json_schema: responseSchema,
       },
       max_completion_tokens: 650,
-    });
+    };
 
-    const raw = completion.choices[0]?.message?.content || "{}";
-    const data = JSON.parse(raw);
+    const finalize = async (raw: string) => {
+    const data = JSON.parse(raw || "{}");
     const productCards = hydrateProductSuggestions(data.product_suggestions, 4, `${message} ${historyText.slice(-300)}`);
     data.product_suggestions = productCards.map((card) => ({
       id: card.id,
@@ -1417,8 +1429,8 @@ Important Jothrah response rules:
         ? data.whatsapp_message
         : fallbackWhatsappMessage;
 
-    return NextResponse.json(
-      {
+    mark("saved");
+    return {
         ...data,
         conversation_id: conversation.id,
         visitor_id: safeVisitorId,
@@ -1431,9 +1443,51 @@ Important Jothrah response rules:
             : matchedCategories,
         whatsapp_needed: Boolean(data.whatsapp_needed || forceWhatsapp),
         whatsapp_url: buildWhatsappUrl(whatsappMessage),
+        server_timing: timings,
+      };
+    };
+
+    if (!wantStream) {
+      const completion = await client.chat.completions.create(completionParams);
+      mark("model");
+      const payload = await finalize(completion.choices[0]?.message?.content || "{}");
+      return NextResponse.json(payload, { headers: corsHeaders(origin) });
+    }
+
+    // بث الرد: يبدأ النص يظهر للعميل خلال ثانية بدل انتظار الرد كامل
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream<Uint8Array>({
+      async start(controller) {
+        let raw = "";
+        try {
+          const modelStream = await client.chat.completions.create({ ...completionParams, stream: true });
+          let first = true;
+          for await (const chunk of modelStream) {
+            const delta = chunk.choices[0]?.delta?.content || "";
+            if (!delta) continue;
+            if (first) { mark("first_token"); first = false; }
+            raw += delta;
+            controller.enqueue(encoder.encode(delta));
+          }
+          mark("model");
+          const payload = await finalize(raw);
+          controller.enqueue(encoder.encode("\n\u001eFINAL" + JSON.stringify(payload)));
+        } catch (err) {
+          console.error(err);
+          controller.enqueue(encoder.encode("\n\u001eFINAL" + JSON.stringify({ error: "Failed to process chat request" })));
+        } finally {
+          controller.close();
+        }
       },
-      { headers: corsHeaders(origin) },
-    );
+    });
+    return new Response(stream, {
+      headers: {
+        ...corsHeaders(origin),
+        "Content-Type": "text/plain; charset=utf-8",
+        "Cache-Control": "no-cache, no-transform",
+        "X-Accel-Buffering": "no",
+      },
+    });
   } catch (error) {
     console.error(error);
 
