@@ -374,9 +374,14 @@
         x.setRequestHeader("Content-Type", "application/json");
         body = JSON.stringify(opts.body);
       }
+      if (opts.onProgress) x.onprogress = function () { try { opts.onProgress(x.responseText || ""); } catch (e) {} };
       x.onload = function () {
         var j = null;
-        try { j = JSON.parse(x.responseText || "null"); } catch (e) {}
+        var txt = x.responseText || "null";
+        var cut = txt.indexOf("\u001eFINAL");
+        if (cut >= 0) txt = txt.slice(cut + 6);
+        try { j = JSON.parse(txt); } catch (e) {}
+        if (j && j.error && cut >= 0) { reject(new Error(j.error)); return; }
         if (x.status >= 200 && x.status < 300) resolve(j || {});
         else reject(new Error((j && j.error) || "HTTP " + x.status));
       };
@@ -855,7 +860,10 @@
       S.pending.forEach(function (p) { html += renderPending(p); });
       S.local.forEach(function (x) { html += x.html; });
       if (waiting) html += waitCard();
-      if (S.botTyping && m === "ai" && Date.now() - S.botTyping < 65000) html += '<div class="row them"><div class="bub"><span class="typing"><i></i><i></i><i></i></span> <small style="color:#55645f">' + esc(T.thinking) + "</small></div></div>";
+      if (S.botTyping && m === "ai" && Date.now() - S.botTyping < 65000) {
+        if (S.streamText) html += '<div class="row them"><div class="bub">' + esc(S.streamText) + ' <span class="typing"><i></i><i></i><i></i></span></div></div>';
+        else html += '<div class="row them"><div class="bub"><span class="typing"><i></i><i></i><i></i></span> <small style="color:#55645f">' + esc(T.thinking) + "</small></div></div>";
+      }
       if (S.connecting) html += '<div class="sys"><span>⏳ ' + esc(T.connecting) + "</span></div>";
       if (S.adminTyping && m === "human") html += '<div class="row them human"><div class="bub"><span class="typing"><i></i><i></i><i></i></span> <small style="color:#8a6415">' + esc(T.adminTyping) + "</small></div></div>";
       if (m === "closed") html += rateCard();
@@ -949,7 +957,7 @@
     var em = (id.user && id.user.email) || store(LS.email) || "";
     if (em) fd.append("customer_email", em);
     if (p.file) fd.append("image", p.file);
-    return api("/api/chat", { method: "POST", body: fd, timeout: 60000 });
+    return api("/api/chat?stream=1", { method: "POST", body: fd, timeout: 60000, onProgress: p.onProgress });
   }
 
   /* ---------- الطلبات (من حساب العميل في سلة) ---------- */
@@ -1034,6 +1042,23 @@
     S.sending = true;
     S.botTyping = mode() === "ai" ? Date.now() : 0;
     S.view = "chat";
+    S.streamText = "";
+    var lastPaint = 0;
+    p.onProgress = function (raw) {
+      var m = /"summary"\s*:\s*"((?:[^"\\]|\\.)*)/.exec(raw);
+      if (!m) return;
+      var cap = m[1].replace(/\\(u[0-9a-fA-F]{0,3})?$/, "");
+      var txt;
+      try { txt = JSON.parse('"' + cap + '"'); } catch (e) { return; }
+      if (txt === S.streamText) return;
+      S.streamText = txt;
+      var now = Date.now();
+      if (now - lastPaint < 70) return;
+      lastPaint = now;
+      lastHtml = "";
+      render();
+      toBottom();
+    };
     render();
     toBottom();
     postMessage(p)
@@ -1055,6 +1080,7 @@
       .finally(function () {
         S.sending = false;
         S.botTyping = 0;
+        S.streamText = "";
         render();
         toBottom();
         schedulePoll();
