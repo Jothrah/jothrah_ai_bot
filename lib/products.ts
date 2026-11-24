@@ -96,6 +96,7 @@ export function hydrateProductSuggestions(
   const isHome = HOME_RE.test(nText);
   // الآفات المذكورة بالاسم: نرشح فقط المنتجات المسجلة/المصنفة لها
   const pestKeys = PEST_KEYS.filter((k) => k.re.test(nText));
+  const asksWeeds = /حشائش|اعشاب ضاره|الاعشاب|اعشاب|عشب ضار|نجيل ضار|سعد|weed|herbicid/.test(nText) && !/مبيد اعشاب طبيعي/.test(nText);
   const asksInsect = /حشر|المن|تربس|ذباب|بعوض|صرصور|صراصير|نمل|بق|سوس|دود|يرق|عنكب|اكاروس|حلم|صانعات|قشري|دوباس|حفار|جراد|نطاط|insect|aphid|thrips|mite/.test(nText);
   const asksFungal = /فطر|بياض|عفن|لفحه|تبقع|صدا|ذبول|تعفن|fung|mildew|blight|rot/.test(nText);
 
@@ -106,6 +107,7 @@ export function hydrateProductSuggestions(
     if (asksPestOrDisease && !asksFertilizer && type === "سماد") return false;
     if (isAgri && !isHome && type === "مبيد صحة عامة") return false;
     if (isHome && !isAgri && (type === "مبيد زراعي" || type === "مبيد فطري" || type === "مبيد أعشاب")) return false;
+    if (asksWeeds && !asksSeeds && type !== "مبيد أعشاب") return false;
     // حشرة ← لا مبيد فطري ولا أعشاب؛ مرض فطري ← لا مبيد حشري
     if (asksInsect && !asksFungal && (type === "مبيد فطري" || type === "مبيد أعشاب")) return false;
     if (asksFungal && !asksInsect && (type === "مبيد صحة عامة" || type === "قوارض" || type === "مصائد" || /حشري|الحشرات/.test(normalize(product.name)))) return false;
@@ -116,11 +118,13 @@ export function hydrateProductSuggestions(
     return true;
   };
 
+  const seenNames = new Set<string>();
   for (const item of suggestions || []) {
     const product = getProductById(item?.id);
-    if (!product || seen.has(product.id)) continue;
+    if (!product || seen.has(product.id) || seenNames.has(normalize(product.name))) continue;
     if (!allowed(product)) continue;
     seen.add(product.id);
+    seenNames.add(normalize(product.name));
 
     cards.push({
       id: product.id,
@@ -128,7 +132,7 @@ export function hydrateProductSuggestions(
       url: product.url,
       image: product.image,
       size: product.size,
-      active: product.active ? `${product.active}${product.conc ? " " + product.conc : ""}` : "",
+      active: activeOf(product),
       reason: String(item?.reason || "").slice(0, 160),
     });
 
@@ -139,15 +143,16 @@ export function hydrateProductSuggestions(
   if (pestKeys.length && cards.length < 2) {
     for (const product of products) {
       if (cards.length >= Math.min(3, max)) break;
-      if (seen.has(product.id) || !allowed(product)) continue;
+      if (seen.has(product.id) || seenNames.has(normalize(product.name)) || !allowed(product)) continue;
       seen.add(product.id);
+      seenNames.add(normalize(product.name));
       cards.push({
         id: product.id,
         name: product.name,
         url: product.url,
         image: product.image,
         size: product.size,
-        active: product.active ? `${product.active}${product.conc ? " " + product.conc : ""}` : "",
+        active: activeOf(product),
         reason: "",
       });
     }
@@ -208,4 +213,67 @@ export function searchProducts(query: string, limit = 8) {
     .sort((a, b) => b.score - a.score)
     .slice(0, limit)
     .map((x) => x.p);
+}
+
+
+/** المادة الفعالة: من الحقل، وإلا من الملخص "بالمادة الفعالة ..." */
+export function activeOf(p: StoreProduct) {
+  if (p.active) return `${p.active}${p.conc ? " " + p.conc : ""}`;
+  const m = /بالمادة الفعالة\s+([^،,:.(]+)/.exec(p.summary || "");
+  return m ? m[1].replace(/\s+(لمكافحة|عبوة|ل).*$/, "").trim() : "";
+}
+
+/** هيكل الحروف الساكنة: يوحّد إيميداكلوبرايد / إميداكلوبريد / أميداكلوبرايد */
+function skel(v: string) {
+  return normalize(v).replace(/^(وال|بال|لل|ال)/, "").replace(/[اويىهءئؤعة\s\d.%()+\-–/]/g, "").replace(/(.)\1+/g, "$1");
+}
+
+let activeSkelCache: Array<{ name: string; sk: string }> | null = null;
+function knownActives() {
+  if (activeSkelCache) return activeSkelCache;
+  const map = new Map<string, string>();
+  for (const p of products) {
+    for (const part of activeOf(p).split(/\+|،|,|\sو(?=\S)| و /)) {
+      const name = part.replace(/[\d.]+\s*%.*$/, "").replace(/\(.*$/, "").trim();
+      const sk = skel(name);
+      if (sk.length >= 4 && !map.has(sk)) map.set(sk, name);
+    }
+  }
+  activeSkelCache = [...map].map(([sk, name]) => ({ sk, name }));
+  return activeSkelCache;
+}
+
+/**
+ * يمنع التناقض بين النصيحة والمنتجات: لو النصيحة ذكرت مادة فعالة ليست في المنتجات المقترحة،
+ * نستبدل السطر بالمواد الفعالة الفعلية للمنتجات (أو نحذفه إذا ما عندنا مادتها).
+ */
+export function alignAdviceWithProducts(advice: unknown, cards: ProductCard[], lang: "ar" | "en" = "ar") {
+  if (!Array.isArray(advice) || !cards.length) return advice;
+  const cardSk = skel(cards.map((c) => `${c.name} ${c.active}`).join(" "));
+  const actives: string[] = [];
+  const seenSk = new Set<string>();
+  for (const c of cards) {
+    for (const part of c.active.split(/\+|،|,|\sو(?=\S)| و /)) {
+      const name = part.replace(/[\d.]+\s*%.*$/, "").replace(/\(.*$/, "").trim();
+      const sk = skel(name);
+      if (sk.length >= 4 && !seenSk.has(sk)) { seenSk.add(sk); actives.push(name); }
+    }
+  }
+  const names = knownActives();
+  let replaced = false;
+  const out: string[] = [];
+  for (const line of advice as string[]) {
+    const words = String(line || "").split(/[\s،,.؛:]+/).map(skel).filter((w) => w.length >= 4);
+    const mentioned = names.filter((a) => words.some((w) => w === a.sk || (a.sk.length >= 5 && w.includes(a.sk))));
+    const wrong = mentioned.some((a) => !cardSk.includes(a.sk));
+    if (wrong) {
+      if (!replaced && actives.length) {
+        out.push(lang === "ar" ? `المادة الفعالة في المنتجات المقترحة: ${actives.slice(0, 3).join("، ")}.` : `Active ingredients of the suggested products: ${actives.slice(0, 3).join(", ")}.`);
+        replaced = true;
+      }
+      continue;
+    }
+    out.push(line);
+  }
+  return out;
 }
