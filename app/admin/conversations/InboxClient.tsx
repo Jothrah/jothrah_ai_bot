@@ -84,7 +84,7 @@ function mmss(ms: number) {
 }
 function cleanName(v: unknown) {
   const t = String(v || "").replace(/[<>]/g, "").replace(/\s+/g, " ").trim();
-  if (t.length < 2 || /^(jth|visitor|guest|v)_[a-z0-9_-]+$/i.test(t)) return "";
+  if (t.length < 2 || /^(jth|visitor|guest|v)_[a-z0-9_-]+$/i.test(t) || /jthrah_chat|customer_name_v\d|undefined|null/i.test(t)) return "";
   return t.slice(0, 80);
 }
 function customerName(c?: Conversation | null) {
@@ -693,7 +693,7 @@ export default function InboxClient({ initialData }: { initialData: InitialData 
 
         <div className="search">
           <span>⌕</span>
-          <input ref={searchRef} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="ابحث بالاسم أو الجوال أو الرسالة…  ( / )" />
+          <input ref={searchRef} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="ابحث بالاسم أو الجوال أو الرسالة…" />
           {query ? <button type="button" onClick={() => setQuery("")}>×</button> : null}
         </div>
 
@@ -992,10 +992,10 @@ export default function InboxClient({ initialData }: { initialData: InitialData 
 /* التصميم                                                               */
 /* ------------------------------------------------------------------ */
 const CSS = `
-html,body{margin:0;padding:0;height:100%;overflow:hidden}
+html,body{margin:0;padding:0;height:100%;overflow:hidden;max-width:100%;overscroll-behavior:none}
 .inbox{--bg:#e9efec;--panel:#ffffff;--panel2:#f6f8f7;--ink:#0f1f1c;--mut:#5a6b66;--line:#dbe4e0;--brand:#0b4a42;--brand2:#083a33;--brandsoft:#e3f0ec;--gold:#b8862b;--goldsoft:#f8eed8;--danger:#c0392b;--dangersoft:#fdecea;--ok:#1d7f4b;--oksoft:#e4f4ea;--ai:#4b5bb3;--aisoft:#eceefb;--in:#ffffff;--out:#0b4a42;--shadow:0 10px 30px rgba(9,40,35,.08);
   font-family:'IBM Plex Sans Arabic',system-ui,-apple-system,'Segoe UI',sans-serif;color:var(--ink);background:var(--bg);
-  height:var(--vvh,100dvh);display:grid;grid-template-columns:380px minmax(0,1fr);gap:0;overflow:hidden;font-size:14.5px}
+  height:var(--vvh,100dvh);width:100%;max-width:100vw;display:grid;grid-template-columns:380px minmax(0,1fr);gap:0;overflow:hidden;font-size:14.5px}
 .inbox.dark{--bg:#0a1412;--panel:#101d1a;--panel2:#152622;--ink:#e7efec;--mut:#94a8a2;--line:#22362f;--brand:#1f8a73;--brand2:#18705e;--brandsoft:#16312b;--gold:#d9a84a;--goldsoft:#2b2414;--danger:#ef6b5c;--dangersoft:#3a1d19;--ok:#3fbf7f;--oksoft:#16301f;--ai:#8d9cf0;--aisoft:#1e2340;--in:#152622;--out:#1f6f5e;--shadow:0 10px 30px rgba(0,0,0,.35)}
 .inbox.details-on{grid-template-columns:380px minmax(0,1fr) 340px}
 .inbox *{box-sizing:border-box;font-family:inherit}
@@ -1018,7 +1018,7 @@ html,body{margin:0;padding:0;height:100%;overflow:hidden}
 .logo.xl{width:84px;height:84px;border-radius:28px;font-size:40px}
 
 /* القائمة */
-.side{background:var(--panel);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.side{background:var(--panel);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0;min-width:0;overflow:hidden}
 .brand{display:flex;align-items:center;gap:11px;padding:16px 16px 12px}
 .brand .bt{flex:1;min-width:0}.brand b{display:block;font-size:17px}.brand small{color:var(--mut);font-size:12.5px}
 .brand .tools{display:flex;gap:6px}
@@ -1034,15 +1034,15 @@ html,body{margin:0;padding:0;height:100%;overflow:hidden}
 .tabs{display:flex;gap:6px;padding:0 16px 10px;overflow-x:auto;scrollbar-width:none}.tabs::-webkit-scrollbar{display:none}
 .tabs button{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:6px 13px;font-size:13px;font-weight:600;white-space:nowrap}
 .tabs button.on{background:var(--brand);border-color:var(--brand);color:#fff}
-.list{flex:1;overflow-y:auto;padding:4px 10px 16px;overscroll-behavior:contain}
+.list{flex:1;min-width:0;overflow-x:hidden;overflow-y:auto;padding:4px 10px 16px;overscroll-behavior:contain}
 .empty-list{text-align:center;color:var(--mut);padding:40px 0}
-.row{width:100%;display:flex;gap:11px;align-items:flex-start;text-align:right;border:1px solid transparent;background:none;border-radius:16px;padding:11px 10px;margin-bottom:2px;transition:.12s}
+.row{width:100%;max-width:100%;min-width:0;overflow:hidden;display:flex;gap:11px;align-items:flex-start;text-align:right;border:1px solid transparent;background:none;border-radius:16px;padding:11px 10px;margin-bottom:2px;transition:.12s}
 .row:hover{background:var(--panel2)}
 .row.active{background:var(--brandsoft);border-color:color-mix(in srgb,var(--brand) 35%,transparent)}
 .row.waiting{box-shadow:inset -3px 0 0 var(--danger)}
 .rb{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
-.r1{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
-.r1 b{font-size:14.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.r1{display:flex;justify-content:space-between;gap:8px;align-items:baseline;min-width:0}
+.r1 b{font-size:14.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1}
 .r1 time{font-size:11.5px;color:var(--mut);flex:none}
 .r2{font-size:13px;color:var(--mut);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .r2 em{color:var(--ok);font-style:normal;font-weight:700}
@@ -1051,7 +1051,7 @@ html,body{margin:0;padding:0;height:100%;overflow:hidden}
 .badge{font-style:normal;margin-right:auto;background:var(--danger);color:#fff;min-width:22px;height:22px;padding:0 7px;border-radius:999px;font-size:12px;font-weight:700;display:grid;place-items:center}
 
 /* المحادثة */
-.chat{display:flex;flex-direction:column;min-width:0;min-height:0;position:relative;background:var(--bg);
+.chat{display:flex;flex-direction:column;min-width:0;overflow:hidden;min-height:0;position:relative;background:var(--bg);
   background-image:radial-gradient(circle at 1px 1px,color-mix(in srgb,var(--brand) 9%,transparent) 1px,transparent 0);background-size:22px 22px}
 .chat-hd{display:flex;align-items:center;gap:11px;padding:12px 18px;background:var(--panel);border-bottom:1px solid var(--line);box-shadow:var(--shadow);z-index:2}
 .chat-hd .back{display:none}
@@ -1167,6 +1167,10 @@ html,body{margin:0;padding:0;height:100%;overflow:hidden}
   .input-row textarea{font-size:16px}
   .details{width:100%;top:auto;height:88%;border-radius:22px 22px 0 0;bottom:0}
   .jump{bottom:150px}
-  .kpis{gap:6px}.kpi b{font-size:18px}
+  .brand{padding:12px 12px 10px}.brand b{font-size:16px}.brand .tools{gap:4px}.brand .ic{width:34px;height:34px;font-size:14px}
+  .kpis{gap:6px;padding:0 12px 10px}.kpi{padding:6px 2px;border-radius:12px}.kpi b{font-size:17px}.kpi span{font-size:10.5px}
+  .search,.push-cta{margin-left:12px;margin-right:12px}.tabs{padding:0 12px 8px}.tabs button{padding:5px 11px;font-size:12.5px}
+  .list{padding:2px 6px 12px}.row{padding:10px 8px;gap:9px}.av{width:40px;height:40px;font-size:16px}
+  .ct small{flex-wrap:nowrap;overflow:hidden}.ct small span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 }
 `;
