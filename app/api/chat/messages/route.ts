@@ -19,10 +19,16 @@ function corsHeaders(origin?: string | null) {
   return {
     "Access-Control-Allow-Origin": allowedOrigin,
     "Access-Control-Allow-Methods": "GET, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type"
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Cache-Control": "no-store"
   };
 }
 
+
+function isRecent(value: unknown, ms: number) {
+  const time = Date.parse(String(value || ""));
+  return Number.isFinite(time) && Date.now() - time < ms;
+}
 
 function buildStateReason(conversation?: Record<string, any> | null) {
   if (!conversation) return "conversation_not_found";
@@ -46,6 +52,8 @@ export async function GET(req: NextRequest) {
     const url = new URL(req.url);
     const visitorId = String(url.searchParams.get("customer_key") || url.searchParams.get("visitor_id") || "").trim();
     const conversationId = String(url.searchParams.get("conversation_id") || "").trim();
+    const sinceRaw = String(url.searchParams.get("since") || "").trim();
+    const since = sinceRaw && !Number.isNaN(Date.parse(sinceRaw)) ? new Date(sinceRaw).toISOString() : "";
     const customerName = String(url.searchParams.get("customer_name") || "").replace(/[<>]/g, "").replace(/\s+/g, " ").trim().slice(0, 80);
     const customerPhone = String(url.searchParams.get("customer_phone") || "").replace(/[<>]/g, "").replace(/\s+/g, " ").trim().slice(0, 40);
     const customerEmail = String(url.searchParams.get("customer_email") || "").replace(/[<>]/g, "").replace(/\s+/g, " ").trim().slice(0, 120);
@@ -102,13 +110,17 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    const { data: messages, error: messagesError } = await supabaseAdmin
+    let messagesQuery = supabaseAdmin
       .from("chat_messages")
       .select("id, conversation_id, sender_type, message, image_url, created_at, metadata, visible_to_customer")
       .eq("conversation_id", conversation.id)
       .eq("visible_to_customer", true)
       .order("created_at", { ascending: true })
       .limit(200);
+
+    if (since) messagesQuery = messagesQuery.gt("created_at", since);
+
+    const { data: messages, error: messagesError } = await messagesQuery;
 
     if (messagesError) throw messagesError;
 
@@ -134,6 +146,10 @@ export async function GET(req: NextRequest) {
           metadata: conversation.metadata || {}
         },
         messages: messages || [],
+        incremental: Boolean(since),
+        admin_typing: isRecent((conversation.metadata || {}).admin_typing_at, 7000),
+        admin_seen_at: (conversation.metadata || {}).admin_seen_at || null,
+        server_time: new Date().toISOString(),
         state_reason: buildStateReason(conversation)
       },
       { headers: corsHeaders(origin) }
