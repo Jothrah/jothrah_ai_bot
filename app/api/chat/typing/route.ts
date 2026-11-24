@@ -10,7 +10,7 @@ function corsHeaders(origin?: string | null) {
     .map((item) => item.trim())
     .filter(Boolean);
   const allowedOrigin =
-    origin && allowedOrigins.includes(origin) ? origin : allowedOrigins[0] || "https://jothrah.com";
+    origin && (allowedOrigins.includes(origin) || /^https:\/\/([a-z0-9-]+\.)?jothrah\.com$/i.test(origin)) ? origin : allowedOrigins[0] || "https://jothrah.com";
 
   return {
     "Access-Control-Allow-Origin": allowedOrigin,
