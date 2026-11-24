@@ -195,6 +195,9 @@ export default function InboxClient({ initialData }: { initialData: InitialData 
   const [jump, setJump] = useState(false);
   const [, tick] = useState(0);
   const [mounted, setMounted] = useState(false);
+  const [selectMode, setSelectMode] = useState(false);
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState("");
 
   const selectedRef = useRef<string | null>(selectedId);
   const seqRef = useRef(0);
@@ -520,6 +523,57 @@ export default function InboxClient({ initialData }: { initialData: InitialData 
     else if (Notification.permission === "denied") setPush("denied");
   }, [enablePush]);
 
+  /* ---- تحديد متعدد: إنهاء / حذف دفعة وحدة ---- */
+  function togglePick(id: string) {
+    setPicked((cur) => {
+      const next = new Set(cur);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+  async function runBulk(kind: "close" | "delete") {
+    const ids = [...picked];
+    if (!ids.length) return;
+    const label = kind === "delete" ? "حذف" : "إنهاء";
+    const msg =
+      kind === "delete"
+        ? `حذف ${ids.length} محادثة نهائياً مع كل رسائلها؟ لا يمكن التراجع.`
+        : `إنهاء ${ids.length} محادثة؟ سيظهر لكل عميل طلب تقييم الخدمة.`;
+    if (!confirm(msg)) return;
+    let done = 0;
+    let failed = 0;
+    setBulkBusy(`${label} 0/${ids.length}`);
+    const queue = [...ids];
+    const worker = async () => {
+      while (queue.length) {
+        const id = queue.shift() as string;
+        try {
+          const res =
+            kind === "delete"
+              ? await fetch(`/api/admin/conversations/${id}/delete`, { method: "DELETE" })
+              : await fetch(`/api/admin/conversations/${id}/close`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({}),
+                });
+          if (!res.ok) failed++;
+        } catch {
+          failed++;
+        }
+        done++;
+        setBulkBusy(`${label} ${done}/${ids.length}`);
+      }
+    };
+    await Promise.all([worker(), worker(), worker(), worker()]);
+    if (kind === "delete" && selectedId && picked.has(selectedId)) backToList();
+    setPicked(new Set());
+    setSelectMode(false);
+    setBulkBusy("");
+    flash(failed ? `تم ${label} ${done - failed} وتعذر ${failed}` : `تم ${label} ${done} محادثة ✅`);
+    refresh(true);
+  }
+
   /* ---- اختصارات لوحة المفاتيح ---- */
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -680,6 +734,7 @@ export default function InboxClient({ initialData }: { initialData: InitialData 
             <button type="button" className="ic" title="الوضع الليلي" onClick={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}>
               {theme === "dark" ? "☀️" : "🌙"}
             </button>
+            <button type="button" className={`ic ${selectMode ? "on" : ""}`} title="تحديد عدة محادثات" onClick={() => { setSelectMode((v) => !v); setPicked(new Set()); }}>☑️</button>
             <button type="button" className="ic" title="تحديث" onClick={() => { refresh(); flash("تم التحديث"); }}>⟳</button>
           </div>
         </header>
@@ -721,6 +776,23 @@ export default function InboxClient({ initialData }: { initialData: InitialData 
           ))}
         </nav>
 
+        {selectMode ? (
+          <div className="bulk">
+            <div className="bulk-top">
+              <b>{picked.size} محددة</b>
+              <button type="button" onClick={() => setPicked(picked.size === filtered.length ? new Set() : new Set(filtered.map((c) => c.id)))}>
+                {picked.size === filtered.length && filtered.length ? "إلغاء تحديد الكل" : `تحديد الكل (${filtered.length})`}
+              </button>
+              <button type="button" onClick={() => { setSelectMode(false); setPicked(new Set()); }}>إلغاء</button>
+            </div>
+            <div className="bulk-acts">
+              <button type="button" className="btn ok" disabled={!picked.size || Boolean(bulkBusy)} onClick={() => runBulk("close")}>✅ إنهاء المحدد</button>
+              <button type="button" className="btn danger" disabled={!picked.size || Boolean(bulkBusy)} onClick={() => runBulk("delete")}>🗑️ حذف المحدد</button>
+            </div>
+            {bulkBusy ? <small className="bulk-prog">جاري {bulkBusy}…</small> : null}
+          </div>
+        ) : null}
+
         <div className="list">
           {filtered.length === 0 ? <div className="empty-list">لا توجد محادثات هنا</div> : null}
           {filtered.map((c) => {
@@ -730,7 +802,8 @@ export default function InboxClient({ initialData }: { initialData: InitialData 
             const unread = Number(c.unread_admin_count) || 0;
             const typing = isRecent(c.metadata?.customer_typing_at, 6000);
             return (
-              <button type="button" key={c.id} className={`row ${c.id === selectedId ? "active" : ""} ${waiting ? "waiting" : ""}`} onClick={() => openConversation(c.id)}>
+              <button type="button" key={c.id} className={`row ${c.id === selectedId ? "active" : ""} ${waiting ? "waiting" : ""} ${picked.has(c.id) ? "picked" : ""}`} onClick={() => (selectMode ? togglePick(c.id) : openConversation(c.id))}>
+                {selectMode ? <span className={`chk ${picked.has(c.id) ? "on" : ""}`}>{picked.has(c.id) ? "✓" : ""}</span> : null}
                 <span className="av" style={{ background: `hsl(${avatarHue(c.id)} 38% 34%)` }}>{initial(c)}</span>
                 <span className="rb">
                   <span className="r1">
@@ -1047,6 +1120,14 @@ html,body{margin:0;padding:0;height:100%;overflow:hidden;max-width:100%;overscro
 .tabs button{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:6px 13px;font-size:13px;font-weight:600;white-space:nowrap}
 .tabs button.on{background:var(--brand);border-color:var(--brand);color:#fff}
 .list{flex:1;min-width:0;overflow-x:hidden;overflow-y:auto;padding:4px 10px 16px;overscroll-behavior:contain}
+.bulk{margin:0 16px 10px;border:1px solid var(--line);background:var(--panel2);border-radius:14px;padding:10px}
+.bulk-top{display:flex;align-items:center;gap:8px;margin-bottom:8px}.bulk-top b{flex:1;font-size:14px}
+.bulk-top button{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:5px 11px;font-size:12.5px;font-weight:600}
+.bulk-acts{display:grid;grid-template-columns:1fr 1fr;gap:8px}.bulk-acts .btn{padding:9px 8px;font-size:13px}.bulk-acts .btn:disabled{opacity:.45;cursor:default}
+.bulk-prog{display:block;margin-top:6px;color:var(--mut);font-weight:600}
+.chk{width:24px;height:24px;border-radius:8px;border:2px solid var(--line);display:grid;place-items:center;flex:none;align-self:center;font-weight:800;color:#fff;background:var(--panel)}
+.chk.on{background:var(--brand);border-color:var(--brand)}
+.row.picked{background:var(--brandsoft)}
 .empty-list{text-align:center;color:var(--mut);padding:40px 0}
 .row{width:100%;max-width:100%;min-width:0;overflow:hidden;display:flex;gap:11px;align-items:flex-start;text-align:right;border:1px solid transparent;background:none;border-radius:16px;padding:11px 10px;margin-bottom:2px;transition:.12s}
 .row:hover{background:var(--panel2)}
