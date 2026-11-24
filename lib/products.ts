@@ -80,13 +80,19 @@ export function hydrateProductSuggestions(
   customerText = "",
 ): ProductCard[] {
   const asksSeeds = /بذور|بذر|بذره|بذرة|شتل|seed/i.test(customerText);
+  // نوع الحاجة من كلام العميل: لا نخلط سماد بمبيد أو بذور
+  const asksFertilizer = /سماد|اسمده|أسمدة|تسميد|تغذي|نقص عنصر|اصفرار|NPK|fertili[sz]/i.test(customerText);
+  const asksPestOrDisease = /حشر|آف|افه|افات|مبيد|مرض|أمراض|فطر|عفن|بياض|تبقع|صراصير|نمل|بعوض|ذباب|بق|سوس|دود|حشرة المن|تربس|عنكب|فئران|pest|insect|disease|fung/i.test(customerText);
   const seen = new Set<string>();
   const cards: ProductCard[] = [];
 
   for (const item of suggestions || []) {
     const product = getProductById(item?.id);
     if (!product || seen.has(product.id)) continue;
-    if (productType(product) === "بذور" && !asksSeeds) continue;
+    const type = productType(product);
+    if (type === "بذور" && !asksSeeds) continue;
+    if (asksFertilizer && !asksPestOrDisease && type !== "سماد") continue;
+    if (asksPestOrDisease && !asksFertilizer && type === "سماد") continue;
     seen.add(product.id);
 
     cards.push({
