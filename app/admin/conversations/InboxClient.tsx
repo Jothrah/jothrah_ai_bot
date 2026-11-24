@@ -59,9 +59,13 @@ function ts(v: unknown) {
   const t = Date.parse(String(v || ""));
   return Number.isFinite(t) ? t : 0;
 }
+// فرق ساعة جهاز المدير عن ساعة الخادم (حتى لا يظهر "يكتب الآن" بالغلط)
+let clockOffset = 0;
 function isRecent(v: unknown, ms: number) {
   const t = ts(v);
-  return t > 0 && Date.now() - t < ms;
+  if (!t) return false;
+  const diff = Date.now() + clockOffset - t;
+  return diff > -1500 && diff < ms;
 }
 function relative(v?: string) {
   const t = ts(v);
@@ -282,6 +286,7 @@ export default function InboxClient({ initialData }: { initialData: InitialData 
         return;
       }
       const data = await res.json();
+      if (data?.serverTime) clockOffset = ts(data.serverTime) - Date.now();
       if (!res.ok || seq !== seqRef.current) return;
       const list: Conversation[] = data.conversations || [];
       const unread = list.reduce((s, c) => s + (Number(c.unread_admin_count) || 0), 0);
