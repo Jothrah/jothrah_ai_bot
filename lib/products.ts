@@ -36,14 +36,12 @@ let catalogCache = "";
 export function buildCatalogIndex() {
   if (catalogCache) return catalogCache;
 
+  // فهرس مضغوط (المعرّف + الاسم + المادة الفعالة) لتسريع رد البوت
   catalogCache = products
     .map((p) => {
       const parts = [p.id, p.name];
-      if (p.size && !p.name.includes(p.size)) parts.push(p.size);
-      if (p.active) parts.push(`مادة فعالة: ${p.active}${p.conc ? " " + p.conc : ""}`);
-      if (p.targets?.length) parts.push(`يستهدف: ${p.targets.slice(0, 5).join("، ")}`);
-      if (p.categories?.length) parts.push(`تصنيف: ${p.categories.slice(0, 3).join("، ")}`);
-      return parts.join(" | ");
+      if (p.active && !p.name.includes(p.active)) parts.push(p.active);
+      return parts.join("|");
     })
     .join("\n");
 
