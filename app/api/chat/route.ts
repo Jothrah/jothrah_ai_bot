@@ -9,6 +9,7 @@ import { supabaseAdmin } from "@/lib/supabase-admin";
 import { detectLanguage, matchCategories } from "@/lib/matcher";
 import { needsWhatsapp } from "@/lib/safety";
 import { sendAdminPushNotification } from "@/lib/admin-push";
+import { buildCatalogIndex, hydrateProductSuggestions } from "@/lib/products";
 import {
   saveChatAttachment,
   saveChatEvent,
@@ -805,13 +806,12 @@ const responseSchema = {
           type: "object",
           additionalProperties: false,
           properties: {
-            name: { type: "string" },
-            url: { type: "string" },
+            id: { type: "string" },
             reason: { type: "string" },
           },
-          required: ["name", "url", "reason"],
+          required: ["id", "reason"],
         },
-        maxItems: 3,
+        maxItems: 4,
       },
       whatsapp_needed: { type: "boolean" },
       whatsapp_message: { type: "string" },
@@ -1248,6 +1248,24 @@ ${forceWhatsapp}
 Reply in a short, useful ecommerce chat style.
 `;
 
+    const { data: historyRows } = await supabaseAdmin
+      .from("chat_messages")
+      .select("sender_type, message, created_at")
+      .eq("conversation_id", conversation.id)
+      .eq("visible_to_customer", true)
+      .in("sender_type", ["customer", "ai", "human"])
+      .order("created_at", { ascending: false })
+      .limit(11);
+
+    const historyText = (historyRows || [])
+      .filter((row: any) => row.message)
+      .slice(1)
+      .reverse()
+      .map((row: any) =>
+        `${row.sender_type === "customer" ? "العميل" : row.sender_type === "human" ? "مختص جذرة" : "المساعد"}: ${String(row.message).slice(0, 400)}`,
+      )
+      .join("\n");
+
     const completion = await client.chat.completions.create({
       model: getModel(),
       messages: [
@@ -1258,13 +1276,41 @@ Reply in a short, useful ecommerce chat style.
         {
           role: "system",
           content: `
+Jothrah product catalog (every product currently available in the store).
+Format per line: product_id | name | size | active ingredient | targets | category
+${buildCatalogIndex()}
+
+Product rules:
+- product_suggestions must ONLY use product_id values that appear in this catalog, copied exactly.
+- Suggest 1 to 4 products that truly fit the customer's need (pest, crop, seed type, fertilizer need). If the customer names a product type that exists (e.g. eggplant / aubergine / باذنجان seeds), suggest those products.
+- If nothing in the catalog fits, return an empty array and say so honestly — never invent products.
+- Each reason: one short line in the customer's language explaining why it fits.
+- Do not write product URLs or prices in the summary; the store shows product cards automatically.
+`,
+        },
+        {
+          role: "system",
+          content: `
+Language rule (overrides earlier language rules):
+- Write summary, advice, questions and reasons in the SAME language as the customer's latest message, whatever it is (Arabic, English, German, Urdu, Hindi, ...).
+- The "language" field must be "ar" only when replying in Arabic, otherwise "en".
+- Arabic replies use clear Saudi-friendly Modern Standard Arabic.
+- Be warm and human, start directly with the answer (no "As an AI").
+
+Previous messages in this conversation (oldest first), use them for context:
+${historyText || "(none)"}
+`,
+        },
+        {
+          role: "system",
+          content: `
 Important Jothrah response rules:
 - The image analysis, if available, was performed first.
 - Use the image analysis result, the customer text, matched categories, and knowledge context.
 - Do not claim certainty from an unclear image.
 - If confidence is low, image is unclear, or the case needs direct diagnosis, set whatsapp_needed to true.
 - Do not invent pesticide dosage, dilution, mixing ratios, or safety claims.
-- Do not recommend a specific product unless the product exists in provided knowledge or matched category data.
+- Only recommend products from the provided catalog, by product_id.
 - product_suggestions may be an empty array.
 - Keep advice to maximum 3 items.
 - Keep questions to maximum 2 items.
@@ -1285,6 +1331,14 @@ Important Jothrah response rules:
 
     const raw = completion.choices[0]?.message?.content || "{}";
     const data = JSON.parse(raw);
+    const productCards = hydrateProductSuggestions(data.product_suggestions);
+    data.product_suggestions = productCards.map((card) => ({
+      id: card.id,
+      name: card.name,
+      url: card.url,
+      reason: card.reason,
+    }));
+    data.products = productCards;
     await saveChatMessage({
       conversationId: conversation.id,
       senderType: "ai",
@@ -1296,6 +1350,7 @@ Important Jothrah response rules:
         fullResponse: data,
         categories: data.categories || matchedCategories,
         productSuggestions: data.product_suggestions || [],
+        products: productCards,
         analysisSource,
       },
     });
