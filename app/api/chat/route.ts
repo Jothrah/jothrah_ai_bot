@@ -1356,6 +1356,7 @@ Reference rules:
 - When you use the pesticide guide, mention briefly: "حسب دليل المبيدات الزراعية في المملكة".
 - If the references contain a line starting with "الحكم الصحيح", state that verdict exactly (restricted is NOT banned). Otherwise, if the customer asks whether an active ingredient is banned or restricted and you cannot find it in the lists, say it is not listed as banned/restricted in the guide.
 - When registered uses from the guide match the customer's crop and pest, name 1-3 of those active ingredients in the advice.
+- If you suggest products, any active ingredient you name in the advice must be the active ingredient of one of the suggested products (or from the guide for that exact crop and pest). Never suggest a fungicide for insects or an insecticide for a fungal disease, and never a public-health product for a crop.
 - Never recommend a banned active ingredient. For restricted ones, say they are used only with approval/supervision of the competent authority.
 - Prefer recommending store products whose active ingredient is registered for the customer's crop and pest in the guide.
 - Fertilizer rates may be given ONLY if they appear in the provided fertilizer knowledge, and always say they are guidance that depends on soil/water analysis, crop and growth stage.
@@ -1379,7 +1380,7 @@ ${historyText || "(none)"}
 
     const finalize = async (raw: string) => {
     const data = JSON.parse(raw || "{}");
-    const productCards = hydrateProductSuggestions(data.product_suggestions, 4, `${message} ${historyText.slice(-300)}`);
+    const productCards = hydrateProductSuggestions(data.product_suggestions, 4, message, historyText.slice(-300));
     data.product_suggestions = productCards.map((card) => ({
       id: card.id,
       name: card.name,
