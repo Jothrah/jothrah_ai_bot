@@ -9,7 +9,7 @@ import { supabaseAdmin } from "@/lib/supabase-admin";
 import { detectLanguage, matchCategories } from "@/lib/matcher";
 import { needsWhatsapp } from "@/lib/safety";
 import { sendAdminPushNotification } from "@/lib/admin-push";
-import { buildCatalogIndex, hydrateProductSuggestions } from "@/lib/products";
+import { buildCatalogIndex, hydrateProductSuggestions, alignAdviceWithProducts } from "@/lib/products";
 import { searchGuide, formatGuideEntries, listsContext, fertilizerRegistrationContext, fertilizerKnowledgeContext } from "@/lib/guide";
 import {
   saveChatAttachment,
@@ -1353,7 +1353,7 @@ Official references (use them as the source of truth when relevant):
 ${referenceBlock || "(none for this question)"}
 
 Reference rules:
-- When you use the pesticide guide, mention briefly: "حسب دليل المبيدات الزراعية في المملكة".
+- Mention "حسب دليل المبيدات الزراعية في المملكة" only when your answer actually uses a guide entry for an agricultural crop/pest or a banned/restricted verdict; never for household/public-health pests (cockroaches, mosquitoes, rodents...).
 - If the references contain a line starting with "الحكم الصحيح", state that verdict exactly (restricted is NOT banned). Otherwise, if the customer asks whether an active ingredient is banned or restricted and you cannot find it in the lists, say it is not listed as banned/restricted in the guide.
 - When registered uses from the guide match the customer's crop and pest, name 1-3 of those active ingredients in the advice.
 - If you suggest products, any active ingredient you name in the advice must be the active ingredient of one of the suggested products (or from the guide for that exact crop and pest). Never suggest a fungicide for insects or an insecticide for a fungal disease, and never a public-health product for a crop.
@@ -1388,6 +1388,7 @@ ${historyText || "(none)"}
       reason: card.reason,
     }));
     data.products = productCards;
+    data.advice = alignAdviceWithProducts(data.advice, productCards, data.language === "en" ? "en" : "ar");
     await saveChatMessage({
       conversationId: conversation.id,
       senderType: "ai",
