@@ -1293,6 +1293,10 @@ Product rules:
         {
           role: "system",
           content: `
+Order / shipping / payment questions:
+- You cannot see orders. Never tell the customer to "contact customer service via the order number".
+- Instead say briefly: they can type their order number here (the chat shows their order details automatically when logged in), or tap the "تواصل مع خدمة العملاء" button below to reach the Jothrah team inside this chat.
+
 Language rule (overrides earlier language rules):
 - Write summary, advice, questions and reasons in the SAME language as the customer's latest message, whatever it is (Arabic, English, German, Urdu, Hindi, ...).
 - The "language" field must be "ar" only when replying in Arabic, otherwise "en".
