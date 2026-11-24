@@ -276,9 +276,12 @@ export default function InboxClient({ initialData }: { initialData: InitialData 
   }, []);
 
   /* ---- جلب البيانات ---- */
-  const refresh = useCallback(async () => {
+  const inflightRef = useRef(false);
+  const refresh = useCallback(async (force = false) => {
+    // لا نرسل طلب جديد قبل ما يرجع السابق (كان يسبب "جاري تحميل الرسائل" بلا نهاية مع الشبكة البطيئة)
+    if (inflightRef.current && !force) return;
+    inflightRef.current = true;
     const id = selectedRef.current;
-    const seq = ++seqRef.current;
     try {
       const res = await fetch(id ? `/api/admin/conversations?id=${encodeURIComponent(id)}` : "/api/admin/conversations", { cache: "no-store" });
       if (res.status === 401) {
@@ -287,7 +290,7 @@ export default function InboxClient({ initialData }: { initialData: InitialData 
       }
       const data = await res.json();
       if (data?.serverTime) clockOffset = ts(data.serverTime) - Date.now();
-      if (!res.ok || seq !== seqRef.current) return;
+      if (!res.ok) return;
       const list: Conversation[] = data.conversations || [];
       const unread = list.reduce((s, c) => s + (Number(c.unread_admin_count) || 0), 0);
       const msgs: ChatMessage[] = Array.isArray(data.messages) ? data.messages : [];
@@ -301,13 +304,17 @@ export default function InboxClient({ initialData }: { initialData: InitialData 
       if (lastCustomer?.id) lastCustomerMsgRef.current = lastCustomer.id;
       setConversations(list);
       if (id && selectedRef.current === id && data.selectedConversation?.id === id) {
+        void seqRef;
         setSelected(data.selectedConversation);
         setMessages((cur) => {
           const pending = cur.filter((m) => m?.metadata?.pending && m.conversation_id === id && !msgs.some((n) => n.sender_type === "human" && n.message === m.message));
           return [...msgs, ...pending];
         });
       }
-    } catch {}
+    } catch {
+    } finally {
+      inflightRef.current = false;
+    }
   }, [flash]);
 
   useEffect(() => {
@@ -338,7 +345,7 @@ export default function InboxClient({ initialData }: { initialData: InitialData 
     stickRef.current = true;
     lastCustomerMsgRef.current = "";
     window.history.replaceState(null, "", `/admin/conversations?id=${id}`);
-    await refresh();
+    await refresh(true);
     toBottom(true);
     if (window.innerWidth > 900) taRef.current?.focus();
   }
