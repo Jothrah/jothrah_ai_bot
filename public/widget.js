@@ -159,6 +159,9 @@
         emailBad: "البريد الإلكتروني غير صحيح",
         locLabel: "📍 شارك موقعي الحالي لخدمة أدق (اختياري)",
         locWait: "جاري تحديد الموقع…",
+        loginFill: "سجّل دخولك برقم جوالك وتنعبى بياناتك تلقائياً",
+        orManual: "أو اكتب بياناتك هنا",
+        loggedAs: "أنت مسجّل دخول، بياناتك معبّأة تلقائياً",
         topic: "باختصار، وش تحتاج؟ (اختياري)",
         start: "ابدأ المحادثة مع المهندس",
         cancel: "رجوع",
@@ -249,6 +252,9 @@
         emailBad: "Invalid email",
         locLabel: "📍 Share my current location for better help (optional)",
         locWait: "Getting location…",
+        loginFill: "Log in with your mobile to fill your details",
+        orManual: "or enter your details here",
+        loggedAs: "You're logged in — your details are filled in",
         topic: "Briefly, what do you need? (optional)",
         start: "Start chat with specialist",
         cancel: "Back",
@@ -801,6 +807,9 @@
     var em = (id.user && id.user.email) || store(LS.email) || "";
     var geo = "geolocation" in navigator;
     return '<form class="form" autocomplete="on" novalidate><h3>👨‍🌾 ' + esc(T.handoffTitle) + "</h3><p>" + esc(T.handoffText) + "</p>" +
+      (!id.user && window.salla && window.salla.event
+        ? '<button type="button" class="hb do-login" style="width:100%;justify-content:center;margin:4px 0 10px">🔐 ' + esc(T.loginFill) + "</button><div style=\"text-align:center;color:#55645f;font-size:12.5px;margin-bottom:4px\">" + esc(T.orManual) + "</div>"
+        : id.user ? '<div style="background:#e7f1ee;color:#0d4a42;border-radius:12px;padding:8px 12px;font-weight:700;font-size:13px;margin-bottom:6px">✅ ' + esc(T.loggedAs) + "</div>" : "") +
       '<input class="f-name" name="name" autocomplete="name" placeholder="' + esc(T.name) + ' *" value="' + esc(nm) + '" required>' +
       '<input class="f-phone" name="tel" type="tel" inputmode="tel" autocomplete="tel" dir="auto" placeholder="' + esc(T.phone) + '" value="' + esc(ph) + '">' +
       '<input class="f-email" name="email" type="email" inputmode="email" autocomplete="email" dir="auto" placeholder="' + esc(T.email) + '" value="' + esc(em) + '">' +
@@ -1049,7 +1058,7 @@
       });
   }
 
-  function requestHuman(name, phone, topic, email, location) {
+  function requestHuman(name, phone, topic, email, geo) {
     var id = identity();
     if (name) store(LS.name, name);
     if (phone) store(LS.phone, phone);
@@ -1063,11 +1072,11 @@
         visitor_id: id.key,
         language: isAr ? "ar" : "en",
         message: topic || (isAr ? "طلب تواصل مع مختص جذرة" : "Requested a Jothrah specialist"),
-        page_url: location.href.split("#")[0].slice(0, 500),
+        page_url: window.location.href.split("#")[0].slice(0, 500),
         customer_name: name,
         customer_phone: phone,
         customer_email: email || (id.user && id.user.email) || "",
-        location: location || null,
+        location: geo || null,
       },
     })
       .then(function (res) {
@@ -1217,8 +1226,16 @@
       return;
     }
     if (t.closest(".do-login")) {
-      try { if (window.salla && salla.event && salla.event.dispatch) salla.event.dispatch("login::open"); } catch (e2) {}
       setOpen(false);
+      try { if (window.salla && salla.event && salla.event.dispatch) salla.event.dispatch("login::open"); } catch (e2) {}
+      // احتياط: زر تسجيل الدخول في هيدر المتجر
+      setTimeout(function () {
+        var modal = document.querySelector("salla-login-modal");
+        var opened = modal && (modal.shadowRoot || modal).querySelector && document.querySelector(".s-modal-wrapper:not(.hidden), salla-modal[open]");
+        if (opened) return;
+        var trigger = document.querySelector('[onclick*="login::open"], salla-user-menu, .s-user-menu-trigger, a[href*="/login"]');
+        if (trigger && trigger.click) trigger.click();
+      }, 700);
       return;
     }
     if (t.closest(".f-back")) { S.view = "chat"; return render(); }
