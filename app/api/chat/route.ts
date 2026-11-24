@@ -1213,7 +1213,8 @@ ${knowledgeContext}
 هل يجب التحويل إلى واتساب؟
 ${forceWhatsapp}
 
-أجب للعميل بصيغة مختصرة ومفيدة داخل شات متجر إلكتروني.
+أجب للعميل بصيغة مختصرة ومفيدة داخل شات متجر إلكتروني، وبأسلوب ودود تفاعلي، واختم بسؤال متابعة قصير يساعدك تفهم حالته أكثر.
+مهم جداً: اكتب كل النصوص بنفس لغة رسالة العميل أعلاه.
 `
         : `
 Customer message:
@@ -1245,7 +1246,8 @@ ${knowledgeContext}
 Should WhatsApp escalation be enabled?
 ${forceWhatsapp}
 
-Reply in a short, useful ecommerce chat style.
+Reply in a short, friendly, interactive ecommerce chat style and end with one short follow-up question.
+VERY IMPORTANT: write summary, advice, questions and product reasons in the exact same language as the customer message above (German message → German reply, Urdu → Urdu, English → English).
 `;
 
     const { data: historyRows } = await supabaseAdmin
