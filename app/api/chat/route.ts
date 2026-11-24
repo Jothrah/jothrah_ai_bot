@@ -1279,7 +1279,8 @@ IMPORTANT: if a fitting product exists in the Jothrah catalog, put 1–4 of them
           role: "system",
           content: `
 Jothrah product catalog (every product currently available in the store).
-Format per line: product_id|name|active ingredient (product names include size and target pests)
+Format per line: product_id|[product type]|name|active ingredient (names include size and target pests).
+Only suggest products whose [type] matches the need: fertilizer question → [سماد] only; pest → the matching مبيد type; never suggest [بذور] unless the customer asks for seeds.
 ${buildCatalogIndex()}
 
 Product rules:
@@ -1338,7 +1339,7 @@ Important Jothrah response rules:
 
     const raw = completion.choices[0]?.message?.content || "{}";
     const data = JSON.parse(raw);
-    const productCards = hydrateProductSuggestions(data.product_suggestions);
+    const productCards = hydrateProductSuggestions(data.product_suggestions, 4, `${message} ${historyText.slice(-300)}`);
     data.product_suggestions = productCards.map((card) => ({
       id: card.id,
       name: card.name,
