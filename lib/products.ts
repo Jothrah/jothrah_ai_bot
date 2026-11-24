@@ -29,6 +29,22 @@ const byId = new Map(products.map((p) => [String(p.id), p]));
 
 let catalogCache = "";
 
+/** نوع المنتج العام — يمنع البوت من خلط الأنواع (مثل اقتراح بذور لسؤال عن سماد). */
+export function productType(p: StoreProduct) {
+  const c = (p.categories || []).join(" ") + " " + p.name;
+  if (/^بذور/.test(p.name) || (/البذور الزراعية|بذور الخضروات/.test(c) && !/مبيد/.test(c))) return "بذور";
+  if (/سماد|أسمدة|الأسمدة|محفز|منشط|مخلبي|أحماض أمينية|تربة|NPK|طحالب|مستخلص/.test(c)) return "سماد";
+  if (/فئران|قوارض|طعوم لينة/.test(c)) return "قوارض";
+  if (/مصائد|مصيدة|لاصق/.test(c)) return "مصائد";
+  if (/مرشة|معدات|أدوات|عصا/.test(c)) return "معدات";
+  if (/فطري|البياض|عفن|أعفان|لفحة/.test(c)) return "مبيد فطري";
+  if (/أعشاب|حشائش/.test(c)) return "مبيد أعشاب";
+  if (/صحة عامة|الصحة العامة/.test(c)) return "مبيد صحة عامة";
+  if (/المبيدات الزراعية|زراعية|زراعي|أكاروسي|عناكب|حشري/.test(c)) return "مبيد زراعي";
+  if (/صراصير|بعوض|ذباب|نمل|بق/.test(c)) return "مبيد صحة عامة";
+  return "أخرى";
+}
+
 /**
  * فهرس مختصر لكل منتجات المتجر يُرسل للنموذج.
  * يوضع في بداية رسائل النظام حتى يستفيد من التخزين المؤقت للـ prompt.
@@ -39,7 +55,7 @@ export function buildCatalogIndex() {
   // فهرس مضغوط (المعرّف + الاسم + المادة الفعالة) لتسريع رد البوت
   catalogCache = products
     .map((p) => {
-      const parts = [p.id, p.name];
+      const parts = [p.id, `[${productType(p)}]`, p.name];
       if (p.active && !p.name.includes(p.active)) parts.push(p.active);
       return parts.join("|");
     })
@@ -55,13 +71,16 @@ export function getProductById(id: unknown) {
 export function hydrateProductSuggestions(
   suggestions: Array<{ id?: string; reason?: string }> | undefined,
   max = 4,
+  customerText = "",
 ): ProductCard[] {
+  const asksSeeds = /بذور|بذر|بذره|بذرة|شتل|seed/i.test(customerText);
   const seen = new Set<string>();
   const cards: ProductCard[] = [];
 
   for (const item of suggestions || []) {
     const product = getProductById(item?.id);
     if (!product || seen.has(product.id)) continue;
+    if (productType(product) === "بذور" && !asksSeeds) continue;
     seen.add(product.id);
 
     cards.push({
