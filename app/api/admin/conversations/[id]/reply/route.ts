@@ -29,25 +29,26 @@ export async function POST(req: NextRequest, props: Params) {
 
     const now = new Date().toISOString();
 
-    const { error } = await supabaseAdmin
-      .from("chat_conversations")
-      .update({
-        status: "human_replied",
-        needs_human: false,
-        unread_admin_count: 0,
-        last_message: message,
-        last_message_at: now,
-        last_human_reply_at: now
+    const [{ error }] = await Promise.all([
+      supabaseAdmin
+        .from("chat_conversations")
+        .update({
+          status: "human_replied",
+          needs_human: false,
+          unread_admin_count: 0,
+          last_message: message,
+          last_message_at: now,
+          last_human_reply_at: now
+        })
+        .eq("id", id),
+      saveChatEvent({
+        conversationId: id,
+        eventName: "human_reply_sent",
+        eventData: { messageId: saved.id }
       })
-      .eq("id", id);
+    ]);
 
     if (error) throw error;
-
-    await saveChatEvent({
-      conversationId: id,
-      eventName: "human_reply_sent",
-      eventData: { messageId: saved.id }
-    });
 
     return NextResponse.json({ ok: true, message: saved });
   } catch (error) {
