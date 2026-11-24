@@ -65,7 +65,19 @@ async function getPayload(selectedId?: string | null) {
 
     const { error: unreadError } = await supabaseAdmin
       .from("chat_conversations")
-      .update({ unread_admin_count: 0 })
+      .update(
+        (() => {
+          const meta = selectedConversation.metadata || {};
+          const lastSeen = Date.parse(String(meta.admin_seen_at || ""));
+          const needsSeenUpdate =
+            Number(selectedConversation.unread_admin_count || 0) > 0 ||
+            !Number.isFinite(lastSeen) ||
+            Date.now() - lastSeen > 20000;
+          return needsSeenUpdate
+            ? { unread_admin_count: 0, metadata: { ...meta, admin_seen_at: new Date().toISOString() } }
+            : { unread_admin_count: 0 };
+        })(),
+      )
       .eq("id", selectedConversation.id);
 
     if (unreadError) {
