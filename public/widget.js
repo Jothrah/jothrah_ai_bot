@@ -132,6 +132,22 @@
         advice: "نصائح سريعة",
         needHumanHint: "حالتك تحتاج نظرة مهندس زراعي؟",
         needHumanBtn: "حوّلني لمهندس زراعي",
+        supportHint: "فريق جذرة جاهز يخدمك هنا مباشرة",
+        supportBtn: "تواصل مع خدمة العملاء",
+        ordersTitle: "طلباتك في جذرة",
+        orderNo: "طلب رقم",
+        orderTotal: "الإجمالي",
+        orderShip: "شركة الشحن",
+        orderTrackNo: "رقم التتبع",
+        orderTrack: "تتبع الشحنة",
+        orderView: "تفاصيل الطلب",
+        orderAsk: "استفسار عن هذا الطلب",
+        orderNone: "ما لقيت طلبات على حسابك.",
+        orderNotFound: "ما لقيت طلب بهذا الرقم في حسابك، هذي آخر طلباتك:",
+        orderLogin: "عشان أعرض لك تفاصيل طلبك وحالة الشحن، سجّل دخولك في المتجر بنفس الحساب اللي طلبت منه.",
+        loginBtn: "تسجيل الدخول",
+        myOrders: "طلباتي",
+        orderLoading: "أجيب لك تفاصيل طلباتك…",
         orWhatsapp: "أو واتساب",
         handoffTitle: "التحدث مع مهندس زراعي",
         handoffText: "حتى تتم خدمتك بشكل أفضل، سجّل اسمك ورقم جوالك أو بريدك الإلكتروني، وبنحوّلك مباشرة لمهندس زراعي من فريق جذرة داخل هذه الدردشة.",
@@ -206,6 +222,22 @@
         advice: "Quick tips",
         needHumanHint: "Need a specialist to look at it?",
         needHumanBtn: "Connect me to a specialist",
+        supportHint: "Our team can help you right here",
+        supportBtn: "Contact customer service",
+        ordersTitle: "Your Jothrah orders",
+        orderNo: "Order",
+        orderTotal: "Total",
+        orderShip: "Carrier",
+        orderTrackNo: "Tracking no.",
+        orderTrack: "Track shipment",
+        orderView: "Order details",
+        orderAsk: "Ask about this order",
+        orderNone: "No orders found on your account.",
+        orderNotFound: "I couldn't find that order number on your account. Your latest orders:",
+        orderLogin: "To show your order details and shipping status, please log in with the account you ordered from.",
+        loginBtn: "Log in",
+        myOrders: "My orders",
+        orderLoading: "Fetching your orders…",
         orWhatsapp: "or WhatsApp",
         handoffTitle: "Talk to a Jothrah specialist",
         handoffText: "To serve you better, enter your name and your mobile number or email, and we'll connect you to an agronomist right here.",
@@ -287,6 +319,7 @@
     conv: null, // conversation object from server
     msgs: [], // server messages
     pending: [], // local optimistic
+    local: [], // بطاقات محلية (تفاصيل الطلبات) لا تُحفظ في الخادم
     cursor: "",
     sending: false,
     adminTyping: false,
@@ -556,6 +589,12 @@
     ".pc .bt a,.pc .bt button{flex:1;text-align:center;border-radius:10px;padding:7px 4px;font-size:12px;font-weight:800;cursor:pointer;text-decoration:none}" +
     ".pc .bt a{border:1.5px solid var(--g);color:var(--g);background:#fff}.pc .bt button{border:0;background:var(--gold);color:#2b1f05}" +
     ".cta{margin-top:10px;background:var(--gold2);border:1px solid #ecdcb8;border-radius:14px;padding:10px 12px;font-size:13px}" +
+    ".ord{background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px;margin:8px 0}" +
+    ".ord h5{margin:0 0 8px;font-size:14px;color:var(--g);display:flex;justify-content:space-between;align-items:center;gap:6px}" +
+    ".ord .stt{font-size:12px;font-weight:800;padding:2px 10px;border-radius:999px;color:#fff;white-space:nowrap}" +
+    ".ord .ln{display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:3px 0;border-bottom:1px dashed #e6ecea}.ord .ln:last-of-type{border:0}.ord .ln span{color:var(--mut)}.ord .ln b{text-align:left}" +
+    ".ord .its{font-size:12.5px;color:#2b3a36;margin:6px 0;line-height:1.7}" +
+    ".ord .ob{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.ord .ob a,.ord .ob button{flex:1;min-width:120px;text-align:center;border-radius:10px;padding:8px 6px;font-size:12.5px;font-weight:800;cursor:pointer;text-decoration:none;border:1.5px solid var(--g);color:var(--g);background:#fff}.ord .ob .pri{background:var(--g);color:#fff}" +
     ".cta .hb{margin-top:7px}.cta a{color:#2c6b3a;font-weight:700;font-size:12.5px;margin-" + (isAr ? "right" : "left") + ":10px}" +
     ".typing{display:inline-flex;gap:4px;align-items:center}.typing i{width:7px;height:7px;border-radius:50%;background:var(--g);opacity:.4;animation:blink 1.2s infinite}.typing i:nth-child(2){animation-delay:.2s}.typing i:nth-child(3){animation-delay:.4s}" +
     "@keyframes blink{0%,80%,100%{opacity:.25;transform:translateY(0)}40%{opacity:1;transform:translateY(-3px)}}" +
@@ -673,6 +712,10 @@
       html += '<div class="qs">' + r.questions.map(function (q) {
         return '<button class="chip q" type="button" data-q="' + esc(q) + '">' + esc(q) + "</button>";
       }).join("") + "</div>";
+    }
+    var mentionsSupport = /خدمة العملاء|التواصل مع|تواصل مع|مختص|مهندس|customer service|contact (our|the|us)|specialist/i.test(String(r.summary || m.message || ""));
+    if (mentionsSupport && !(r.whatsapp_needed || m.ai_whatsapp_needed) && mode() === "ai") {
+      html += '<div class="cta">' + esc(T.supportHint) + '<br><button class="hb human2" type="button">' + ICON_USER + esc(T.supportBtn) + "</button></div>";
     }
     if ((r.whatsapp_needed || m.ai_whatsapp_needed) && mode() === "ai") {
       html += '<div class="cta">' + esc(T.needHumanHint) + '<br><button class="hb human2" type="button">' + ICON_USER + esc(T.needHumanBtn) + "</button>" +
@@ -798,9 +841,10 @@
     if (S.view === "handoff") {
       html = handoffForm();
     } else {
-      if (!S.msgs.length && !S.pending.length) html += welcome();
+      if (!S.msgs.length && !S.pending.length && !S.local.length) html += welcome();
       S.msgs.forEach(function (msg) { html += renderMsg(msg); });
       S.pending.forEach(function (p) { html += renderPending(p); });
+      S.local.forEach(function (x) { html += x.html; });
       if (waiting) html += waitCard();
       if (S.sending && m === "ai") html += '<div class="row them"><div class="bub"><span class="typing"><i></i><i></i><i></i></span> <small style="color:#55645f">' + esc(T.thinking) + "</small></div></div>";
       if (S.adminTyping && m === "human") html += '<div class="row them human"><div class="bub"><span class="typing"><i></i><i></i><i></i></span> <small style="color:#8a6415">' + esc(T.adminTyping) + "</small></div></div>";
@@ -896,6 +940,79 @@
     if (em) fd.append("customer_email", em);
     if (p.file) fd.append("image", p.file);
     return api("/api/chat", { method: "POST", body: fd, timeout: 60000 });
+  }
+
+  /* ---------- الطلبات (من حساب العميل في سلة) ---------- */
+  var ORDER_RE = /(طلبي|طلبيتي|الطلب|رقم الطلب|رقم طلب|طلب رقم|تتبع|التتبع|الشحنه|الشحنة|شحنتي|وين طلب|متى يوصل|متى يوصل|وصل طلب|order|tracking|shipment)/i;
+  function localPush(html) {
+    S.local.push({ html: html });
+    lastHtml = "";
+    render();
+    toBottom();
+  }
+  function money(v) {
+    var a = v && typeof v === "object" ? v.amount : v;
+    return a == null ? "" : Number(a).toLocaleString(isAr ? "ar-SA" : "en", { maximumFractionDigits: 2 }) + (isAr ? " ر.س" : " SAR");
+  }
+  function orderCard(o) {
+    var st = o.status || {};
+    var sh = o.shipping || {};
+    var trackNo = sh.number && sh.number !== "0" ? sh.number : "";
+    var trackUrl = safeUrl(sh.tracking_url || sh.tracing_link || "");
+    var items = (o.items || []).map(function (i) { return esc(i.name) + " × " + esc(i.quantity); }).join("<br>");
+    var d = o.created_at && (o.created_at.date || o.created_at);
+    var date = "";
+    try { date = new Date(String(d).replace(" ", "T")).toLocaleDateString(isAr ? "ar-SA" : "en-GB", { day: "numeric", month: "long", year: "numeric" }); } catch (e) {}
+    return '<div class="ord"><h5><span>📦 ' + esc(T.orderNo) + " #" + esc(o.reference_id || o.id) + '</span><span class="stt" style="background:' + esc(st.color || "#0d4a42") + '">' + esc(st.name || "") + "</span></h5>" +
+      (date ? '<div class="ln"><span>🗓️</span><b>' + esc(date) + "</b></div>" : "") +
+      '<div class="ln"><span>' + esc(T.orderTotal) + "</span><b>" + esc(money(o.total)) + "</b></div>" +
+      (sh.name ? '<div class="ln"><span>' + esc(T.orderShip) + "</span><b>" + esc(sh.name) + "</b></div>" : "") +
+      (trackNo ? '<div class="ln"><span>' + esc(T.orderTrackNo) + '</span><b dir="ltr">' + esc(trackNo) + "</b></div>" : "") +
+      (items ? '<div class="its">' + items + "</div>" : "") +
+      '<div class="ob">' +
+      (trackUrl ? '<a class="pri" href="' + esc(trackUrl) + '" target="_blank" rel="noopener">🚚 ' + esc(T.orderTrack) + "</a>" : "") +
+      (o.url ? '<a href="' + esc(safeUrl(o.url)) + '" target="_blank" rel="noopener">' + esc(T.orderView) + "</a>" : "") +
+      '<button type="button" class="ord-ask" data-ref="' + esc(o.reference_id || o.id) + '">💬 ' + esc(T.orderAsk) + "</button>" +
+      "</div></div>";
+  }
+  function handleOrderQuestion(text) {
+    localPush('<div class="row me"><div class="bub">' + linkify(text) + '<div class="meta">' + esc(fmtTime(new Date().toISOString())) + "</div></div></div>");
+    var s = window.salla;
+    var api = s && s.order && s.order.api;
+    var u = sallaUser();
+    var botWrap = function (inner) { return '<div class="row them"><div class="bub"><div class="who">🌿 ' + esc(T.bot) + "</div>" + inner + "</div></div>"; };
+    var supportBtn = '<div class="cta">' + esc(T.supportHint) + '<br><button class="hb human2" type="button">' + ICON_USER + esc(T.supportBtn) + "</button></div>";
+    if (!api || !api.fetch) {
+      localPush(botWrap(esc(T.orderLogin) + '<div class="qs"><a class="chip" style="text-decoration:none" href="https://jothrah.com/ar/account/orders" target="_blank" rel="noopener">📦 ' + esc(T.myOrders) + " ↗</a></div>" + supportBtn));
+      return;
+    }
+    if (!u) {
+      localPush(botWrap(esc(T.orderLogin) + '<div class="qs"><button type="button" class="chip do-login">🔐 ' + esc(T.loginBtn) + "</button></div>" + supportBtn));
+      return;
+    }
+    var loadingId = "ld" + uid();
+    S.local.push({ id: loadingId, html: botWrap('<span class="typing"><i></i><i></i><i></i></span> <small>' + esc(T.orderLoading) + "</small>") });
+    lastHtml = ""; render(); toBottom();
+    var num = (String(text).replace(/[٠-٩]/g, function (d) { return String("٠١٢٣٤٥٦٧٨٩".indexOf(d)); }).match(/\d{4,}/) || [])[0] || "";
+    Promise.resolve(api.fetch())
+      .then(function (res) {
+        var list = (res && (res.data || res)) || [];
+        if (!Array.isArray(list)) list = list.data || [];
+        var match = num ? list.filter(function (o) { return String(o.reference_id) === num || String(o.id) === num; }) : [];
+        var show = match.length ? match : list.slice(0, 3);
+        return Promise.all(show.map(function (o) {
+          return Promise.resolve(api.getDetails(o.id)).then(function (r) { return (r && (r.data || r)) || o; }).catch(function () { return o; });
+        })).then(function (details) { return { details: details, found: match.length > 0, total: list.length }; });
+      })
+      .then(function (r) {
+        S.local = S.local.filter(function (x) { return x.id !== loadingId; });
+        var head = !r.total ? esc(T.orderNone) : num && !r.found ? esc(T.orderNotFound) : "<b>" + esc(T.ordersTitle) + "</b>";
+        localPush(botWrap(head + r.details.map(orderCard).join("") + supportBtn));
+      })
+      .catch(function () {
+        S.local = S.local.filter(function (x) { return x.id !== loadingId; });
+        localPush(botWrap(esc(T.orderLogin) + supportBtn));
+      });
   }
 
   function send(text, file, preview) {
@@ -1029,6 +1146,12 @@
     var text = el.ta.value;
     var img = S.image;
     if (!text.trim() && !img) return;
+    if (!img && mode() === "ai" && ORDER_RE.test(text) && text.length < 160) {
+      el.ta.value = "";
+      el.ta.style.height = "auto";
+      el.send.disabled = true;
+      return handleOrderQuestion(text.trim());
+    }
     if (!img && mode() === "ai" && HUMAN_RE.test(text) && text.length < 80) {
       el.ta.value = "";
       el.send.disabled = true;
@@ -1078,11 +1201,26 @@
     if (q) {
       var text = q.getAttribute("data-q");
       if (q.classList.contains("st4")) return el.att.click();
-      if (q.classList.contains("st5")) text = T.orderQ;
+      if (q.classList.contains("st5")) return handleOrderQuestion(T.orderQ);
+      if (mode() === "ai" && ORDER_RE.test(text)) return handleOrderQuestion(text);
       return send(text);
     }
     if (t.closest(".human2")) { S.view = "handoff"; return render(); }
     if (t.closest(".notif-on")) { askNotifications(); return; }
+    var oa = t.closest(".ord-ask");
+    if (oa) {
+      S.view = "handoff";
+      lastHtml = "";
+      render();
+      var tp = root.querySelector(".f-topic");
+      if (tp) tp.value = (isAr ? "استفسار عن الطلب رقم " : "Question about order #") + oa.getAttribute("data-ref");
+      return;
+    }
+    if (t.closest(".do-login")) {
+      try { if (window.salla && salla.event && salla.event.dispatch) salla.event.dispatch("login::open"); } catch (e2) {}
+      setOpen(false);
+      return;
+    }
     if (t.closest(".f-back")) { S.view = "chat"; return render(); }
     var retry = t.closest(".retry");
     if (retry) {
@@ -1112,7 +1250,7 @@
     if (t.closest(".newc")) {
       if (S.conv) store(LS.dismissed, S.conv.id);
       store(LS.conv, null);
-      S.conv = null; S.msgs = []; S.pending = []; S.cursor = ""; S.rated = false; S.lastHumanCount = -1;
+      S.conv = null; S.msgs = []; S.pending = []; S.local = []; S.cursor = ""; S.rated = false; S.lastHumanCount = -1;
       lastHtml = "";
       return render();
     }
