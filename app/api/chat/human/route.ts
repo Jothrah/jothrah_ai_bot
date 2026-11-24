@@ -54,7 +54,7 @@ async function notifyAdminHumanRequest(params: {
 function corsHeaders(origin?: string | null) {
   const rawAllowedOrigins = process.env.ALLOWED_ORIGIN || "https://jothrah.com";
   const allowedOrigins = rawAllowedOrigins.split(",").map((item) => item.trim()).filter(Boolean);
-  const allowedOrigin = origin && allowedOrigins.includes(origin) ? origin : allowedOrigins[0] || "https://jothrah.com";
+  const allowedOrigin = origin && (allowedOrigins.includes(origin) || /^https:\/\/([a-z0-9-]+\.)?jothrah\.com$/i.test(origin)) ? origin : allowedOrigins[0] || "https://jothrah.com";
 
   return {
     "Access-Control-Allow-Origin": allowedOrigin,
