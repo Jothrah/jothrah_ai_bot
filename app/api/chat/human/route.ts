@@ -83,6 +83,18 @@ export async function POST(req: NextRequest) {
     const customerName = String(body.customer_name || body.customerName || "").trim();
     const customerPhone = String(body.customer_phone || body.customerPhone || "").trim();
     const customerEmail = String(body.customer_email || body.customerEmail || "").trim();
+    const rawLocation = body.location && typeof body.location === "object" ? body.location : null;
+    const lat = Number(rawLocation?.lat);
+    const lng = Number(rawLocation?.lng);
+    const location =
+      Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180
+        ? {
+            lat: Math.round(lat * 1e5) / 1e5,
+            lng: Math.round(lng * 1e5) / 1e5,
+            accuracy: Math.round(Number(rawLocation?.accuracy) || 0),
+            at: new Date().toISOString(),
+          }
+        : null;
 
     if (!visitorId) {
       return NextResponse.json(
@@ -102,7 +114,8 @@ export async function POST(req: NextRequest) {
       customerPhone,
       customerEmail,
       metadata: {
-        humanRequestedFrom: "client_button"
+        humanRequestedFrom: "client_button",
+        ...(location ? { location } : {})
       }
     });
 
@@ -112,6 +125,24 @@ export async function POST(req: NextRequest) {
       message: language === "ar" ? "تم طلب مختص جذرة." : "Jothrah specialist requested.",
       metadata: { event: "human_requested" }
     });
+
+    const contactLines = [
+      customerName ? `👤 الاسم: ${customerName}` : "",
+      customerPhone ? `📱 الجوال: ${customerPhone}` : "",
+      customerEmail ? `✉️ البريد: ${customerEmail}` : "",
+      location ? `📍 الموقع: https://maps.google.com/?q=${location.lat},${location.lng}` : "",
+      message && message !== "طلب تواصل مع مختص" ? `📝 الطلب: ${message}` : "",
+    ].filter(Boolean);
+
+    if (contactLines.length) {
+      await saveChatMessage({
+        conversationId: conversation.id,
+        senderType: "system",
+        message: `بيانات العميل للتواصل:\n${contactLines.join("\n")}`,
+        visibleToCustomer: false,
+        metadata: { event: "customer_contact_card", location }
+      });
+    }
 
     await saveChatEvent({
       conversationId: conversation.id,
