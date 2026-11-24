@@ -1215,6 +1215,7 @@ ${forceWhatsapp}
 
 أجب للعميل بصيغة مختصرة ومفيدة داخل شات متجر إلكتروني، وبأسلوب ودود تفاعلي، واختم بسؤال متابعة قصير يساعدك تفهم حالته أكثر.
 مهم جداً: اكتب كل النصوص بنفس لغة رسالة العميل أعلاه.
+مهم: إذا كانت المشكلة أو الطلب له منتج مناسب في كتالوج جذرة فرشّح 1 إلى 4 منتجات في product_suggestions بالمعرّف، ولا تكتفي بذكر التصنيف.
 `
         : `
 Customer message:
@@ -1248,6 +1249,7 @@ ${forceWhatsapp}
 
 Reply in a short, friendly, interactive ecommerce chat style and end with one short follow-up question.
 VERY IMPORTANT: write summary, advice, questions and product reasons in the exact same language as the customer message above (German message → German reply, Urdu → Urdu, English → English).
+IMPORTANT: if a fitting product exists in the Jothrah catalog, put 1–4 of them in product_suggestions by product_id instead of only naming a category.
 `;
 
     const { data: historyRows } = await supabaseAdmin
