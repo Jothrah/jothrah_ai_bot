@@ -716,10 +716,8 @@
         return '<a class="chip" style="text-decoration:none" href="' + esc(safeUrl(c.url)) + '" target="_blank" rel="noopener">' + esc(c.title) + " ↗</a>";
       }).join("") + "</div>";
     }
-    if (r.questions && r.questions.length && mode() === "ai") {
-      html += '<div class="qs">' + r.questions.map(function (q) {
-        return '<button class="chip q" type="button" data-q="' + esc(q) + '">' + esc(q) + "</button>";
-      }).join("") + "</div>";
+    if (r.questions && r.questions.length) {
+      html += '<div style="margin-top:8px;color:#0d4a42;font-weight:700">' + r.questions.slice(0, 2).map(function (q) { return "❓ " + esc(q); }).join("<br>") + "</div>";
     }
     var mentionsSupport = /خدمة العملاء|التواصل مع|تواصل مع|مختص|مهندس|customer service|contact (our|the|us)|specialist/i.test(String(r.summary || m.message || ""));
     if (mentionsSupport && !(r.whatsapp_needed || m.ai_whatsapp_needed) && mode() === "ai") {
