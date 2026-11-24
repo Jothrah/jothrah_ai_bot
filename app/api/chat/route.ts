@@ -1460,6 +1460,8 @@ ${historyText || "(none)"}
       async start(controller) {
         let raw = "";
         try {
+          // حشوة 2KB حتى لا يحجز المتصفح أول البث (MIME sniffing في XHR)
+          controller.enqueue(encoder.encode(" ".repeat(2048) + "\n"));
           const modelStream = await client.chat.completions.create({ ...completionParams, stream: true });
           let first = true;
           for await (const chunk of modelStream) {
@@ -1486,6 +1488,7 @@ ${historyText || "(none)"}
         "Content-Type": "text/plain; charset=utf-8",
         "Cache-Control": "no-cache, no-transform",
         "X-Accel-Buffering": "no",
+        "X-Content-Type-Options": "nosniff",
       },
     });
   } catch (error) {
