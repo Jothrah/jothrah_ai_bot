@@ -124,6 +124,7 @@
         ],
         send: "إرسال",
         thinking: "مساعد جذرة يكتب",
+        connecting: "جاري تحويلك للمهندس…",
         adminTyping: "مهندس جذرة يكتب الآن",
         products: "منتجات مناسبة من جذرة",
         view: "عرض المنتج",
@@ -217,6 +218,7 @@
         ],
         send: "Send",
         thinking: "Jothrah assistant is typing",
+        connecting: "Connecting you to an agronomist…",
         adminTyping: "Specialist is typing",
         products: "Suitable Jothrah products",
         view: "View product",
@@ -855,7 +857,8 @@
       S.pending.forEach(function (p) { html += renderPending(p); });
       S.local.forEach(function (x) { html += x.html; });
       if (waiting) html += waitCard();
-      if (S.sending && m === "ai") html += '<div class="row them"><div class="bub"><span class="typing"><i></i><i></i><i></i></span> <small style="color:#55645f">' + esc(T.thinking) + "</small></div></div>";
+      if (S.botTyping && m === "ai" && Date.now() - S.botTyping < 65000) html += '<div class="row them"><div class="bub"><span class="typing"><i></i><i></i><i></i></span> <small style="color:#55645f">' + esc(T.thinking) + "</small></div></div>";
+      if (S.connecting) html += '<div class="sys"><span>⏳ ' + esc(T.connecting) + "</span></div>";
       if (S.adminTyping && m === "human") html += '<div class="row them human"><div class="bub"><span class="typing"><i></i><i></i><i></i></span> <small style="color:#8a6415">' + esc(T.adminTyping) + "</small></div></div>";
       if (m === "closed") html += rateCard();
     }
@@ -1031,6 +1034,7 @@
     var p = { lid: uid(), text: text || (file ? (isAr ? "صورة مرفقة" : "Attached image") : ""), file: file || null, preview: preview || "", status: "sending" };
     S.pending.push(p);
     S.sending = true;
+    S.botTyping = mode() === "ai" ? Date.now() : 0;
     S.view = "chat";
     render();
     toBottom();
@@ -1052,6 +1056,7 @@
       })
       .finally(function () {
         S.sending = false;
+        S.botTyping = 0;
         render();
         toBottom();
         schedulePoll();
@@ -1064,9 +1069,9 @@
     if (phone) store(LS.phone, phone);
     if (email) store(LS.email, email);
     S.view = "chat";
-    S.sending = true;
+    S.connecting = true;
     render();
-    return api("/api/chat/human", {
+    return Promise.resolve().then(function () { return api("/api/chat/human", {
       method: "POST",
       body: {
         visitor_id: id.key,
@@ -1078,7 +1083,7 @@
         customer_email: email || (id.user && id.user.email) || "",
         location: geo || null,
       },
-    })
+    }); })
       .then(function (res) {
         if (res && res.conversation_id && (!S.conv || S.conv.id !== res.conversation_id)) {
           S.conv = { id: res.conversation_id, status: "needs_human" };
@@ -1094,7 +1099,7 @@
         S.pending.push({ lid: uid(), text: T.talkHuman, status: "error", human: true });
       })
       .finally(function () {
-        S.sending = false;
+        S.connecting = false;
         if (S.lastHumanCount < 0) S.lastHumanCount = 0;
         render();
         toBottom();
@@ -1324,6 +1329,7 @@
 
   // عدّاد الانتظار حي
   setInterval(function () {
+    if (S.botTyping && Date.now() - S.botTyping > 65000) { S.botTyping = 0; S.sending = false; lastHtml = ""; render(); }
     if (!S.open || !waitingForHuman()) return;
     var e = root.querySelector(".elapsed");
     var req = ts(S.conv && S.conv.human_requested_at);
