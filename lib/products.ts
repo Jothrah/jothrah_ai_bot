@@ -96,6 +96,8 @@ export function hydrateProductSuggestions(
   const isHome = HOME_RE.test(nText);
   // الآفات المذكورة بالاسم: نرشح فقط المنتجات المسجلة/المصنفة لها
   const pestKeys = PEST_KEYS.filter((k) => k.re.test(nText));
+  const asksInsect = /حشر|المن|تربس|ذباب|بعوض|صرصور|صراصير|نمل|بق|سوس|دود|يرق|عنكب|اكاروس|حلم|صانعات|قشري|دوباس|حفار|جراد|نطاط|insect|aphid|thrips|mite/.test(nText);
+  const asksFungal = /فطر|بياض|عفن|لفحه|تبقع|صدا|ذبول|تعفن|fung|mildew|blight|rot/.test(nText);
 
   const allowed = (product: StoreProduct) => {
     const type = productType(product);
@@ -104,6 +106,9 @@ export function hydrateProductSuggestions(
     if (asksPestOrDisease && !asksFertilizer && type === "سماد") return false;
     if (isAgri && !isHome && type === "مبيد صحة عامة") return false;
     if (isHome && !isAgri && (type === "مبيد زراعي" || type === "مبيد فطري" || type === "مبيد أعشاب")) return false;
+    // حشرة ← لا مبيد فطري ولا أعشاب؛ مرض فطري ← لا مبيد حشري
+    if (asksInsect && !asksFungal && (type === "مبيد فطري" || type === "مبيد أعشاب")) return false;
+    if (asksFungal && !asksInsect && (type === "مبيد صحة عامة" || type === "قوارض" || type === "مصائد" || /حشري|الحشرات/.test(normalize(product.name)))) return false;
     if (pestKeys.length) {
       const hay = normalize([product.name, ...(product.categories || []), ...(product.targets || [])].join(" "));
       if (!pestKeys.some((k) => k.hay.some((h) => hay.includes(h)))) return false;
