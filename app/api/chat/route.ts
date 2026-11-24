@@ -1325,7 +1325,8 @@ ${referenceBlock || "(none for this question)"}
 
 Reference rules:
 - When you use the pesticide guide, mention briefly: "حسب دليل المبيدات الزراعية في المملكة".
-- If the customer asks whether an active ingredient is banned or restricted, answer clearly from the lists; if it is not in either list say it is not listed as banned/restricted in the guide.
+- If the references contain a line starting with "الحكم الصحيح", state that verdict exactly (restricted is NOT banned). Otherwise, if the customer asks whether an active ingredient is banned or restricted and you cannot find it in the lists, say it is not listed as banned/restricted in the guide.
+- When registered uses from the guide match the customer's crop and pest, name 1-3 of those active ingredients in the advice.
 - Never recommend a banned active ingredient. For restricted ones, say they are used only with approval/supervision of the competent authority.
 - Prefer recommending store products whose active ingredient is registered for the customer's crop and pest in the guide.
 - Fertilizer rates may be given ONLY if they appear in the provided fertilizer knowledge, and always say they are guidance that depends on soil/water analysis, crop and growth stage.
