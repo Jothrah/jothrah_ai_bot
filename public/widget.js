@@ -24,6 +24,8 @@
     email: "jth2_customer_email",
     phone: "jth2_customer_phone",
     open: "jth2_open",
+    conv: "jth2_conv_id",
+    notif: "jth2_notif_asked",
     nudge: "jth2_nudge_seen",
   };
 
@@ -137,6 +139,8 @@
         waitTitle: "تم تحويلك لمهندس جذرة الزراعي ✅",
         waitText: "يستغرق الرد عليك حوالي دقيقتين، رجاءً لا تغادر الصفحة أو تغلق المتصفح حتى يصلك الرد.",
         waitSound: "بننبهك بصوت أول ما يوصل الرد.",
+        notifBtn: "فعّل الإشعارات عشان يوصلك الرد",
+        notifOn: "الإشعارات مفعّلة، بيوصلك تنبيه حتى لو كنت في صفحة ثانية.",
         waitLong: "المهندس مشغول مع عميل آخر حالياً، رسالتك محفوظة وبيرد عليك هنا قريباً. تقدر تكتب تفاصيل مشكلتك الآن.",
         elapsed: "مدة الانتظار",
         leaveWarn: "مهندس جذرة على وشك الرد عليك، متأكد تبغى تغادر؟",
@@ -209,6 +213,8 @@
         waitTitle: "You're connected to a specialist ✅",
         waitText: "A reply usually takes about two minutes — please don't leave the page or close the browser until it arrives.",
         waitSound: "We'll play a sound when the reply arrives.",
+        notifBtn: "Enable notifications for the reply",
+        notifOn: "Notifications are on — you'll be alerted even in another tab.",
         waitLong: "Our specialist is helping another customer; your message is saved and they'll reply here shortly. Feel free to add details now.",
         elapsed: "Waiting time",
         leaveWarn: "A specialist is about to reply. Leave anyway?",
@@ -252,15 +258,15 @@
       return null;
     }
   }
+  // المعرّف ثابت لهذا المتصفح (محفوظ في localStorage) حتى تبقى المحادثة بعد التحديث أو التنقل أو تسجيل الدخول
   function identity() {
     var u = sallaUser();
-    if (u) return { key: "salla_" + u.id.replace(/[^a-zA-Z0-9]/g, ""), logged: true, user: u };
     var v = store(LS.visitor);
     if (!v) {
       v = uid();
       store(LS.visitor, v);
     }
-    return { key: v, logged: false, user: null };
+    return { key: v, logged: Boolean(u), user: u };
   }
 
   /* ------------------------------------------------------------------ */
@@ -332,7 +338,8 @@
   function sync(full) {
     var id = identity();
     var q = "/api/chat/messages?visitor_id=" + encodeURIComponent(id.key);
-    if (S.conv && S.conv.id && !full) q += "&conversation_id=" + encodeURIComponent(S.conv.id);
+    var knownConv = (S.conv && S.conv.id) || (full ? store(LS.conv) : "");
+    if (knownConv && (!full || !S.conv)) q += "&conversation_id=" + encodeURIComponent(knownConv);
     if (!full && S.cursor) q += "&since=" + encodeURIComponent(S.cursor);
     if (id.user && id.user.name) q += "&customer_name=" + encodeURIComponent(id.user.name);
     return api(q, { timeout: 15000 }).then(function (data) {
@@ -347,6 +354,7 @@
       }
       if (full && conv.status === "closed" && (conv.rating || Date.now() - ts(conv.closed_at || conv.last_message_at) > 864e5)) {
         store(LS.dismissed, conv.id);
+        store(LS.conv, null);
         S.conv = null;
         S.msgs = [];
         S.cursor = "";
@@ -354,6 +362,7 @@
       }
       var convChanged = !S.conv || S.conv.id !== conv.id;
       S.conv = conv;
+      store(LS.conv, conv.id);
       S.adminTyping = Boolean(data.admin_typing);
       S.adminSeenAt = data.admin_seen_at || "";
       if (convChanged || full || !data.incremental) S.msgs = [];
@@ -435,7 +444,33 @@
       schedulePoll();
     }
   });
+  function canNotify() {
+    return "Notification" in window && window.isSecureContext;
+  }
+  function askNotifications() {
+    if (!canNotify() || Notification.permission !== "default") return;
+    store(LS.notif, "1");
+    try {
+      var r = Notification.requestPermission(function () { lastHtml = ""; render(); });
+      if (r && r.then) r.then(function () { lastHtml = ""; render(); });
+    } catch (e) {}
+  }
+  function systemNotify(text) {
+    if (!canNotify() || Notification.permission !== "granted") return;
+    if (!document.hidden && S.open) return;
+    try {
+      var n = new Notification(isAr ? "💬 رد من مهندس جذرة" : "💬 Reply from Jothrah", {
+        body: String(text || "").slice(0, 140),
+        icon: "https://cdn.salla.sa/xPpow/fd42af9f-40f2-4972-bcad-7c8b7c1a464a-1000x1000-K7vWaelbWALZairnR5Nb269vBeHTCkfTaK8mHymz.jpg",
+        tag: "jothrah-chat",
+        renotify: true,
+      });
+      n.onclick = function () { window.focus(); setOpen(true); n.close(); };
+    } catch (e) {}
+  }
   function onHumanReply(n) {
+    var last = S.msgs.filter(function (m) { return m.sender_type === "human"; }).pop();
+    systemNotify(last && last.message);
     chime();
     flashTitle();
     if (navigator.vibrate) try { navigator.vibrate(120); } catch (e) {}
@@ -457,8 +492,8 @@
   /* ------------------------------------------------------------------ */
   var CSS =
     ":host{all:initial}" +
-    "*{box-sizing:border-box;font-family:inherit}" +
-    ".w{--g:#0d4a42;--g2:#0a3832;--g3:#e7f1ee;--gold:#c99a3b;--gold2:#f6ecd5;--ink:#12201d;--mut:#55645f;--line:#dfe6e3;--bg:#f5f7f6;font-family:inherit;color:var(--ink);font-size:14.5px;line-height:1.6;direction:" + (isAr ? "rtl" : "ltr") + "}" +
+    "*{box-sizing:border-box;font-family:'IBM Plex Sans Arabic','Tajawal',system-ui,-apple-system,'Segoe UI',sans-serif}" +
+    ".w{font-family:'IBM Plex Sans Arabic','Tajawal',system-ui,-apple-system,'Segoe UI',sans-serif!important;--g:#0d4a42;--g2:#0a3832;--g3:#e7f1ee;--gold:#c99a3b;--gold2:#f6ecd5;--ink:#12201d;--mut:#55645f;--line:#dfe6e3;--bg:#f5f7f6;color:var(--ink);font-size:14.5px;line-height:1.6;direction:" + (isAr ? "rtl" : "ltr") + "}" +
     ".launch{position:fixed;bottom:18px;" + (isAr ? "left" : "right") + ":18px;z-index:2147483000;width:62px;height:62px;border-radius:50%;border:0;cursor:pointer;background:linear-gradient(145deg,#11594f,#0a3832);box-shadow:0 10px 28px rgba(10,56,50,.38),0 0 0 3px rgba(201,154,59,.55);display:grid;place-items:center;transition:transform .2s}" +
     ".launch:hover{transform:scale(1.06)}.launch:focus-visible{outline:3px solid var(--gold);outline-offset:3px}" +
     ".launch svg{width:30px;height:30px}" +
@@ -538,6 +573,15 @@
     ".lb{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:2147483002;display:grid;place-items:center;cursor:zoom-out}.lb img{max-width:94vw;max-height:90vh;border-radius:12px}" +
     "@media (max-width:520px){.panel{inset:0;width:100%;height:100%;max-height:none;border-radius:0;bottom:0;left:0;right:0}.launch{bottom:14px;" + (isAr ? "left" : "right") + ":14px;width:58px;height:58px}.nudge{bottom:84px}}" +
     "@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}";
+
+  // خط عربي أنيق (يُحمَّل مرة واحدة على مستوى الصفحة لأن الخطوط لا تُعرَّف داخل Shadow DOM)
+  if (!document.getElementById("jth-chat-font")) {
+    var fl = document.createElement("link");
+    fl.id = "jth-chat-font";
+    fl.rel = "stylesheet";
+    fl.href = "https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap";
+    (document.head || document.documentElement).appendChild(fl);
+  }
 
   var host = document.createElement("div");
   host.id = "jth-chat-v2";
@@ -677,7 +721,13 @@
     var el2 = Date.now() - req;
     var long = el2 > 4 * 60 * 1000;
     return '<div class="wait"><b>' + esc(T.waitTitle) + '</b><div class="dots"><i></i><i></i><i></i></div><p>' + esc(long ? T.waitLong : T.waitText) +
-      '</p><div class="clock">⏱ ' + esc(T.elapsed) + ' <span class="elapsed">' + mmss(el2) + "</span></div><br><small>🔔 " + esc(T.waitSound) + "</small></div>";
+      '</p><div class="clock">⏱ ' + esc(T.elapsed) + ' <span class="elapsed">' + mmss(el2) + "</span></div><br>" +
+      (canNotify() && Notification.permission === "default"
+        ? '<button type="button" class="hb notif-on" style="margin:8px auto 0">🔔 ' + esc(T.notifBtn) + "</button>"
+        : canNotify() && Notification.permission === "granted"
+          ? "<small>🔔 " + esc(T.notifOn) + "</small>"
+          : "<small>🔔 " + esc(T.waitSound) + "</small>") +
+      "</div>";
   }
 
   function rateCard() {
@@ -827,7 +877,6 @@
     fd.append("message", p.text || "");
     fd.append("language", isAr ? "ar" : "en");
     fd.append("visitor_id", id.key);
-    if (id.logged) fd.append("customer_key", id.key);
     fd.append("page_url", location.href.split("#")[0].slice(0, 500));
     var nm = (id.user && id.user.name) || store(LS.name) || "";
     if (nm) fd.append("customer_name", nm);
@@ -1023,6 +1072,7 @@
       return send(text);
     }
     if (t.closest(".human2")) { S.view = "handoff"; return render(); }
+    if (t.closest(".notif-on")) { askNotifications(); return; }
     if (t.closest(".f-back")) { S.view = "chat"; return render(); }
     var retry = t.closest(".retry");
     if (retry) {
@@ -1051,6 +1101,7 @@
     }
     if (t.closest(".newc")) {
       if (S.conv) store(LS.dismissed, S.conv.id);
+      store(LS.conv, null);
       S.conv = null; S.msgs = []; S.pending = []; S.cursor = ""; S.rated = false; S.lastHumanCount = -1;
       lastHtml = "";
       return render();
@@ -1096,6 +1147,7 @@
     if (!phone && !email) return fail(T.contactReq);
     if (phone && !/^\+?\d{9,15}$/.test(phone)) return fail(T.phoneBad);
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return fail(T.emailBad);
+    askNotifications();
     var wantLoc = (root.querySelector(".f-loc") || {}).checked;
     var btn = root.querySelector(".f-go");
     if (btn) { btn.disabled = true; btn.textContent = wantLoc ? T.locWait : "…"; }
