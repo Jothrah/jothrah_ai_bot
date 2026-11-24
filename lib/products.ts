@@ -78,7 +78,11 @@ export function hydrateProductSuggestions(
   suggestions: Array<{ id?: string; reason?: string }> | undefined,
   max = 4,
   customerText = "",
+  historyText = "",
 ): ProductCard[] {
+  // نعتمد على رسالة العميل الحالية؛ السياق السابق فقط إذا الرسالة نفسها ما تحدد الحاجة
+  const hasOwnNeed = /بذور|بذر|سماد|اسمده|أسمدة|تسميد|حشر|آف|مبيد|مرض|فطر|بياض|صراصير|نمل|بعوض|ذباب|بق|سوس|دود|المن|تربس|عنكب|فئران|اصفرار|طماطم|نخيل|خيار/i.test(customerText);
+  if (!hasOwnNeed && historyText) customerText = `${customerText} ${historyText}`;
   const asksSeeds = /بذور|بذر|بذره|بذرة|شتل|seed/i.test(customerText);
   // نوع الحاجة من كلام العميل: لا نخلط سماد بمبيد أو بذور
   const asksFertilizer = /سماد|اسمده|أسمدة|تسميد|تغذي|نقص عنصر|اصفرار|NPK|fertili[sz]/i.test(customerText);
