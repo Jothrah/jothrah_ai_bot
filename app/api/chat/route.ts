@@ -10,6 +10,7 @@ import { detectLanguage, matchCategories } from "@/lib/matcher";
 import { needsWhatsapp } from "@/lib/safety";
 import { sendAdminPushNotification } from "@/lib/admin-push";
 import { buildCatalogIndex, hydrateProductSuggestions } from "@/lib/products";
+import { searchGuide, formatGuideEntries, listsContext, fertilizerRegistrationContext, fertilizerKnowledgeContext } from "@/lib/guide";
 import {
   saveChatAttachment,
   saveChatEvent,
@@ -1268,6 +1269,21 @@ IMPORTANT: if a fitting product exists in the Jothrah catalog, put 1–4 of them
       )
       .join("\n");
 
+    // المراجع الموسعة: دليل المبيدات السعودي 1446 + القوائم المقيدة/المحظورة + معرفة الأسمدة ومتطلبات تسجيلها
+    const guideQuery = `${message} ${visionAnalysis?.detected_problem || ""} ${(visionAnalysis?.possible_category_terms || []).join(" ")}`;
+    const guideText = formatGuideEntries(searchGuide(guideQuery, 6));
+    const legalText = listsContext(message);
+    const fertText = fertilizerKnowledgeContext(message);
+    const fertRegText = fertilizerRegistrationContext(message);
+    const referenceBlock = [
+      guideText ? `من دليل المبيدات الزراعية في المملكة العربية السعودية (1446هـ) — مواد فعالة مسجلة مطابقة للسؤال:\n${guideText}` : "",
+      legalText ? `من دليل المبيدات 1446 — المبيدات المقيدة والمحظورة:\n${legalText}` : "",
+      fertText ? `معرفة جذرة في الأسمدة (معدلات استرشادية):\n${fertText}` : "",
+      fertRegText ? `متطلبات تسجيل الأسمدة ومحسنات التربة في المملكة (منصة نما / الشركة الوطنية للخدمات الزراعية):\n${fertRegText}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n\n");
+
     const completion = await client.chat.completions.create({
       model: getModel(),
       messages: [
@@ -1303,6 +1319,17 @@ Language rule (overrides earlier language rules):
 - The "language" field must be "ar" only when replying in Arabic, otherwise "en".
 - Arabic replies use clear Saudi-friendly Modern Standard Arabic.
 - Be warm and human, start directly with the answer (no "As an AI").
+
+Official references (use them as the source of truth when relevant):
+${referenceBlock || "(none for this question)"}
+
+Reference rules:
+- When you use the pesticide guide, mention briefly: "حسب دليل المبيدات الزراعية في المملكة".
+- If the customer asks whether an active ingredient is banned or restricted, answer clearly from the lists; if it is not in either list say it is not listed as banned/restricted in the guide.
+- Never recommend a banned active ingredient. For restricted ones, say they are used only with approval/supervision of the competent authority.
+- Prefer recommending store products whose active ingredient is registered for the customer's crop and pest in the guide.
+- Fertilizer rates may be given ONLY if they appear in the provided fertilizer knowledge, and always say they are guidance that depends on soil/water analysis, crop and growth stage.
+- For registration questions (importers/factories), answer from the registration requirements in organized short points.
 
 Previous messages in this conversation (oldest first), use them for context:
 ${historyText || "(none)"}
