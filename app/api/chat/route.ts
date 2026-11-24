@@ -1376,6 +1376,7 @@ ${historyText || "(none)"}
         json_schema: responseSchema,
       },
       max_completion_tokens: 650,
+      temperature: 0.2,
     };
 
     const finalize = async (raw: string) => {
@@ -1388,6 +1389,9 @@ ${historyText || "(none)"}
       reason: card.reason,
     }));
     data.products = productCards;
+    const clean = (v: unknown) => String(v || "").replace(/[",\s]+$/g, "").replace(/\s{2,}/g, " ").trim();
+    if (typeof data.summary === "string") data.summary = clean(data.summary);
+    if (Array.isArray(data.advice)) data.advice = data.advice.map(clean).filter(Boolean);
     data.advice = alignAdviceWithProducts(data.advice, productCards, data.language === "en" ? "en" : "ar");
     await saveChatMessage({
       conversationId: conversation.id,
