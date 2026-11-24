@@ -780,12 +780,12 @@ const responseSchema = {
       advice: {
         type: "array",
         items: { type: "string" },
-        maxItems: 3,
+        maxItems: 2,
       },
       questions: {
         type: "array",
         items: { type: "string" },
-        maxItems: 2,
+        maxItems: 1,
       },
       categories: {
         type: "array",
@@ -814,7 +814,6 @@ const responseSchema = {
         maxItems: 4,
       },
       whatsapp_needed: { type: "boolean" },
-      whatsapp_message: { type: "string" },
     },
     required: [
       "language",
@@ -827,7 +826,6 @@ const responseSchema = {
       "categories",
       "product_suggestions",
       "whatsapp_needed",
-      "whatsapp_message",
     ],
   },
   strict: true,
@@ -1323,6 +1321,7 @@ Important Jothrah response rules:
 - Keep advice to maximum 3 items.
 - Keep questions to maximum 2 items.
 - Return only valid JSON matching the schema.
+- SPEED: be brief. summary max 35 words, each advice max 12 words, each product reason max 8 words, categories may be [] when products are suggested.
 `,
         },
         {
