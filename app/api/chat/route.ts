@@ -1,6 +1,6 @@
 import { promises as fs } from "fs";
 import path from "path";
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import OpenAI from "openai";
 
 import { jothrahSystemPrompt } from "@/lib/jothrah-system-prompt";
@@ -1015,7 +1015,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    await saveChatEvent({
+    after(() => saveChatEvent({
       conversationId: conversation.id,
       visitorId: safeVisitorId,
       eventName: "chat_request_received",
@@ -1023,7 +1023,7 @@ export async function POST(req: NextRequest) {
         hasImage: Boolean(imageDataUrl),
         pageUrl,
       },
-    });
+    }).catch(() => {}));
     let storedImageUrl: string | null = null;
     let uploadedImage: {
       filePath: string;
@@ -1077,7 +1077,7 @@ export async function POST(req: NextRequest) {
 
     const currentStatus = String(conversation.status || "ai");
 
-    await notifyAdminNewCustomerMessage({
+    after(() => notifyAdminNewCustomerMessage({
       conversationId: conversation.id,
       message,
       hasImage: Boolean(imageDataUrl),
@@ -1086,7 +1086,7 @@ export async function POST(req: NextRequest) {
       customerEmail: customerEmail || conversation.customer_email || "",
       isHumanRequest: shouldRequestHuman,
       currentStatus,
-    });
+    }));
 
     if (shouldRequestHuman || isHumanHandoffStatus(currentStatus)) {
       if (shouldRequestHuman && currentStatus !== "needs_human") {
@@ -1279,7 +1279,7 @@ VERY IMPORTANT: write summary, advice, questions and product reasons in the exac
           role: "system",
           content: `
 Jothrah product catalog (every product currently available in the store).
-Format per line: product_id | name | size | active ingredient | targets | category
+Format per line: product_id|name|active ingredient (product names include size and target pests)
 ${buildCatalogIndex()}
 
 Product rules:
@@ -1332,7 +1332,7 @@ Important Jothrah response rules:
         type: "json_schema",
         json_schema: responseSchema,
       },
-      max_completion_tokens: 1000,
+      max_completion_tokens: 650,
     });
 
     const raw = completion.choices[0]?.message?.content || "{}";
@@ -1361,7 +1361,7 @@ Important Jothrah response rules:
       },
     });
 
-    await saveChatEvent({
+    after(() => saveChatEvent({
       conversationId: conversation.id,
       visitorId: safeVisitorId,
       eventName: "ai_response_created",
@@ -1371,7 +1371,7 @@ Important Jothrah response rules:
         confidence: data.confidence || "",
         analysisSource,
       },
-    });
+    }).catch(() => {}));
 
     const fallbackWhatsappMessage =
       language === "ar"
