@@ -1247,7 +1247,7 @@ ${forceWhatsapp}
 
 Reply in a short, friendly, interactive ecommerce chat style and end with one short follow-up question.
 VERY IMPORTANT: write summary, advice, questions and product reasons in the exact same language as the customer message above (German message → German reply, Urdu → Urdu, English → English).
-IMPORTANT: if a fitting product exists in the Jothrah catalog, put 1–4 of them in product_suggestions by product_id instead of only naming a category.
+IMPORTANT: if a fitting product exists in the Jothrah catalog, put 1–4 of them in product_suggestions by their catalog line number instead of only naming a category.
 `;
 
     const { data: historyRows } = await supabaseAdmin
@@ -1279,12 +1279,12 @@ IMPORTANT: if a fitting product exists in the Jothrah catalog, put 1–4 of them
           role: "system",
           content: `
 Jothrah product catalog (every product currently available in the store).
-Format per line: product_id|[product type]|name|active ingredient (names include size and target pests).
+Format per line: number|[product type]|name|active ingredient (names include size and target pests). Use the line number as the product id.
 Only suggest products whose [type] matches the need: fertilizer question → [سماد] only; pest → the matching مبيد type; never suggest [بذور] unless the customer asks for seeds.
 ${buildCatalogIndex()}
 
 Product rules:
-- product_suggestions must ONLY use product_id values that appear in this catalog, copied exactly.
+- product_suggestions[].id must be the line number of the product in this catalog (e.g. "57"), and the product name must truly match the need.
 - Suggest 1 to 4 products that truly fit the customer's need (pest, crop, seed type, fertilizer need). If the customer names a product type that exists (e.g. eggplant / aubergine / باذنجان seeds), suggest those products.
 - If nothing in the catalog fits, return an empty array and say so honestly — never invent products.
 - Each reason: one short line in the customer's language explaining why it fits.
@@ -1317,7 +1317,7 @@ Important Jothrah response rules:
 - Do not claim certainty from an unclear image.
 - If confidence is low, image is unclear, or the case needs direct diagnosis, set whatsapp_needed to true.
 - Do not invent pesticide dosage, dilution, mixing ratios, or safety claims.
-- Only recommend products from the provided catalog, by product_id.
+- Only recommend products from the provided catalog, by catalog line number.
 - product_suggestions may be an empty array.
 - Keep advice to maximum 3 items.
 - Keep questions to maximum 2 items.
