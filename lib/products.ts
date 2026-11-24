@@ -85,14 +85,32 @@ export function hydrateProductSuggestions(
   const asksPestOrDisease = /حشر|آف|افه|افات|مبيد|مرض|أمراض|فطر|عفن|بياض|تبقع|صراصير|نمل|بعوض|ذباب|بق|سوس|دود|حشرة المن|تربس|عنكب|فئران|pest|insect|disease|fung/i.test(customerText);
   const seen = new Set<string>();
   const cards: ProductCard[] = [];
+  const nText = normalize(customerText);
+
+  // زراعي أو منزلي؟ لا نرشح مبيد صحة عامة لمحصول، ولا مبيد زراعي لصراصير البيت
+  const isAgri = AGRI_RE.test(nText);
+  const isHome = HOME_RE.test(nText);
+  // الآفات المذكورة بالاسم: نرشح فقط المنتجات المسجلة/المصنفة لها
+  const pestKeys = PEST_KEYS.filter((k) => k.re.test(nText));
+
+  const allowed = (product: StoreProduct) => {
+    const type = productType(product);
+    if (type === "بذور" && !asksSeeds) return false;
+    if (asksFertilizer && !asksPestOrDisease && type !== "سماد") return false;
+    if (asksPestOrDisease && !asksFertilizer && type === "سماد") return false;
+    if (isAgri && !isHome && type === "مبيد صحة عامة") return false;
+    if (isHome && !isAgri && (type === "مبيد زراعي" || type === "مبيد فطري" || type === "مبيد أعشاب")) return false;
+    if (pestKeys.length) {
+      const hay = normalize([product.name, ...(product.categories || []), ...(product.targets || [])].join(" "));
+      if (!pestKeys.some((k) => k.hay.some((h) => hay.includes(h)))) return false;
+    }
+    return true;
+  };
 
   for (const item of suggestions || []) {
     const product = getProductById(item?.id);
     if (!product || seen.has(product.id)) continue;
-    const type = productType(product);
-    if (type === "بذور" && !asksSeeds) continue;
-    if (asksFertilizer && !asksPestOrDisease && type !== "سماد") continue;
-    if (asksPestOrDisease && !asksFertilizer && type === "سماد") continue;
+    if (!allowed(product)) continue;
     seen.add(product.id);
 
     cards.push({
@@ -108,8 +126,48 @@ export function hydrateProductSuggestions(
     if (cards.length >= max) break;
   }
 
+  // لو النموذج ما رشح منتجات مطابقة للآفة المذكورة، نكمل من الكتالوج مباشرة
+  if (pestKeys.length && cards.length < 2) {
+    for (const product of products) {
+      if (cards.length >= Math.min(3, max)) break;
+      if (seen.has(product.id) || !allowed(product)) continue;
+      seen.add(product.id);
+      cards.push({
+        id: product.id,
+        name: product.name,
+        url: product.url,
+        image: product.image,
+        size: product.size,
+        active: product.active ? `${product.active}${product.conc ? " " + product.conc : ""}` : "",
+        reason: "",
+      });
+    }
+  }
+
   return cards;
 }
+
+const AGRI_RE = /طماطم|بندوره|خيار|كوسا|باذنجان|فلفل|بطاطس|بصل|ثوم|ملفوف|كرنب|خس|بطيخ|شمام|فراوله|نخيل|نخله|نخل|تمر|ليمون|برتقال|حمضيات|مانجو|عنب|تين|رمان|زيتون|تفاح|خوخ|مشمش|قمح|ذره|شعير|برسيم|نجيل|ثيل|ورد|نبات|نباتات|شجر|اشجار|شجره|محصول|محاصيل|مزرع|حديقه|زرع|زراع|اوراق|ورق|ثمار|بيت محمي|صوب|المن|تربس|الذبابه البيضاء|عنكبوت|اكاروس|حلم|بق دقيقي|البق الدقيقي|قشري|صانعات|سوسه النخيل|حفار|دوباس|بياض|لفحه|تبقع|عفن/;
+const HOME_RE = /صرصور|صراصير|بعوض|ناموس|ذباب منزلي|الذباب المنزلي|بق الفراش|بق الفراش|براغيث|قمل|نمل|رمه|النمل الابيض|عقارب|عقرب|حشرات زاحفه|حشرات طائره|منزل|بيت|البيت|مطبخ|غرفه|حمام|مستودع|مخزن/;
+
+const PEST_KEYS: Array<{ re: RegExp; hay: string[] }> = [
+  { re: /(^|\s)(لل|ال|وال|بال)?من(\s|$)|حشره المن|aphid/, hay: ["المن"] },
+  { re: /تربس|thrips/, hay: ["تربس"] },
+  { re: /ذبابه بيضاء|الذبابه البيضاء|ذباب ابيض|whitefl/, hay: ["الذبابه البيضاء", "ذباب ابيض"] },
+  { re: /عنكبوت|اكاروس|حلم|mite/, hay: ["عنكب", "اكاروس", "حلم"] },
+  { re: /بق دقيقي|البق الدقيقي|mealybug/, hay: ["البق الدقيقي", "بق دقيقي"] },
+  { re: /قشري|قشريه|scale/, hay: ["قشري"] },
+  { re: /صانعات|حفار الاوراق|leafminer/, hay: ["صانعات"] },
+  { re: /سوسه النخيل|سوسة النخيل|weevil/, hay: ["سوسه"] },
+  { re: /دوباس/, hay: ["دوباس"] },
+  { re: /صرصور|صراصير|cockroach/, hay: ["صراصير", "صرصور"] },
+  { re: /بعوض|ناموس|mosquito/, hay: ["بعوض"] },
+  { re: /نمل ابيض|النمل الابيض|رمه|termite/, hay: ["رمه", "النمل الابيض"] },
+  { re: /بق الفراش|bed ?bug/, hay: ["بق الفراش"] },
+  { re: /فئران|فار|جرذ|جرذان|قوارض|rat|mice|mouse/, hay: ["فئران", "قوارض", "جرذ"] },
+  { re: /بياض دقيقي|البياض الدقيقي|powdery/, hay: ["البياض الدقيقي", "بياض دقيقي"] },
+  { re: /بياض زغبي|البياض الزغبي|downy/, hay: ["البياض الزغبي", "بياض زغبي"] },
+];
 
 function normalize(value: string) {
   return String(value || "")
