@@ -54,8 +54,9 @@ export function buildCatalogIndex() {
 
   // فهرس مضغوط (المعرّف + الاسم + المادة الفعالة) لتسريع رد البوت
   catalogCache = products
-    .map((p) => {
-      const parts = [p.id, `[${productType(p)}]`, p.name];
+    .map((p, i) => {
+      // رقم قصير بدل المعرّف الطويل: النموذج ينسخه بدقة أعلى
+      const parts = [String(i + 1), `[${productType(p)}]`, p.name];
       if (p.active && !p.name.includes(p.active)) parts.push(p.active);
       return parts.join("|");
     })
@@ -65,7 +66,12 @@ export function buildCatalogIndex() {
 }
 
 export function getProductById(id: unknown) {
-  return byId.get(String(id || "").trim()) || null;
+  const key = String(id || "").trim();
+  if (/^\d{1,3}$/.test(key)) {
+    const n = Number(key);
+    return n >= 1 && n <= products.length ? products[n - 1] : null;
+  }
+  return byId.get(key) || null;
 }
 
 export function hydrateProductSuggestions(
