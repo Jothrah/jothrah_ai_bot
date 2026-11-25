@@ -79,6 +79,7 @@ function textSkels(text: string) {
 const indexed = guide.map((e) => ({
   e,
   hayUses: norm(e.uses.map((u) => `${u.crops} ${u.pests}`).join(" ")),
+  hayRows: e.uses.map((u) => norm(`${u.crops} ${u.pests}`)),
   hayName: norm(`${e.ai_en} ${e.ai_ar} ${e.chem_group}`),
   hayType: norm(`${e.type} ${e.props}`),
 }));
@@ -136,6 +137,24 @@ function productMatch(x: { active: string; form: string; pct: string }, e: Guide
   return formOk && pctOk ? 2 : 1;
 }
 
+/** رقم المنتج في كتالوج البوت (نفس ترقيم buildCatalogIndex). */
+const catalogNo = new Map((storeProducts as StoreP[]).map((p, i) => [p, i + 1] as const));
+const storeMatchCache = new Map<GuideEntry, typeof storeIndex>();
+/** منتجات المتجر المطابقة تماماً لصفحة الدليل (نفس المادة والتركيز والهيئة). */
+function storeMatchesFor(e: GuideEntry) {
+  let hit = storeMatchCache.get(e);
+  if (!hit) {
+    const seen = new Set<string>();
+    hit = storeIndex.filter((x) => {
+      if (productMatch(x, e) !== 2 || seen.has(x.brand)) return false;
+      seen.add(x.brand);
+      return true;
+    });
+    storeMatchCache.set(e, hit);
+  }
+  return hit;
+}
+
 /** منتجات المتجر المذكورة في السؤال (بالاسم التجاري). */
 export function mentionedStoreProducts(text: string) {
   const n = ` ${norm(text)} `;
@@ -174,7 +193,7 @@ export function searchGuide(text: string, limit = 6) {
   const sk = textSkels(text);
   const nt = ` ${norm(text)} `;
   const shortPests = [
-    /\s(لل|ال|وال|بال)من\s/.test(nt) ? "المن" : "",
+    /\s(لل|ال|وال|بال)من\s/.test(nt) || /\s(عندي|فيه|في|عليه|عليها|عليهم|حشره|حشرة)\s+من\s/.test(nt) || /\sمن\s+(على|علي|في|ب\S+)\s/.test(nt) ? "المن" : "",
     /\s(لل|ال|ل|و)?بق\s/.test(nt) ? "البق" : "",
   ].filter(Boolean);
   return indexed
@@ -187,6 +206,11 @@ export function searchGuide(text: string, limit = 6) {
         if (x.hayUses.includes(t)) score += 3;
         if (x.hayType.includes(t)) score += 1;
       }
+      // صف واحد يجمع محصول السؤال وآفته أهم من تطابقات متفرقة في صفوف مختلفة
+      const rowBest = Math.max(0, ...x.hayRows.map((r) => toks.filter((t) => r.includes(t)).length + shortPests.filter((sp) => r.includes(sp)).length));
+      if (rowBest >= 2) score += 4 + 2 * (rowBest - 2);
+      // بدون منتج مذكور: نقدّم المواد المتوفرة في المتجر بنفس التركيز والهيئة
+      if (!prods.length && score >= 3 && storeMatchesFor(x.e).length) score += 3;
       return { e: x.e, score };
     })
     .filter((x) => x.score >= 3)
@@ -224,6 +248,9 @@ export function formatGuideEntries(entries: GuideEntry[], text = "") {
           if (m === 1) return `  ⚠️ نفس المادة الفعالة لمنتج «${x.p.name}» لكن بتركيز أو هيئة مختلفة — لا تعطِ هذه المعدلات لذلك المنتج.`;
           return "";
         }),
+        !prods.length && storeMatchesFor(e).length
+          ? `  🛒 متوفر في المتجر بنفس المادة والتركيز والهيئة: ${storeMatchesFor(e).slice(0, 2).map((x) => `«${x.p.name}» (رقم الكتالوج ${catalogNo.get(x.p)}، المادة بالعربي: ${x.active})`).join("، ")}`
+          : "",
         uses ? `  الاستخدامات المسجلة في الدليل (المحصول ← الآفة | المعدل | فترة التحريم):\n${uses}` : "",
       ]
         .filter(Boolean)
