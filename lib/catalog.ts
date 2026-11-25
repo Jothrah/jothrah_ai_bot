@@ -1,4 +1,6 @@
 import productsData from "@/data/products.json";
+import { unstable_cache } from "next/cache";
+import { after } from "next/server";
 
 /**
  * كتالوج المتجر الحي:
@@ -24,7 +26,8 @@ export type StoreProduct = {
 
 const STORE_ID = process.env.SALLA_STORE_ID || "446051475";
 const API = "https://api.salla.dev/store/v1/products";
-const TTL_MS = 60 * 60 * 1000; // ساعة
+const TTL_MS = 10 * 60 * 1000; // النسخة المحلية تُراجع كل 10 دقائق (من الكاش المشترك، سريع)
+const SHARED_TTL_S = 60 * 60; // الكاش المشترك بين كل نسخ الخادم يُجدد من سلة كل ساعة
 const RETRY_MS = 5 * 60 * 1000; // بعد فشل: نعيد المحاولة بعد 5 دقائق
 const MAX_PAGES = 80;
 const MIN_VALID = 50; // أقل من هذا العدد نعتبر الرد غير سليم ولا نستبدل الكتالوج
@@ -157,7 +160,6 @@ async function fetchPage(url: string) {
   try {
     const r = await fetch(url, {
       headers: { "Store-Identifier": STORE_ID, "Accept-Language": "ar", Accept: "application/json" },
-      cache: "no-store",
       signal: ctrl.signal,
     });
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -167,28 +169,39 @@ async function fetchPage(url: string) {
   }
 }
 
+/** يسحب كل منتجات المتجر من سلة (صفحة بعد صفحة) ويحولها لصيغة البوت. */
+async function fetchAllFromSalla(): Promise<StoreProduct[]> {
+  const all: SallaProduct[] = [];
+  let url: string | null = `${API}?per_page=100`;
+  let pages = 0;
+  while (url && pages < MAX_PAGES) {
+    const j = await fetchPage(url);
+    all.push(...(j.data || []));
+    url = j.cursor?.next || null;
+    pages++;
+  }
+  const seen = new Set<string>();
+  const mapped: StoreProduct[] = [];
+  for (const p of all) {
+    // المنتجات النافدة أو غير المتاحة لا يقترحها البوت
+    if (p.is_available === false || p.is_out_of_stock || p.status === "out") continue;
+    const m = mapProduct(p);
+    if (!m || seen.has(m.id)) continue;
+    seen.add(m.id);
+    mapped.push(m);
+  }
+  // رد ناقص من سلة ← نرمي خطأ حتى لا يُحفظ في الكاش ولا يستبدل الكتالوج
+  if (mapped.length < MIN_VALID) throw new Error(`only ${mapped.length} products`);
+  return mapped;
+}
+
+// كاش مشترك بين كل نسخ الخادم (Vercel Data Cache): السحب من سلة مرة بالساعة فقط،
+// وبعدها كل نسخة تقرأ النتيجة جاهزة بدل 20 طلب متتالي.
+const cachedCatalog = unstable_cache(fetchAllFromSalla, ["jothrah-salla-catalog-v1"], { revalidate: SHARED_TTL_S });
+
 async function refresh() {
   try {
-    const all: SallaProduct[] = [];
-    let url: string | null = `${API}?per_page=100`;
-    let pages = 0;
-    while (url && pages < MAX_PAGES) {
-      const j = await fetchPage(url);
-      all.push(...(j.data || []));
-      url = j.cursor?.next || null;
-      pages++;
-    }
-    const seen = new Set<string>();
-    const mapped: StoreProduct[] = [];
-    for (const p of all) {
-      // المنتجات النافدة أو غير المتاحة لا يقترحها البوت
-      if (p.is_available === false || p.is_out_of_stock || p.status === "out") continue;
-      const m = mapProduct(p);
-      if (!m || seen.has(m.id)) continue;
-      seen.add(m.id);
-      mapped.push(m);
-    }
-    if (mapped.length < MIN_VALID) throw new Error(`only ${mapped.length} products`);
+    const mapped = await cachedCatalog();
     mapped.forEach((p) => assignNumber(p.id));
     mapped.sort((a, b) => (numberOf.get(a.id) || 0) - (numberOf.get(b.id) || 0));
     current = mapped;
@@ -216,6 +229,12 @@ async function refresh() {
  */
 export async function ensureCatalog(waitMs = 2500) {
   if (Date.now() < nextTryAt) return;
-  if (!inflight) inflight = refresh().finally(() => (inflight = null));
+  if (!inflight) {
+    inflight = refresh().finally(() => (inflight = null));
+    // نخلي الخادم يكمل التحديث حتى بعد إرسال الرد للعميل
+    try {
+      after(() => inflight || undefined);
+    } catch {}
+  }
   await Promise.race([inflight, new Promise((r) => setTimeout(r, waitMs))]);
 }
