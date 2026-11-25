@@ -371,3 +371,122 @@ export function fertilizerRateHint(text: string) {
     `ملاحظة إلزامية: ${npk.mandatory_note}`,
   ].filter(Boolean).join("\n");
 }
+
+/* ───────── توصية مباشرة: "عندي <آفة> على <محصول> وش أستخدم" بدون ذكر منتج ─────────
+ * نختار من الدليل صفاً يجمع آفة السؤال ومحصوله، وله منتج في المتجر بنفس المادة والتركيز والهيئة،
+ * ونكتب الرد بصيغة ثابتة (المادة + المنتج + المعدل + فترة التحريم) بدون الاعتماد على صياغة النموذج. */
+const PEST_HAY = ` ${norm(guide.flatMap((e) => e.uses.map((u) => u.pests)).join(" ")).split(" ").map((w) => w.replace(/^(وال|بال|لل|ال)/, "")).join(" ")} `;
+const NOT_RECO_RE = /اعراض|أعراض|سبب|أسباب|اسباب|ليش|لماذا|تعريف|وش هو|وش هي|ما هو|ما هي|ايش هو|ايش هي|كيف اعرف|كيف أعرف|محظور|ممنوع|مقيد|مسجل|تسجيل|سعر|بكم|خلط|يخلط|نخلط/;
+const NON_WORDS = new Set(["عندي", "عندنا", "على", "علي", "في", "وش", "ايش", "استخدم", "أستخدم", "الحل", "حل", "علاج", "اعالج", "أعالج", "ارش", "أرش", "مبيد", "يصلح", "ينفع", "شجر", "اشجار", "أشجار", "زرع", "زراعة", "مزرعة", "مزرعتي", "فيه", "فيها", "عليه", "عليها", "طلع", "ظهر", "ظهرت", "طلعت", "كثير", "مره", "مرة", "مرررره"]);
+
+function wordsOf(text: string) {
+  return String(text || "").split(/[\s،,.؟?!:]+/).map((w) => w.trim()).filter(Boolean);
+}
+const wKey = (w: string) => norm(w).replace(/^(وال|بال|لل|ال)/, "");
+
+function activeAr(x: { active: string }) {
+  return x.active.replace(/\s*[\d.]+\s*%.*$/, "").replace(/\s+و\/[وح].*$/, "").trim();
+}
+function brandAr(p: StoreP) {
+  return String(p.name || "").split(/\s+/)[0] || p.name;
+}
+function phiLine(phi?: string) {
+  const v = String(phi || "").trim();
+  if (!v || /^[-—–]$/.test(v)) return "";
+  if (PHI_NOTE_RE.test(v)) return v.endsWith(".") ? v : `${v}.`;
+  return `فترة التحريم قبل الحصاد: ${v}`;
+}
+
+export type GuideRecommendation = { summary: string; advice: string[]; catalogNos: number[] };
+
+export function recommendFromGuide(text: string): GuideRecommendation | null {
+  const msg = String(text || "").trim();
+  if (!msg || msg.length > 220 || NOT_RECO_RE.test(msg)) return null;
+  if (mentionedStoreProducts(msg).length) return null;
+  const nt = ` ${norm(msg)} `;
+  const aphid = /\s(لل|ال|وال|بال)من\s/.test(nt) || /\s(عندي|فيه|في|عليه|عليها|عليهم|حشره|حشرة)\s+من\s/.test(nt) || /\sمن\s+(على|علي|في|ب\S+)\s/.test(nt);
+  const words = wordsOf(msg);
+  const keys = words.map((w) => (NON_WORDS.has(w) || NON_WORDS.has(norm(w)) || STOP.has(norm(w)) ? "" : wKey(w)));
+  // كلمات الآفة في السؤال = أطول تتابع كلمات موجود في أسماء آفات الدليل (دودة ورق القطن، البياض الدقيقي، سوسة النخيل)
+  const isPestWord = (k: string) => k.length >= 3 && PEST_HAY.includes(` ${k}`);
+  let runS = -1, runE = -1;
+  for (let i = 0; i < keys.length; i++) {
+    if (!isPestWord(keys[i])) continue;
+    let j = i;
+    while (j + 1 < keys.length && isPestWord(keys[j + 1])) j++;
+    if (runS < 0 || j - i > runE - runS) { runS = i; runE = j; }
+    i = j;
+  }
+  const run = runS >= 0 ? keys.slice(runS, runE + 1) : [];
+  if (!run.length && !aphid) return null;
+  if (!run.length && !PEST_RE.test(msg) && !aphid) return null;
+  const entries = searchGuide(msg, 6);
+
+  type Cand = { e: GuideEntry; u: GuideUse; x: (typeof storeIndex)[number] | null; score: number; pestIdx: number[]; cropIdx: number[] };
+  const collect = (withStore: boolean) => {
+  const cands: Cand[] = [];
+  entries.forEach((e, rank) => {
+    const stores = storeMatchesFor(e);
+    if (withStore ? !stores.length : stores.length) return;
+    for (const u of e.uses) {
+      const pn = norm(u.pests);
+      const cn = norm(u.crops);
+      // كل كلمات الآفة اللي ذكرها العميل لازم تكون في نفس الصف (دودة ورق القطن ≠ دودة ورق الكرنب)
+      const runOk = run.length > 0 && run.every((k) => pn.includes(k));
+      const pestIdx = runOk ? Array.from({ length: runE - runS + 1 }, (_, n) => runS + n) : [];
+      const pestOk = runOk || (!run.length && aphid && pn.includes("المن")) || (aphid && pn.includes("المن") && run.every((k) => norm(u.crops).includes(k)));
+      if (!pestOk) continue;
+      const cropIdx = keys.map((k, i) => (k.length >= 3 && cn.includes(k) && !pestIdx.includes(i) ? i : -1)).filter((i) => i >= 0);
+      // ذكر العميل محصولاً موجوداً في الدليل لكنه ليس في هذا الصف → الصف لا يناسب
+      const askedCrop = keys.some((k, i) => k.length >= 3 && !pestIdx.includes(i) && guide.some((g) => g.uses.some((gu) => norm(gu.crops).includes(k))));
+      if (askedCrop && !cropIdx.length && !keys.some((k) => k.length >= 3 && cn.includes(k))) continue;
+      const score = pestIdx.length * 2 + (aphid ? 2 : 0) + cropIdx.length * 3 - rank * 0.5;
+      cands.push({ e, u, x: stores[0] || null, score, pestIdx, cropIdx });
+    }
+  });
+  return cands.sort((a, b) => b.score - a.score);
+  };
+  let cands = collect(true);
+  const inStore = cands.length > 0;
+  if (!inStore) cands = collect(false);
+  if (!cands.length) return null;
+  const best = cands[0];
+
+  // الآفة والمحصول بكلمات العميل نفسها
+  let pest = "";
+  if (best.pestIdx.length) {
+    const s = Math.min(...best.pestIdx);
+    let eIdx = s;
+    while (best.pestIdx.includes(eIdx + 1)) eIdx++;
+    pest = words.slice(s, eIdx + 1).join(" ");
+  } else if (aphid) pest = "المن";
+  const crop = best.cropIdx.length ? words[best.cropIdx[0]] : "";
+  const lam = (w: string) => (/^ال/.test(w) ? `لل${w.slice(2)}` : /\s/.test(w) ? `ل${w}` : `لل${w}`);
+  const head = `${pest ? lam(pest) : "لهذه المشكلة"}${crop ? ` على ${crop}` : ""} تقدر تستخدم`;
+  if (!best.x) {
+    // المادة مسجلة لهذه الآفة والمحصول لكن ما عندنا منتج مطابق في المتجر
+    const ai = best.e.ai_en.replace(/\(\s*w\s*[\\/]\s*[vw]\s*\)/gi, "").replace(/\s+/g, " ").trim();
+    return {
+      summary: `${head} مادة ${ai}.`,
+      advice: [best.u.rate ? `المعدل: ${best.u.rate}` : "", phiLine(best.u.phi), "هذه المادة غير متوفرة حالياً في متجر جذرة.", "الالتزام بملصق المنتج."].filter(Boolean),
+      catalogNos: [],
+    };
+  }
+  const bx = best.x;
+  const pct = bx.pct ? ` ${bx.pct}%` : "";
+  const summary = `${head} ${activeAr(bx)}${pct} (${brandAr(bx.p)}).`;
+
+  const advice = [best.u.rate ? `المعدل: ${best.u.rate}` : "", phiLine(best.u.phi), "الالتزام بملصق المنتج."].filter(Boolean);
+  const catalogNos = [catalogNo.get(bx.p)!];
+
+  // بديل بمادة فعالة مختلفة لنفس الآفة والمحصول
+  const bestAi = skel(activeAr(bx));
+  const alt = cands.find((c) => c !== best && c.x && c.score >= best.score - 3 && skel(activeAr(c.x)) !== bestAi && c.e.ai_en.split("+").length === 1);
+  if (alt && alt.x) {
+    const ap = alt.x.pct ? ` ${alt.x.pct}%` : "";
+    const altPhi = phiLine(alt.u.phi);
+    advice.splice(advice.length - 1, 0, `بديل: ${activeAr(alt.x)}${ap} (${brandAr(alt.x.p)}) — المعدل ${alt.u.rate || "حسب الملصق"}${altPhi ? `، ${altPhi.replace(/\.$/, "")}` : ""}.`);
+    catalogNos.push(catalogNo.get(alt.x.p)!);
+  }
+  return { summary, advice, catalogNos };
+}
