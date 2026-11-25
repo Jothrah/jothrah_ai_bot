@@ -212,3 +212,34 @@ export function fertilizerKnowledgeContext(text: string) {
   files.push(fHandoff);
   return files.map(arPart).join("\n").slice(0, 14000);
 }
+
+/* تحديد فئة المحصول وإعطاء المعدل الصحيح من ملف NPK مباشرة (حتى لا يخلط النموذج بين الصفوف) */
+const CROP_CATS: Array<{ key: string; re: RegExp }> = [
+  { key: "بيوت محمية", re: /بيو?ت (ال)?محمي|صوب|صوبه|صوبة|greenhouse/i },
+  { key: "محاصيل خضار", re: /طماطم|بندوره|خيار|فلفل|باذنجان|كوسا|كوسه|بطاطس|بطاطا|بصل|ثوم|ملفوف|كرنب|خس|بطيخ|شمام|فراوله|فراولة|بامي|بامية|جزر|قرنبيط|بروكلي|خضار|خضروات/i },
+  { key: "محاصيل فاكهة", re: /نخيل|نخله|نخلة|نخل|تمر|ليمون|برتقال|حمضيات|يوسفي|عنب|مانجو|تين|رمان|زيتون|تفاح|خوخ|مشمش|جوافه|جوافة|موز|فاكهه|فاكهة|اشجار مثمره|أشجار مثمرة/i },
+  { key: "محاصيل حقلية", re: /قمح|شعير|ذره|ذرة|برسيم|اعلاف|أعلاف|رودس|سورجم|دخن/i },
+  { key: "نباتات زينة", re: /زينه|زينة|ورد|نجيل|ثيل|عشب الحديقه|عشب الحديقة|اشجار الزينه|أشجار الزينة/i },
+];
+
+export function fertilizerRateHint(text: string) {
+  if (!FERT_RE.test(text)) return "";
+  if (!/معدل|كميه|كمية|كم |جرام|غرام|كيلو|كجم|لتر|مل |npk|\d+-\d+-\d+|متوازن|مركب/i.test(text)) return "";
+  const cat = CROP_CATS.find((c) => c.re.test(text));
+  if (!cat) return "";
+  const npk = (fNpk as any)?.ar;
+  if (!npk) return "";
+  const solid = (npk.solid_npk_irrigation || []).find((r: any) => r.crop === cat.key)?.rate;
+  const liquid = (npk.liquid_npk_irrigation || []).find((r: any) => r.crop === cat.key)?.rate;
+  const short: Record<string, string> = { "محاصيل حقلية": "محاصيل حقلية", "محاصيل خضار": "خضار", "محاصيل فاكهة": "فاكهة", "بيوت محمية": "بيوت محمية", "نباتات زينة": "نباتات زينة" };
+  const ex = String((npk.example_20_20_20_50m2 || [])[0] || "");
+  const m = new RegExp(`${short[cat.key]}\\s+([\\d.]+-[\\d.]+\\s*جم)`).exec(ex);
+  return [
+    `فئة المحصول في السؤال: ${cat.key} (اعتمد هذه الفئة فقط ولا تستخدم صفوف الفئات الأخرى).`,
+    solid ? `سماد NPK صلب ذواب مع ماء الري: ${solid}.` : "",
+    liquid ? `سماد NPK سائل مع ماء الري: ${liquid}.` : "",
+    npk.solid_npk_foliar ? `رش ورقي (صلب): ${npk.solid_npk_foliar}.` : "",
+    m ? `مثال لمساحة 50 م² مع ماء الري: ${m[1]}.` : "",
+    `ملاحظة إلزامية: ${npk.mandatory_note}`,
+  ].filter(Boolean).join("\n");
+}
