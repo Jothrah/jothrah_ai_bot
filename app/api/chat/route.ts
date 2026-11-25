@@ -10,7 +10,7 @@ import { detectLanguage, matchCategories } from "@/lib/matcher";
 import { needsWhatsapp } from "@/lib/safety";
 import { sendAdminPushNotification } from "@/lib/admin-push";
 import { buildCatalogIndex, hydrateProductSuggestions, alignAdviceWithProducts } from "@/lib/products";
-import { searchGuide, formatGuideEntries, listsContext, fertilizerKnowledgeContext } from "@/lib/guide";
+import { searchGuide, formatGuideEntries, listsContext, fertilizerKnowledgeContext, fertilizerRateHint } from "@/lib/guide";
 import {
   saveChatAttachment,
   saveChatEvent,
@@ -1293,10 +1293,12 @@ IMPORTANT: if a fitting product exists in the Jothrah catalog, put 1–4 of them
     const legalText = listsContext(message);
     // اشتراطات التسجيل والوثائق الرسمية ليست من خدمة العميل — لا تُضاف للبوت
     const fertText = fertilizerKnowledgeContext(message);
+    const rateHint = fertilizerRateHint(message);
     const fertRegText = "";
     const referenceBlock = [
       guideText ? `من دليل المبيدات الزراعية في المملكة العربية السعودية (1446هـ) — مواد فعالة مسجلة مطابقة للسؤال:\n${guideText}` : "",
       legalText ? `من دليل المبيدات 1446 — المبيدات المقيدة والمحظورة:\n${legalText}` : "",
+      rateHint ? `المعدل المعتمد لهذا السؤال (استخدم هذه الأرقام حرفياً، صلب = كجم، سائل = لتر):\n${rateHint}` : "",
       fertText ? `معرفة جذرة في الأسمدة (معدلات استرشادية):\n${fertText}` : "",
       fertRegText ? `متطلبات تسجيل الأسمدة ومحسنات التربة في المملكة (منصة نما / الشركة الوطنية للخدمات الزراعية):\n${fertRegText}` : "",
     ]
