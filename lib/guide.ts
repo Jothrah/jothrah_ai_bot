@@ -490,3 +490,8 @@ export function recommendFromGuide(text: string): GuideRecommendation | null {
   }
   return { summary, advice, catalogNos };
 }
+
+/** أرقام الكتالوج للمنتجات المذكورة بالاسم في السؤال. */
+export function mentionedCatalogNos(text: string) {
+  return mentionedStoreProducts(text).map((x) => catalogNo.get(x.p)!).filter(Boolean);
+}
