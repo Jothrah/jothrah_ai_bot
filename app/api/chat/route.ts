@@ -10,7 +10,7 @@ import { detectLanguage, matchCategories } from "@/lib/matcher";
 import { needsWhatsapp } from "@/lib/safety";
 import { sendAdminPushNotification } from "@/lib/admin-push";
 import { buildCatalogIndex, hydrateProductSuggestions, alignAdviceWithProducts } from "@/lib/products";
-import { searchGuide, formatGuideEntries, listsContext, fertilizerRegistrationContext, fertilizerKnowledgeContext } from "@/lib/guide";
+import { searchGuide, formatGuideEntries, listsContext } from "@/lib/guide";
 import {
   saveChatAttachment,
   saveChatEvent,
@@ -946,6 +946,12 @@ async function readRequestBody(req: NextRequest) {
   };
 }
 
+// أسئلة عميقة لا يجاوب عليها البوت: معدلات، جرعات، تخفيف، خلط، تسجيل/اشتراطات
+const DEEP_RE = /معدل|جرعه|جرعات|كم (مل|ملي|جرام|غرام|سم|سي سي|لتر|ملعقه|غطا|كيلو|كجم)|لكل لتر|باللتر|لكل (دونم|هكتار|نخله|شجره)|تخفيف|نسبه الخلط|خلط|يخلط|اخلط|مخلوط|توافق|متوافق|يتوافق|يتعارض|اشتراطات|متطلبات (ال)?تسجيل|تسجيل (سماد|اسمده|مبيد|مبيدات|منتج|شركه|مصنع)|فتره (الامان|ما قبل الحصاد)|\bdos(e|age)\b|\brates?\b|dilut|\bmix|compatib|registration/i;
+function normalizeArabicLite(v: string) {
+  return String(v || "").replace(/[إأآ]/g, "ا").replace(/ة/g, "ه").replace(/ى/g, "ي");
+}
+
 export async function POST(req: NextRequest) {
   const origin = req.headers.get("origin");
   const wantStream = req.nextUrl.searchParams.get("stream") === "1";
@@ -1285,8 +1291,9 @@ IMPORTANT: if a fitting product exists in the Jothrah catalog, put 1–4 of them
     const guideQuery = `${message} ${visionAnalysis?.detected_problem || ""} ${(visionAnalysis?.possible_category_terms || []).join(" ")}`;
     const guideText = formatGuideEntries(searchGuide(guideQuery, 6));
     const legalText = listsContext(message);
-    const fertText = fertilizerKnowledgeContext(message);
-    const fertRegText = fertilizerRegistrationContext(message);
+    // معدلات الاستخدام والخلط واشتراطات التسجيل لا تُعطى في المحادثة — تُحوّل للمهندس
+    const fertText = "";
+    const fertRegText = "";
     const referenceBlock = [
       guideText ? `من دليل المبيدات الزراعية في المملكة العربية السعودية (1446هـ) — مواد فعالة مسجلة مطابقة للسؤال:\n${guideText}` : "",
       legalText ? `من دليل المبيدات 1446 — المبيدات المقيدة والمحظورة:\n${legalText}` : "",
@@ -1359,8 +1366,7 @@ Reference rules:
 - If you suggest products, any active ingredient you name in the advice must be the active ingredient of one of the suggested products (or from the guide for that exact crop and pest). Never suggest a fungicide for insects or an insecticide for a fungal disease, and never a public-health product for a crop.
 - Never recommend a banned active ingredient. For restricted ones, say they are used only with approval/supervision of the competent authority.
 - Prefer recommending store products whose active ingredient is registered for the customer's crop and pest in the guide.
-- Fertilizer rates may be given ONLY if they appear in the provided fertilizer knowledge, and always say they are guidance that depends on soil/water analysis, crop and growth stage.
-- For registration questions (importers/factories), answer from the registration requirements in organized short points.
+- NEVER give application rates, doses, quantities per liter, dilution, spray intervals, mixing compatibility (tank mixes), or product/fertilizer/pesticide registration requirements. For any such question, say briefly that Jothrah's agricultural engineer will answer it precisely, and set whatsapp_needed = true.
 
 Previous messages in this conversation (oldest first), use them for context:
 ${historyText || "(none)"}
@@ -1389,6 +1395,14 @@ ${historyText || "(none)"}
       reason: card.reason,
     }));
     data.products = productCards;
+    if (DEEP_RE.test(normalizeArabicLite(message))) {
+      data.summary = language !== "en"
+        ? "هذا السؤال يحتاج مهندس جذرة الزراعي يجاوبك عليه بدقة حسب محصولك وحالتك."
+        : "This question needs Jothrah's agricultural engineer to answer it accurately for your crop and case.";
+      data.advice = [language !== "en" ? "اضغط زر التحدث مع المهندس الزراعي وبيرد عليك خلال دقائق." : "Tap the talk-to-engineer button and we will reply within minutes."];
+      data.questions = [];
+      data.whatsapp_needed = true;
+    }
     const clean = (v: unknown) => String(v || "").replace(/[",\s]+$/g, "").replace(/\s{2,}/g, " ").trim();
     if (typeof data.summary === "string") data.summary = clean(data.summary);
     if (Array.isArray(data.advice)) data.advice = data.advice.map(clean).filter(Boolean);
