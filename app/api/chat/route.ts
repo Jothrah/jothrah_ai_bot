@@ -10,7 +10,7 @@ import { detectLanguage, matchCategories } from "@/lib/matcher";
 import { needsWhatsapp } from "@/lib/safety";
 import { sendAdminPushNotification } from "@/lib/admin-push";
 import { buildCatalogIndex, hydrateProductSuggestions, alignAdviceWithProducts } from "@/lib/products";
-import { searchGuide, formatGuideEntries, listsContext } from "@/lib/guide";
+import { searchGuide, formatGuideEntries, listsContext, fertilizerKnowledgeContext } from "@/lib/guide";
 import {
   saveChatAttachment,
   saveChatEvent,
@@ -946,8 +946,8 @@ async function readRequestBody(req: NextRequest) {
   };
 }
 
-// أسئلة عميقة لا يجاوب عليها البوت: معدلات، جرعات، تخفيف، خلط، تسجيل/اشتراطات
-const DEEP_RE = /معدل|جرعه|جرعات|كم (مل|ملي|جرام|غرام|سم|سي سي|لتر|ملعقه|غطا|كيلو|كجم)|لكل لتر|باللتر|لكل (دونم|هكتار|نخله|شجره)|تخفيف|نسبه الخلط|خلط|يخلط|اخلط|مخلوط|توافق|متوافق|يتوافق|يتعارض|اشتراطات|متطلبات (ال)?تسجيل|تسجيل (سماد|اسمده|مبيد|مبيدات|منتج|شركه|مصنع)|فتره (الامان|ما قبل الحصاد)|\bdos(e|age)\b|\brates?\b|dilut|\bmix|compatib|registration/i;
+// أمور التسجيل الرسمية خارج نطاق خدمة العملاء: اشتراطات، أرقام تسجيل، مختبرات محايدة، تفاويض، تعهدات، وثائق
+const DEEP_RE = /اشتراطات|اشراطات|شروط (ال)?تسجيل|متطلبات (ال)?تسجيل|تسجيل (ال)?(سماد|اسمده|مبيد|مبيدات|منتج|منتجات|شركه|مصنع)|(رقم|ارقام) (ال)?تسجيل|شهاده (ال)?تسجيل|مختبر(ات)? (محايد|معتمد)|تفويض|تفاويض|تعهد|تعهدات|شهاده (بيع حر|حره|التحليل)|free ?sale|\bcoa\b|\bmsds\b|registration/i;
 function normalizeArabicLite(v: string) {
   return String(v || "").replace(/[إأآ]/g, "ا").replace(/ة/g, "ه").replace(/ى/g, "ي");
 }
@@ -1291,8 +1291,8 @@ IMPORTANT: if a fitting product exists in the Jothrah catalog, put 1–4 of them
     const guideQuery = `${message} ${visionAnalysis?.detected_problem || ""} ${(visionAnalysis?.possible_category_terms || []).join(" ")}`;
     const guideText = formatGuideEntries(searchGuide(guideQuery, 6));
     const legalText = listsContext(message);
-    // معدلات الاستخدام والخلط واشتراطات التسجيل لا تُعطى في المحادثة — تُحوّل للمهندس
-    const fertText = "";
+    // اشتراطات التسجيل والوثائق الرسمية ليست من خدمة العميل — لا تُضاف للبوت
+    const fertText = fertilizerKnowledgeContext(message);
     const fertRegText = "";
     const referenceBlock = [
       guideText ? `من دليل المبيدات الزراعية في المملكة العربية السعودية (1446هـ) — مواد فعالة مسجلة مطابقة للسؤال:\n${guideText}` : "",
@@ -1366,7 +1366,8 @@ Reference rules:
 - If you suggest products, any active ingredient you name in the advice must be the active ingredient of one of the suggested products (or from the guide for that exact crop and pest). Never suggest a fungicide for insects or an insecticide for a fungal disease, and never a public-health product for a crop.
 - Never recommend a banned active ingredient. For restricted ones, say they are used only with approval/supervision of the competent authority.
 - Prefer recommending store products whose active ingredient is registered for the customer's crop and pest in the guide.
-- NEVER give application rates, doses, quantities per liter, dilution, spray intervals, mixing compatibility (tank mixes), or product/fertilizer/pesticide registration requirements. For any such question, say briefly that Jothrah's agricultural engineer will answer it precisely, and set whatsapp_needed = true.
+- Usage questions (how/when to use, registered crops and pests, mixing, fertilizer guidance rates) are allowed, but give numbers ONLY if they appear in the provided references or product data; never invent a pesticide rate — say to follow the product label or ask the engineer.
+- Registration matters are OUT OF SCOPE for customers: registration requirements/conditions for fertilizers or pesticides, registration numbers, neutral/accredited labs, authorization letters, pledges/undertakings, official documents (MSDS, COA, free-sale certificates). Do not answer them.
 
 Previous messages in this conversation (oldest first), use them for context:
 ${historyText || "(none)"}
@@ -1397,11 +1398,13 @@ ${historyText || "(none)"}
     data.products = productCards;
     if (DEEP_RE.test(normalizeArabicLite(message))) {
       data.summary = language !== "en"
-        ? "هذا السؤال يحتاج مهندس جذرة الزراعي يجاوبك عليه بدقة حسب محصولك وحالتك."
-        : "This question needs Jothrah's agricultural engineer to answer it accurately for your crop and case.";
-      data.advice = [language !== "en" ? "اضغط زر التحدث مع المهندس الزراعي وبيرد عليك خلال دقائق." : "Tap the talk-to-engineer button and we will reply within minutes."];
+        ? "عذراً، أمور التسجيل والوثائق الرسمية خارج نطاق خدمة متجر جذرة."
+        : "Sorry, registration matters and official documents are outside Jothrah store support.";
+      data.advice = [language !== "en" ? "نقدر نساعدك في تشخيص مشكلتك واختيار المنتج المناسب لها." : "We can help you diagnose your problem and choose the right product."];
       data.questions = [];
-      data.whatsapp_needed = true;
+      data.product_suggestions = [];
+      data.products = [];
+      data.whatsapp_needed = false;
     }
     const clean = (v: unknown) => String(v || "").replace(/[",\s]+$/g, "").replace(/\s{2,}/g, " ").trim();
     if (typeof data.summary === "string") data.summary = clean(data.summary);
@@ -1461,7 +1464,7 @@ ${historyText || "(none)"}
           Array.isArray(data.categories) && data.categories.length
             ? data.categories
             : matchedCategories,
-        whatsapp_needed: Boolean(data.whatsapp_needed || forceWhatsapp),
+        whatsapp_needed: DEEP_RE.test(normalizeArabicLite(message)) ? false : Boolean(data.whatsapp_needed || forceWhatsapp),
         whatsapp_url: buildWhatsappUrl(whatsappMessage),
         server_timing: timings,
       };
