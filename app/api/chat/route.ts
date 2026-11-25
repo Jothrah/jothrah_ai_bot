@@ -9,8 +9,8 @@ import { supabaseAdmin } from "@/lib/supabase-admin";
 import { detectLanguage, matchCategories } from "@/lib/matcher";
 import { needsWhatsapp } from "@/lib/safety";
 import { sendAdminPushNotification } from "@/lib/admin-push";
-import { buildCatalogIndex, hydrateProductSuggestions, alignAdviceWithProducts } from "@/lib/products";
-import { recommendFromGuide, searchGuide, formatGuideEntries, listsContext, fertilizerKnowledgeContext, fertilizerRateHint } from "@/lib/guide";
+import { buildCatalogIndex, hydrateProductSuggestions, alignAdviceWithProducts, getProductById, productType } from "@/lib/products";
+import { recommendFromGuide, mentionedCatalogNos, searchGuide, formatGuideEntries, listsContext, fertilizerKnowledgeContext, fertilizerRateHint } from "@/lib/guide";
 import {
   saveChatAttachment,
   saveChatEvent,
@@ -47,6 +47,8 @@ type VisionAnalysis = {
   visual_notes: string;
   whatsapp_needed: boolean;
   whatsapp_reason: string;
+  crop?: string;
+  pest_or_disease?: string;
 };
 
 
@@ -550,6 +552,8 @@ function fallbackVisionAnalysis(language: Language): VisionAnalysis {
   return {
     detected_problem: language === "ar" ? "غير واضح" : "Unclear",
     possible_category_terms: [],
+    crop: "",
+    pest_or_disease: "",
     confidence: "low",
     image_clarity: "unclear",
     visual_notes:
@@ -582,6 +586,8 @@ async function analyzeImageFirst(params: {
 - هل هي حشرة منزلية؟ آفة نباتية؟ مرض نبات؟ أثر قارض؟ أم غير واضح؟
 - لا تجزم إذا الصورة غير واضحة.
 - لا تعطي جرعات مبيدات.
+- crop: اسم النبات/المحصول الظاهر بالعربي كما يسميه المزارع في السعودية (مثل: الطماطم، الخيار، النخيل، الفلفل، العنب)، أو "" إذا ما يظهر نبات أو غير متأكد.
+- pest_or_disease: الاسم العربي الشائع للآفة أو المرض الأرجح (مثل: المن، الذبابة البيضاء، التربس، العناكب، صانعات الأنفاق، البياض الدقيقي، البياض الزغبي، العفن الرمادي، اللفحة المتأخرة، سوسة النخيل الحمراء)، أو "" إذا غير واضح. لا تخمّن اسماً إذا الثقة منخفضة.
 - إذا كانت الصورة غير واضحة أو الحالة خطرة أو تحتاج تشخيص مباشر، اجعل whatsapp_needed = true.
 
 رسالة العميل:
@@ -597,6 +603,8 @@ Required:
 - Is it a household insect, plant pest, plant disease, rodent sign, or unclear?
 - Do not be overconfident if the image is unclear.
 - Do not provide pesticide dosage.
+- crop: the plant/crop shown, in Arabic (e.g. الطماطم، الخيار، النخيل), or "" if none/unsure.
+- pest_or_disease: the most likely pest or disease, common Arabic name (e.g. المن، الذبابة البيضاء، البياض الدقيقي), or "" if unclear. Do not guess when confidence is low.
 - If the image is unclear, risky, or needs direct review, set whatsapp_needed = true.
 
 Customer message:
@@ -644,6 +652,12 @@ Return JSON only.
                 },
                 maxItems: 6,
               },
+              crop: {
+                type: "string",
+              },
+              pest_or_disease: {
+                type: "string",
+              },
               confidence: {
                 type: "string",
                 enum: ["high", "medium", "low"],
@@ -665,6 +679,8 @@ Return JSON only.
             required: [
               "detected_problem",
               "possible_category_terms",
+              "crop",
+              "pest_or_disease",
               "confidence",
               "image_clarity",
               "visual_notes",
@@ -1288,7 +1304,7 @@ IMPORTANT: if a fitting product exists in the Jothrah catalog, put 1–4 of them
       .join("\n");
 
     // المراجع الموسعة: دليل المبيدات السعودي 1446 + القوائم المقيدة/المحظورة + معرفة الأسمدة ومتطلبات تسجيلها
-    const guideQuery = `${message} ${visionAnalysis?.detected_problem || ""} ${(visionAnalysis?.possible_category_terms || []).join(" ")}`;
+    const guideQuery = `${message} ${visionAnalysis?.pest_or_disease || ""} ${visionAnalysis?.crop ? `على ${visionAnalysis.crop}` : ""} ${visionAnalysis?.detected_problem || ""} ${(visionAnalysis?.possible_category_terms || []).join(" ")}`;
     const guideText = formatGuideEntries(searchGuide(guideQuery, 4), message);
     const legalText = listsContext(message);
     // اشتراطات التسجيل والوثائق الرسمية ليست من خدمة العميل — لا تُضاف للبوت
@@ -1369,7 +1385,7 @@ Reference rules:
 - Never recommend a banned active ingredient. For restricted ones, say they are used only with approval/supervision of the competent authority.
 - Prefer recommending store products whose active ingredient is registered for the customer's crop and pest in the guide.
 - Usage questions (how/when to use, registered crops and pests, mixing, fertilizer guidance rates) are allowed, but give numbers ONLY if they appear in the provided references or product data; never invent or convert a rate.
-- Pesticide rates and pre-harvest intervals: when the guide references list a row for the customer's crop and pest, give the rate (المعدل) and the pre-harvest interval (فترة التحريم) exactly as written (without naming any source), and add that the product label is the final reference. If the customer named a store product, use ONLY an entry marked ✅ for that product; if none is marked ✅ (or it is marked ⚠️), say the rate of that exact product is on its label and do not quote another concentration's rate. If the crop is not in the listed rows, say it is not registered for that crop.
+- Pesticide rates and pre-harvest intervals: when the guide references list a row for the customer's crop and pest, give the rate (المعدل) and the pre-harvest interval (فترة التحريم) exactly as written (without naming any source), and add that the product label is the final reference. If the customer named a store product, use ONLY an entry marked ✅ for that product; if none is marked ✅ (or it is marked ⚠️), say the rate of that exact product is on its label and do not quote another concentration's rate. If the crop is not in the listed rows, say it is not registered for that crop. If the customer asks per liter (لكل لتر) and the rate is per 100 or 1000 liters, also give the per-liter amount (divide carefully: 50-80 جم/100 لتر = 0.5-0.8 جم/لتر). If the customer did not mention the crop and the rate differs by crop, ask which crop.
 - Recommendation format (apply to every question like "عندي <آفة/مرض> على <محصول> وش أستخدم"، when the customer does NOT name a product): choose a guide entry marked 🛒 whose listed row contains the customer's crop and pest/disease (prefer the first such entry). Write the summary exactly in this shape: "لـ<الآفة> على <المحصول> تقدر تستخدم <المادة الفعالة بالعربي> <التركيز>% (<الاسم التجاري للمنتج>)." Then advice lines, in order: "المعدل: <rate as written>"، "فترة التحريم: <PHI as written> قبل الحصاد" (if the row has an application note instead of a PHI, write that note as written)، "الالتزام بملصق المنتج.". Put that product first in product_suggestions using its catalog number. If another 🛒 entry with a DIFFERENT active ingredient also has a row for the same crop and pest, add one more advice line: "بديل: <المادة بالعربي> <التركيز>% (<المنتج>) — المعدل <rate>، فترة التحريم <PHI>" and suggest that product second. If no 🛒 entry has a row for that crop and pest, use the same format with the active ingredient from a matching row (no product name) and say it is not available in the store right now. Never write generic advice like "استخدم مبيد حشري مناسب".
 - When giving fertilizer guidance rates, pick the row of the correct crop category exactly: vegetables (خضار) = tomato, cucumber, pepper, eggplant, squash/zucchini, potato, onion, garlic, cabbage, lettuce, melon, watermelon, strawberry; fruit (فاكهة) = palms/dates, citrus, grapes, mango, fig, pomegranate, olive, apple; field crops (حقلية) = wheat, barley, corn, alfalfa/forage; greenhouse (بيوت محمية) when the customer says greenhouse. If irrigation vs foliar or field vs greenhouse is not stated, state which case your number is for. Always end with: "المعدلات استرشادية وتختلف حسب تحليل التربة والمياه ومرحلة النمو، والالتزام بملصق المنتج أولاً."
 - Registration matters are OUT OF SCOPE for customers: registration requirements/conditions for fertilizers or pesticides, registration numbers, neutral/accredited labs, authorization letters, pledges/undertakings, official documents (MSDS, COA, free-sale certificates). Do not answer them.
@@ -1412,7 +1428,34 @@ ${historyText || "(none)"}
       data.whatsapp_needed = false;
     }
     // توصية ثابتة الصيغة: "لـ<الآفة> على <المحصول> تقدر تستخدم <المادة> (<المنتج>)" + المعدل + فترة التحريم
-    const reco = language !== "en" && !DEEP_RE.test(normalizeArabicLite(message)) ? recommendFromGuide(message) : null;
+    let reco = language !== "en" && !DEEP_RE.test(normalizeArabicLite(message)) ? recommendFromGuide(message) : null;
+    // صورة: نبني التوصية من تشخيص الصورة (الآفة + المحصول) إذا الثقة ليست منخفضة
+    const vPest = String(visionAnalysis?.pest_or_disease || "").trim();
+    const vCrop = String(visionAnalysis?.crop || "").trim();
+    if (!reco && language !== "en" && visionAnalysis && visionAnalysis.confidence !== "low" && visionAnalysis.image_clarity !== "unclear" && vPest && !mentionedCatalogNos(message).length) {
+      const fromImage = recommendFromGuide(`عندي ${vPest}${vCrop ? ` على ${vCrop}` : ""}`);
+      if (fromImage) {
+        reco = {
+          ...fromImage,
+          summary: `التشخيص المبدئي من الصورة: ${vPest}${vCrop ? ` على ${vCrop}` : ""}${visionAnalysis.confidence === "medium" ? " (غير مؤكد)" : ""}. ${fromImage.summary}`,
+        };
+      }
+    }
+    // منتج مذكور بالاسم (بوستاك...): بطاقته أولاً، والبقية من نفس نوعه فقط (لا مبيد صحة عامة مع مبيد فطري)
+    if (!reco) {
+      const named = mentionedCatalogNos(message);
+      if (named.length) {
+        const namedCards = hydrateProductSuggestions(named.map((n) => ({ id: String(n), reason: "" })), named.length, "", "");
+        const types = new Set(namedCards.map((c) => { const p = getProductById(c.id); return p ? productType(p) : ""; }));
+        const ids = new Set(namedCards.map((c) => c.id));
+        productCards = [
+          ...namedCards,
+          ...productCards.filter((c) => { const p = getProductById(c.id); return !ids.has(c.id) && p && types.has(productType(p)); }),
+        ].slice(0, 4);
+        data.product_suggestions = productCards.map((card) => ({ id: card.id, name: card.name, url: card.url, reason: card.reason }));
+        data.products = productCards;
+      }
+    }
     if (reco) {
       const recoCards = reco.catalogNos.length ? hydrateProductSuggestions(reco.catalogNos.map((n) => ({ id: String(n), reason: "" })), reco.catalogNos.length, "", "") : [];
       const recoIds = new Set(recoCards.map((c) => c.id));
