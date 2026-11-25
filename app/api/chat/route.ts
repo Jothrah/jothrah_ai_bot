@@ -586,7 +586,8 @@ async function analyzeImageFirst(params: {
 - هل هي حشرة منزلية؟ آفة نباتية؟ مرض نبات؟ أثر قارض؟ أم غير واضح؟
 - لا تجزم إذا الصورة غير واضحة.
 - لا تعطي جرعات مبيدات.
-- crop: اسم النبات/المحصول الظاهر بالعربي كما يسميه المزارع في السعودية (مثل: الطماطم، الخيار، النخيل، الفلفل، العنب)، أو "" إذا ما يظهر نبات أو غير متأكد.
+- crop: اسم نبات واحد محدد بالعربي (مثل: الطماطم، الخيار، النخيل، الفلفل، العنب، المانجو)، أو "" إذا غير متأكد من نوع النبات. لا تكتب كلمات عامة مثل "نباتات" أو "نبات".
+- فرّق بدقة: البياض الدقيقي = مسحوق أبيض دقيقي على سطح الورقة يُمسح باليد؛ البياض الزغبي = بقع صفراء/بنية زاوية على السطح العلوي مع زغب رمادي أو بنفسجي على السطح السفلي. إذا ما تقدر تفرق بينهما فاجعل confidence = "medium".
 - pest_or_disease: الاسم العربي الشائع للآفة أو المرض الأرجح (مثل: المن، الذبابة البيضاء، التربس، العناكب، صانعات الأنفاق، البياض الدقيقي، البياض الزغبي، العفن الرمادي، اللفحة المتأخرة، سوسة النخيل الحمراء)، أو "" إذا غير واضح. لا تخمّن اسماً إذا الثقة منخفضة.
 - إذا كانت الصورة غير واضحة أو الحالة خطرة أو تحتاج تشخيص مباشر، اجعل whatsapp_needed = true.
 
@@ -1432,13 +1433,29 @@ ${historyText || "(none)"}
     // صورة: نبني التوصية من تشخيص الصورة (الآفة + المحصول) إذا الثقة ليست منخفضة
     const vPest = String(visionAnalysis?.pest_or_disease || "").trim();
     const vCrop = String(visionAnalysis?.crop || "").trim();
-    if (!reco && language !== "en" && visionAnalysis && visionAnalysis.confidence !== "low" && visionAnalysis.image_clarity !== "unclear" && vPest && !mentionedCatalogNos(message).length) {
-      const fromImage = recommendFromGuide(`عندي ${vPest}${vCrop ? ` على ${vCrop}` : ""}`);
+    const vCropOk = Boolean(vCrop) && !/نبات|متنوع|غير|مختلف|اشجار|أشجار|شجر/.test(vCrop);
+    if (!reco && language !== "en" && visionAnalysis && vPest && !mentionedCatalogNos(message).length) {
+      const where = vCropOk ? ` على ${vCrop}` : "";
+      // ثقة عالية + محصول محدد → توصية بالمادة والمعدل مع تنبيه أن التشخيص مبدئي
+      const fromImage = visionAnalysis.confidence === "high" && visionAnalysis.image_clarity !== "unclear" && vCropOk ? recommendFromGuide(`عندي ${vPest}${where}`) : null;
       if (fromImage) {
         reco = {
           ...fromImage,
-          summary: `التشخيص المبدئي من الصورة: ${vPest}${vCrop ? ` على ${vCrop}` : ""}${visionAnalysis.confidence === "medium" ? " (غير مؤكد)" : ""}. ${fromImage.summary}`,
+          summary: `التشخيص المبدئي من الصورة: ${vPest}${where}. ${fromImage.summary}`,
+          advice: [...fromImage.advice, "التشخيص من الصورة مبدئي؛ إذا الأعراض مختلفة اكتب لنا وصفها أو تواصل مع مهندس زراعي."],
         };
+      } else if (visionAnalysis.confidence !== "low") {
+        // تشخيص غير مؤكد: نعرضه ونطلب التأكيد بدل ما نرشح مبيد على تخمين
+        data.summary = `التشخيص المبدئي من الصورة: ${vPest}${where} (غير مؤكد).`;
+        data.advice = [
+          `إذا تأكدت، اكتب لي مثلاً: «عندي ${vPest}${where || " على <اسم المحصول>"}» وأعطيك المادة المناسبة ومعدلها.`,
+          "أو أرسل صورة أقرب وأوضح للورقة من الجهتين.",
+        ];
+        data.questions = vCropOk ? [] : ["وش نوع النبات أو المحصول؟"];
+        productCards = [];
+        data.product_suggestions = [];
+        data.products = [];
+        reco = { summary: data.summary, advice: data.advice, catalogNos: [], questions: data.questions } as typeof reco & { questions: string[] };
       }
     }
     // سؤال معدل/تحريم لمنتج مذكور بالاسم: الرد من صفحة الدليل المطابقة للمنتج مباشرة
@@ -1448,10 +1465,10 @@ ${historyText || "(none)"}
         data.summary = nr.summary;
         data.advice = nr.advice;
         data.questions = nr.askCrop ? ["على أي محصول تبي تستخدمه؟"] : [];
-        reco = nr;
+        reco = { ...nr, questions: data.questions } as typeof reco & { questions: string[] };
         const recoCards = hydrateProductSuggestions(nr.catalogNos.map((n) => ({ id: String(n), reason: "" })), 1, "", "");
         const t = recoCards[0] ? getProductById(recoCards[0].id) : null;
-        productCards = [...recoCards, ...productCards.filter((c) => { const p = getProductById(c.id); return c.id !== recoCards[0]?.id && p && t && productType(p) === productType(t); })].slice(0, 4);
+        productCards = [...recoCards, ...productCards.filter((c) => { const p = getProductById(c.id); return c.id !== recoCards[0]?.id && c.name !== recoCards[0]?.name && p && t && productType(p) === productType(t); })].slice(0, 4);
         data.product_suggestions = productCards.map((card) => ({ id: card.id, name: card.name, url: card.url, reason: card.reason }));
         data.products = productCards;
       }
@@ -1477,7 +1494,7 @@ ${historyText || "(none)"}
       productCards = [...recoCards, ...(recoCards.length ? productCards.filter((c) => !recoIds.has(c.id)) : [])].slice(0, 4);
       data.summary = reco.summary;
       data.advice = reco.advice;
-      data.questions = [];
+      data.questions = (reco as { questions?: string[] }).questions || [];
       data.product_suggestions = productCards.map((card) => ({ id: card.id, name: card.name, url: card.url, reason: card.reason }));
       data.products = productCards;
     }
