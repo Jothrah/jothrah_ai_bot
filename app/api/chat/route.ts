@@ -10,7 +10,7 @@ import { detectLanguage, matchCategories } from "@/lib/matcher";
 import { needsWhatsapp } from "@/lib/safety";
 import { sendAdminPushNotification } from "@/lib/admin-push";
 import { buildCatalogIndex, hydrateProductSuggestions, alignAdviceWithProducts, getProductById, productType } from "@/lib/products";
-import { recommendFromGuide, mentionedCatalogNos, searchGuide, formatGuideEntries, listsContext, fertilizerKnowledgeContext, fertilizerRateHint } from "@/lib/guide";
+import { recommendFromGuide, namedProductRate, mentionedCatalogNos, searchGuide, formatGuideEntries, listsContext, fertilizerKnowledgeContext, fertilizerRateHint } from "@/lib/guide";
 import {
   saveChatAttachment,
   saveChatEvent,
@@ -1439,6 +1439,21 @@ ${historyText || "(none)"}
           ...fromImage,
           summary: `التشخيص المبدئي من الصورة: ${vPest}${vCrop ? ` على ${vCrop}` : ""}${visionAnalysis.confidence === "medium" ? " (غير مؤكد)" : ""}. ${fromImage.summary}`,
         };
+      }
+    }
+    // سؤال معدل/تحريم لمنتج مذكور بالاسم: الرد من صفحة الدليل المطابقة للمنتج مباشرة
+    if (!reco && language !== "en" && !DEEP_RE.test(normalizeArabicLite(message))) {
+      const nr = namedProductRate(message);
+      if (nr) {
+        data.summary = nr.summary;
+        data.advice = nr.advice;
+        data.questions = nr.askCrop ? ["على أي محصول تبي تستخدمه؟"] : [];
+        reco = nr;
+        const recoCards = hydrateProductSuggestions(nr.catalogNos.map((n) => ({ id: String(n), reason: "" })), 1, "", "");
+        const t = recoCards[0] ? getProductById(recoCards[0].id) : null;
+        productCards = [...recoCards, ...productCards.filter((c) => { const p = getProductById(c.id); return c.id !== recoCards[0]?.id && p && t && productType(p) === productType(t); })].slice(0, 4);
+        data.product_suggestions = productCards.map((card) => ({ id: card.id, name: card.name, url: card.url, reason: card.reason }));
+        data.products = productCards;
       }
     }
     // منتج مذكور بالاسم (بوستاك...): بطاقته أولاً، والبقية من نفس نوعه فقط (لا مبيد صحة عامة مع مبيد فطري)
