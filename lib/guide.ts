@@ -1,7 +1,7 @@
 import pesticidesData from "@/data/knowledge/guide/pesticides.json";
 import listsData from "@/data/knowledge/guide/lists.json";
 import fertRegData from "@/data/knowledge/guide/fertilizer-registration.json";
-import storeProducts from "@/data/products.json";
+import { catalogProducts, catalogNumber, onCatalogChange } from "@/lib/catalog";
 
 /**
  * معرفة جذرة الموسعة:
@@ -116,13 +116,17 @@ function storeActive(p: StoreP) {
   const m = /بالمادة الفعالة\s+([^،,:.(]+)/.exec(p.summary || "");
   return m ? m[1].replace(/\s+(لمكافحة|عبوة|ل).*$/, "").trim() : "";
 }
-const storeIndex = (storeProducts as StoreP[])
-  .map((p) => {
-    const first = norm(p.name).split(" ")[0] || "";
-    const active = storeActive(p);
-    return { p, brand: GENERIC.has(first) || first.length < 3 ? "" : first, active, form: formCode(p.name), pct: productPct(p.name, active) };
-  })
-  .filter((x) => x.brand && x.active);
+function buildStoreIndex() {
+  return (catalogProducts() as StoreP[])
+    .map((p) => {
+      const first = norm(p.name).split(" ")[0] || "";
+      const active = storeActive(p);
+      return { p, brand: GENERIC.has(first) || first.length < 3 ? "" : first, active, form: formCode(p.name), pct: productPct(p.name, active) };
+    })
+    .filter((x) => x.brand && x.active);
+}
+// يُعاد بناؤه تلقائياً كلما تحدث كتالوج المتجر من سلة
+let storeIndex = buildStoreIndex();
 
 /** مستوى تطابق منتج متجر مع صفحة في الدليل: 2 = نفس المادة والتركيز والهيئة، 1 = نفس المادة فقط، 0 = لا */
 function productMatch(x: { active: string; form: string; pct: string }, e: GuideEntry) {
@@ -138,8 +142,12 @@ function productMatch(x: { active: string; form: string; pct: string }, e: Guide
 }
 
 /** رقم المنتج في كتالوج البوت (نفس ترقيم buildCatalogIndex). */
-const catalogNo = new Map((storeProducts as StoreP[]).map((p, i) => [p, i + 1] as const));
+const catalogNo = { get: (p: StoreP) => catalogNumber(p.id) };
 const storeMatchCache = new Map<GuideEntry, typeof storeIndex>();
+onCatalogChange(() => {
+  storeIndex = buildStoreIndex();
+  storeMatchCache.clear();
+});
 /** منتجات المتجر المطابقة تماماً لصفحة الدليل (نفس المادة والتركيز والهيئة). */
 function storeMatchesFor(e: GuideEntry) {
   let hit = storeMatchCache.get(e);

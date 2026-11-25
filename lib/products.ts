@@ -1,18 +1,6 @@
-import productsData from "@/data/products.json";
+import { catalogProducts, catalogNumber, onCatalogChange, productById, productByNumber, type StoreProduct } from "@/lib/catalog";
 
-export type StoreProduct = {
-  id: string;
-  name: string;
-  url: string;
-  image: string;
-  categories: string[];
-  brand: string;
-  size: string;
-  active: string;
-  conc: string;
-  targets: string[];
-  summary: string;
-};
+export type { StoreProduct };
 
 export type ProductCard = {
   id: string;
@@ -24,10 +12,15 @@ export type ProductCard = {
   reason: string;
 };
 
-const products = productsData as StoreProduct[];
-const byId = new Map(products.map((p) => [String(p.id), p]));
+// الكتالوج الحي من سلة (lib/catalog.ts) — يتحدث تلقائياً
+let products: StoreProduct[] = catalogProducts();
 
 let catalogCache = "";
+onCatalogChange(() => {
+  products = catalogProducts();
+  catalogCache = "";
+  activeSkelCache = null;
+});
 
 /** نوع المنتج العام — يمنع البوت من خلط الأنواع (مثل اقتراح بذور لسؤال عن سماد). */
 export function productType(p: StoreProduct) {
@@ -54,9 +47,9 @@ export function buildCatalogIndex() {
 
   // فهرس مضغوط (المعرّف + الاسم + المادة الفعالة) لتسريع رد البوت
   catalogCache = products
-    .map((p, i) => {
-      // رقم قصير بدل المعرّف الطويل: النموذج ينسخه بدقة أعلى
-      const parts = [String(i + 1), `[${productType(p)}]`, p.name];
+    .map((p) => {
+      // رقم قصير ثابت بدل المعرّف الطويل: النموذج ينسخه بدقة أعلى
+      const parts = [String(catalogNumber(p.id)), `[${productType(p)}]`, p.name];
       if (p.active && !p.name.includes(p.active)) parts.push(p.active);
       return parts.join("|");
     })
@@ -67,11 +60,8 @@ export function buildCatalogIndex() {
 
 export function getProductById(id: unknown) {
   const key = String(id || "").trim();
-  if (/^\d{1,3}$/.test(key)) {
-    const n = Number(key);
-    return n >= 1 && n <= products.length ? products[n - 1] : null;
-  }
-  return byId.get(key) || null;
+  if (/^\d{1,4}$/.test(key)) return productByNumber(Number(key));
+  return productById(key);
 }
 
 export function hydrateProductSuggestions(
