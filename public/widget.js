@@ -447,12 +447,21 @@
     });
   }
 
+  // مزامنة فورية عند فتح النافذة أو الرجوع للصفحة: تظهر رسالة الإنهاء والتقييم بدون انتظار دورة الاستطلاع
+  var lastSyncNow = 0;
+  function syncNow() {
+    if (!S.conv || mode() === "closed" || Date.now() - lastSyncNow < 2000) return schedulePoll();
+    lastSyncNow = Date.now();
+    clearTimeout(S.pollTimer);
+    sync(false).then(render).catch(function () {}).finally(schedulePoll);
+  }
+
   function schedulePoll() {
     clearTimeout(S.pollTimer);
     var m = mode();
     if (!S.conv || m === "closed") return;
     var hidden = document.hidden;
-    var delay = m === "human" ? (hidden ? 5000 : 1500) : S.open ? 6000 : 25000;
+    var delay = m === "human" ? (hidden ? 5000 : 1500) : S.open ? 6000 : 12000;
     S.pollTimer = setTimeout(function () {
       sync(false)
         .then(render)
@@ -497,7 +506,7 @@
       clearInterval(titleTimer);
       titleTimer = null;
       document.title = baseTitle;
-      schedulePoll();
+      syncNow();
     }
   });
   function canNotify() {
@@ -1160,7 +1169,8 @@
     } else {
       document.documentElement.style.overflow = "";
     }
-    schedulePoll();
+    if (v) syncNow();
+    else schedulePoll();
   }
 
   el.launch.addEventListener("click", function () { setOpen(!S.open); });
