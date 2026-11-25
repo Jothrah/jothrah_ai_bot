@@ -1289,7 +1289,7 @@ IMPORTANT: if a fitting product exists in the Jothrah catalog, put 1–4 of them
 
     // المراجع الموسعة: دليل المبيدات السعودي 1446 + القوائم المقيدة/المحظورة + معرفة الأسمدة ومتطلبات تسجيلها
     const guideQuery = `${message} ${visionAnalysis?.detected_problem || ""} ${(visionAnalysis?.possible_category_terms || []).join(" ")}`;
-    const guideText = formatGuideEntries(searchGuide(guideQuery, 6));
+    const guideText = formatGuideEntries(searchGuide(guideQuery, 4), message);
     const legalText = listsContext(message);
     // اشتراطات التسجيل والوثائق الرسمية ليست من خدمة العميل — لا تُضاف للبوت
     const fertText = fertilizerKnowledgeContext(message);
@@ -1368,7 +1368,8 @@ Reference rules:
 - If you suggest products, any active ingredient you name in the advice must be the active ingredient of one of the suggested products (or from the guide for that exact crop and pest). Never suggest a fungicide for insects or an insecticide for a fungal disease, and never a public-health product for a crop.
 - Never recommend a banned active ingredient. For restricted ones, say they are used only with approval/supervision of the competent authority.
 - Prefer recommending store products whose active ingredient is registered for the customer's crop and pest in the guide.
-- Usage questions (how/when to use, registered crops and pests, mixing, fertilizer guidance rates) are allowed, but give numbers ONLY if they appear in the provided references or product data; never invent a pesticide rate — say to follow the product label or ask the engineer.
+- Usage questions (how/when to use, registered crops and pests, mixing, fertilizer guidance rates) are allowed, but give numbers ONLY if they appear in the provided references or product data; never invent or convert a rate.
+- Pesticide rates and pre-harvest intervals: when the guide references list a row for the customer's crop and pest, give the rate (المعدل) and the pre-harvest interval (فترة التحريم) exactly as written, say "حسب دليل المبيدات الزراعية في المملكة"، and add that the product label is the final reference. If the customer named a store product, use ONLY an entry marked ✅ for that product; if none is marked ✅ (or it is marked ⚠️), say the rate of that exact product is on its label and do not quote another concentration's rate. If the crop is not in the listed rows, say it is not registered for that crop in the guide.
 - When giving fertilizer guidance rates, pick the row of the correct crop category exactly: vegetables (خضار) = tomato, cucumber, pepper, eggplant, squash/zucchini, potato, onion, garlic, cabbage, lettuce, melon, watermelon, strawberry; fruit (فاكهة) = palms/dates, citrus, grapes, mango, fig, pomegranate, olive, apple; field crops (حقلية) = wheat, barley, corn, alfalfa/forage; greenhouse (بيوت محمية) when the customer says greenhouse. If irrigation vs foliar or field vs greenhouse is not stated, state which case your number is for. Always end with: "المعدلات استرشادية وتختلف حسب تحليل التربة والمياه ومرحلة النمو، والالتزام بملصق المنتج أولاً."
 - Registration matters are OUT OF SCOPE for customers: registration requirements/conditions for fertilizers or pesticides, registration numbers, neutral/accredited labs, authorization letters, pledges/undertakings, official documents (MSDS, COA, free-sale certificates). Do not answer them.
 
