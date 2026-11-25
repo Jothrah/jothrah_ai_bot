@@ -385,6 +385,8 @@ function wordsOf(text: string) {
 const wKey = (w: string) => norm(w).replace(/^(وال|بال|لل|ال)/, "");
 
 function activeAr(x: { active: string }) {
+  // خليط: نكتب المادتين كاملتين بتركيزهما (بوسكاليد 25.2% + بيراكلوستروبين 12.8%)
+  if (/\+/.test(x.active)) return x.active.replace(/\s*\((?:و\/[وح]|w\/[wv])\)\s*/gi, " ").replace(/\s+/g, " ").trim();
   return x.active.replace(/\s*[\d.]+\s*%.*$/, "").replace(/\s+و\/[وح].*$/, "").trim();
 }
 function brandAr(p: StoreP) {
@@ -494,4 +496,68 @@ export function recommendFromGuide(text: string): GuideRecommendation | null {
 /** أرقام الكتالوج للمنتجات المذكورة بالاسم في السؤال. */
 export function mentionedCatalogNos(text: string) {
   return mentionedStoreProducts(text).map((x) => catalogNo.get(x.p)!).filter(Boolean);
+}
+
+/* ───────── سؤال معدل/تحريم لمنتج مذكور بالاسم (أكوكيم، لورد، بوستاك...) ─────────
+ * نأخذ صفحة الدليل المطابقة تماماً للمنتج، ونختار صف محصول/آفة السؤال؛
+ * إذا ما حدد المحصول وتختلف المعدلات أو فترات التحريم، نعرضها لكل مجموعة محاصيل. */
+const RATE_Q_RE = /معدل|كم|جرعه|جرعة|نسبه|نسبة|مقدار|لكل لتر|للتر|باللتر|تحريم|قبل الحصاد|كيف استخدم|كيف أستخدم|طريقة استخدام|طريقه استخدام|استخدامه|اخلط|أخلط|احط|أحط/;
+
+export function namedProductRate(text: string): (GuideRecommendation & { askCrop: boolean }) | null {
+  const msg = String(text || "").trim();
+  if (!msg || !RATE_Q_RE.test(msg) || /محظور|ممنوع|مقيد|تسجيل|سعر|بكم/.test(msg)) return null;
+  const prods = mentionedStoreProducts(msg);
+  if (prods.length !== 1) return null;
+  const x = prods[0];
+  const e = guide.find((g) => productMatch(x, g) === 2);
+  if (!e || !e.uses.length) return null;
+  const brand = brandAr(x.p);
+  const bn = norm(brand);
+  const keys = wordsOf(msg).map((w) => wKey(w)).filter((k) => k.length >= 3 && !STOP.has(k) && !NON_WORDS.has(k) && !bn.includes(k));
+  const hit = e.uses.filter((u) => {
+    const h = norm(`${u.crops} ${u.pests}`);
+    return keys.some((k) => h.includes(k));
+  });
+  const rows = hit.length ? hit : e.uses;
+  // نجمع الصفوف المتطابقة في المعدل وفترة التحريم
+  const groups: { crops: string[]; rate: string; phi: string }[] = [];
+  for (const u of rows) {
+    const g = groups.find((v) => v.rate === (u.rate || "") && v.phi === (u.phi || ""));
+    if (g) g.crops.push(u.crops);
+    else groups.push({ crops: [u.crops], rate: u.rate || "", phi: u.phi || "" });
+  }
+  const catalogNos = [catalogNo.get(x.p)!];
+  const ai = activeAr(x);
+  const pct = x.pct && !/\+/.test(x.active) ? ` ${x.pct}%` : "";
+  // المحصول بكلمة العميل نفسها (الطماطم) بدل عنوان المجموعة في الدليل
+  const qWords = wordsOf(msg);
+  const cropWord = hit.length ? qWords.find((w) => { const k = wKey(w); return k.length >= 3 && !bn.includes(k) && hit.some((u) => norm(u.crops).includes(k)); }) || "" : "";
+  if (groups.length === 1) {
+    const g = groups[0];
+    const where = cropWord ? ` على ${cropWord}` : "";
+    return {
+      summary: `معدل ${brand} (${ai}${pct})${where}: ${g.rate || "حسب ملصق المنتج"}.`,
+      advice: [g.rate ? `المعدل: ${g.rate}` : "", phiLine(g.phi), "الالتزام بملصق المنتج."].filter(Boolean),
+      catalogNos,
+      askCrop: false,
+    };
+  }
+  const sameRate = groups.every((g) => g.rate === groups[0].rate);
+  const lines = groups.slice(0, 5).map((g) => {
+    // المحصول محدد ← نفرّق بالآفة؛ غير محدد ← نفرّق بالمحاصيل
+    const rowsOf = rows.filter((u) => (u.rate || "") === g.rate && (u.phi || "") === g.phi);
+    const dupCrops = !cropWord && groups.filter((o) => o.crops.join("|") === g.crops.join("|")).length > 1;
+    const pestsOf = [...new Set(rowsOf.map((u) => u.pests))].join("، ");
+    const crops = (cropWord ? pestsOf : dupCrops ? `${g.crops.join("، ").replace(/:.*$/, "")} ← ${pestsOf}` : g.crops.join("، ")).replace(/\s+/g, " ").slice(0, 80);
+    const ph = phiLine(g.phi).replace(/^فترة التحريم قبل الحصاد: /, "فترة التحريم ").replace(/\.$/, "");
+    return sameRate ? `${crops}: ${ph}` : `${crops}: المعدل ${g.rate}${ph ? `، ${ph}` : ""}`;
+  });
+  return {
+    summary: sameRate
+      ? `معدل ${brand} (${ai}${pct}): ${groups[0].rate}، وفترة التحريم تختلف حسب المحصول.`
+      : `معدل ${brand} (${ai}${pct})${cropWord ? ` على ${cropWord} يختلف حسب الآفة:` : " يختلف حسب المحصول:"}`,
+    advice: [sameRate ? `المعدل: ${groups[0].rate}` : "", ...lines, "الالتزام بملصق المنتج."].filter(Boolean),
+    catalogNos,
+    askCrop: !cropWord,
+  };
 }
