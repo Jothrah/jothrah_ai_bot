@@ -1467,7 +1467,8 @@ ${historyText || "(none)"}
       };
     };
 
-    if (!wantStream) {
+    // الأسئلة العميقة ما تُبث حتى لا يظهر للعميل أي نص قبل استبداله بالتحويل للمهندس
+    if (!wantStream || DEEP_RE.test(normalizeArabicLite(message))) {
       const completion = await client.chat.completions.create(completionParams);
       mark("model");
       const payload = await finalize(completion.choices[0]?.message?.content || "{}");
