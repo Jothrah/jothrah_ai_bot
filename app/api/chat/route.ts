@@ -10,7 +10,7 @@ import { detectLanguage, matchCategories } from "@/lib/matcher";
 import { needsWhatsapp } from "@/lib/safety";
 import { sendAdminPushNotification } from "@/lib/admin-push";
 import { buildCatalogIndex, hydrateProductSuggestions, alignAdviceWithProducts } from "@/lib/products";
-import { searchGuide, formatGuideEntries, listsContext, fertilizerKnowledgeContext, fertilizerRateHint } from "@/lib/guide";
+import { recommendFromGuide, searchGuide, formatGuideEntries, listsContext, fertilizerKnowledgeContext, fertilizerRateHint } from "@/lib/guide";
 import {
   saveChatAttachment,
   saveChatEvent,
@@ -1393,7 +1393,7 @@ ${historyText || "(none)"}
 
     const finalize = async (raw: string) => {
     const data = JSON.parse(raw || "{}");
-    const productCards = hydrateProductSuggestions(data.product_suggestions, 4, message, historyText.slice(-300));
+    let productCards = hydrateProductSuggestions(data.product_suggestions, 4, message, historyText.slice(-300));
     data.product_suggestions = productCards.map((card) => ({
       id: card.id,
       name: card.name,
@@ -1411,6 +1411,18 @@ ${historyText || "(none)"}
       data.products = [];
       data.whatsapp_needed = false;
     }
+    // توصية ثابتة الصيغة: "لـ<الآفة> على <المحصول> تقدر تستخدم <المادة> (<المنتج>)" + المعدل + فترة التحريم
+    const reco = language !== "en" && !DEEP_RE.test(normalizeArabicLite(message)) ? recommendFromGuide(message) : null;
+    if (reco) {
+      const recoCards = reco.catalogNos.length ? hydrateProductSuggestions(reco.catalogNos.map((n) => ({ id: String(n), reason: "" })), reco.catalogNos.length, "", "") : [];
+      const recoIds = new Set(recoCards.map((c) => c.id));
+      productCards = [...recoCards, ...(recoCards.length ? productCards.filter((c) => !recoIds.has(c.id)) : [])].slice(0, 4);
+      data.summary = reco.summary;
+      data.advice = reco.advice;
+      data.questions = [];
+      data.product_suggestions = productCards.map((card) => ({ id: card.id, name: card.name, url: card.url, reason: card.reason }));
+      data.products = productCards;
+    }
     // لا نذكر مصدر المعلومة للعميل (دليل المبيدات / الوزارة)
     const stripSource = (t: string) => t
       .replace(/\s*[(（]?\s*(?:و?(?:حسب|بحسب|وفق|وفقا|وفقاً|طبقا|طبقاً|استنادا|استناداً|بناء|بناءً)\s*(?:ل|لما|إلى|الى|على|ما)?\s*(?:ورد|جاء|هو مذكور|مذكور)?\s*(?:في)?\s*)(?:ال)?دليل(?:\s+(?:المبيدات|الزراعية|الزراعي|في|المملكة|العربية|السعودية|الرسمي|الوزارة|\d{4}هـ?|[(]?1446هـ?[)]?))*\s*[)）]?/g, "")
@@ -1420,7 +1432,7 @@ ${historyText || "(none)"}
     const clean = (v: unknown) => stripSource(String(v || "")).replace(/[",\s]+$/g, "").replace(/\s{2,}/g, " ").trim();
     if (typeof data.summary === "string") data.summary = clean(data.summary);
     if (Array.isArray(data.advice)) data.advice = data.advice.map(clean).filter(Boolean);
-    data.advice = alignAdviceWithProducts(data.advice, productCards, data.language === "en" ? "en" : "ar");
+    if (!reco) data.advice = alignAdviceWithProducts(data.advice, productCards, data.language === "en" ? "en" : "ar");
     await saveChatMessage({
       conversationId: conversation.id,
       senderType: "ai",
