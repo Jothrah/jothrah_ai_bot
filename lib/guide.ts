@@ -142,7 +142,9 @@ export function mentionedStoreProducts(text: string) {
   const seen = new Set<string>();
   return storeIndex.filter((x) => {
     if (seen.has(x.brand)) return false;
-    const hit = n.includes(` ${x.brand} `) || n.includes(` ال${x.brand} `) || n.includes(` ${x.brand}`);
+    // يقبل حروف الجر والعطف الملتصقة بالاسم: لأكوكيم، بلورد، وأكوكيم، للورد، بالأكوكيم
+    const esc = x.brand.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const hit = new RegExp(`\\s(?:[وفبلك])?(?:ال|لل)?${esc}`).test(n);
     if (hit) seen.add(x.brand);
     return hit;
   }).slice(0, 2);
