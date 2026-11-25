@@ -26,8 +26,8 @@ export type StoreProduct = {
 
 const STORE_ID = process.env.SALLA_STORE_ID || "446051475";
 const API = "https://api.salla.dev/store/v1/products";
-const TTL_MS = 10 * 60 * 1000; // النسخة المحلية تُراجع كل 10 دقائق (من الكاش المشترك، سريع)
-const SHARED_TTL_S = 60 * 60; // الكاش المشترك بين كل نسخ الخادم يُجدد من سلة كل ساعة
+const TTL_MS = 3 * 60 * 1000; // النسخة المحلية تُراجع كل 3 دقائق (من الكاش المشترك، سريع)
+const SHARED_TTL_S = 15 * 60; // الكاش المشترك بين كل نسخ الخادم يُجدد من سلة كل ربع ساعة
 const RETRY_MS = 5 * 60 * 1000; // بعد فشل: نعيد المحاولة بعد 5 دقائق
 const MAX_PAGES = 80;
 const MIN_VALID = 50; // أقل من هذا العدد نعتبر الرد غير سليم ولا نستبدل الكتالوج
