@@ -9,6 +9,7 @@ import { supabaseAdmin } from "@/lib/supabase-admin";
 import { detectLanguage, matchCategories } from "@/lib/matcher";
 import { needsWhatsapp } from "@/lib/safety";
 import { sendAdminPushNotification } from "@/lib/admin-push";
+import { ensureCatalog } from "@/lib/catalog";
 import { buildCatalogIndex, hydrateProductSuggestions, alignAdviceWithProducts, getProductById, productType } from "@/lib/products";
 import { recommendFromGuide, namedProductRate, mentionedCatalogNos, searchGuide, formatGuideEntries, listsContext, fertilizerKnowledgeContext, fertilizerRateHint } from "@/lib/guide";
 import {
@@ -1169,6 +1170,8 @@ export async function POST(req: NextRequest) {
     }
 
     const client = getOpenAIClient();
+    // تحديث كتالوج المتجر من سلة (كل ساعة) بالتوازي مع تحليل الصورة
+    const catalogReady = ensureCatalog();
 
     const visionAnalysis = imageDataUrl
       ? await analyzeImageFirst({
@@ -1178,6 +1181,7 @@ export async function POST(req: NextRequest) {
           language,
         })
       : null;
+    await catalogReady;
 
     const matchingText = [
       message,
