@@ -1,6 +1,7 @@
 import pesticidesData from "@/data/knowledge/guide/pesticides.json";
 import listsData from "@/data/knowledge/guide/lists.json";
 import fertRegData from "@/data/knowledge/guide/fertilizer-registration.json";
+import storeProducts from "@/data/products.json";
 
 /**
  * معرفة جذرة الموسعة:
@@ -9,8 +10,9 @@ import fertRegData from "@/data/knowledge/guide/fertilizer-registration.json";
  * - متطلبات تسجيل الأسمدة ومحسنات التربة (وزارة البيئة والمياه والزراعة / الشركة الوطنية للخدمات الزراعية)
  */
 
-type GuideUse = { crops: string; pests: string };
+type GuideUse = { crops: string; pests: string; rate?: string; phi?: string };
 type GuideEntry = {
+  page?: number;
   ai_en: string;
   ai_ar: string;
   type: string;
@@ -55,7 +57,7 @@ function skel(word: string) {
   let w = String(word || "").toLowerCase();
   if (/[a-z]/.test(w)) {
     w = w
-      .replace(/ph/g, "f").replace(/th/g, "t").replace(/ch/g, "k").replace(/sh/g, "s").replace(/kh/g, "k")
+      .replace(/c(?=[eiy])/g, "s").replace(/ph/g, "f").replace(/th/g, "t").replace(/ch/g, "k").replace(/sh/g, "s").replace(/kh/g, "k")
       .replace(/[cq]/g, "k").replace(/p/g, "b").replace(/v/g, "f").replace(/x/g, "ks").replace(/g/g, "j")
       .replace(/[^a-z]/g, "").replace(/[aeiouywh]/g, "");
   } else {
@@ -81,13 +83,92 @@ const indexed = guide.map((e) => ({
   hayType: norm(`${e.type} ${e.props}`),
 }));
 
+/* ربط منتجات المتجر بالدليل: اسم المنتج (أكوكيم، لورد...) ← مادته الفعالة وتركيزه وهيئته */
+type StoreP = { id: string; name: string; active: string; conc: string; summary: string };
+const GENERIC = new Set(["سماد", "مبيد", "بذور", "مصيده", "مصيدة", "طعم", "جهاز", "مرشه", "مرشة", "شبك", "اسمده", "منشط", "محلول", "مركب"]);
+const FORM_MAP: Array<[RegExp, string]> = [
+  [/دبليو دي جي|\bwdg\b|\bdf\b/i, "WG"], [/اي سي|\bec\b/i, "EC"], [/اس سي|\bsc\b/i, "SC"], [/دبليو بي|\bwp\b/i, "WP"], [/دبليو جي|\bwg\b/i, "WG"],
+  [/اس ال|\bsl\b/i, "SL"], [/اس بي|\bsp\b/i, "SP"], [/اي دبليو|\bew\b/i, "EW"], [/جي ار|\bgr\b/i, "GR"],
+  [/ام اي|\bme\b/i, "ME"], [/او دي|\bod\b/i, "OD"], [/سي اس|\bcs\b/i, "CS"], [/اف اس|\bfs\b/i, "FS"],
+  [/زد سي|\bzc\b/i, "ZC"], [/اس اي|\bse\b/i, "SE"], [/اس جي|\bsg\b/i, "SG"], [/دبليو اس|\bws\b/i, "WS"],
+];
+function formCode(v: string) {
+  const n = norm(v);
+  for (const [re, c] of FORM_MAP) if (re.test(n)) return c;
+  return "";
+}
+/** التركيز: من الاسم (%)، أو من المادة الفعالة، أو رقم جم/لتر قبل الهيئة (50 إي سي = 5%) */
+function productPct(name: string, active: string) {
+  const a = /(\d+(?:\.\d+)?)\s*%/.exec(name) || /(\d+(?:\.\d+)?)\s*%/.exec(active);
+  if (a) return a[1];
+  const n = String(name || "").replace(/[إأآ]/g, "ا");
+  const g = /(\d+(?:\.\d+)?)\s+(اي سي|اس سي|اي دبليو|دبليو|اس ال|اس بي|جي ار|جي آر|ام اي|او دي|سي اس|اس اي|اس جي)/.exec(n);
+  if (g) {
+    // الهيئات الصلبة يكتب رقمها كنسبة مئوية، والسائلة جم/لتر (50 إي سي = 5%)
+    const solid = /^(دبليو|اس بي|جي ار|جي آر|اس جي)$/.test(g[2]) && !/اي دبليو/.test(g[0]);
+    return String(solid ? Number(g[1]) : Number(g[1]) / 10);
+  }
+  return "";
+}
+function storeActive(p: StoreP) {
+  if (p.active) return p.active;
+  const m = /بالمادة الفعالة\s+([^،,:.(]+)/.exec(p.summary || "");
+  return m ? m[1].replace(/\s+(لمكافحة|عبوة|ل).*$/, "").trim() : "";
+}
+const storeIndex = (storeProducts as StoreP[])
+  .map((p) => {
+    const first = norm(p.name).split(" ")[0] || "";
+    const active = storeActive(p);
+    return { p, brand: GENERIC.has(first) || first.length < 3 ? "" : first, active, form: formCode(p.name), pct: productPct(p.name, active) };
+  })
+  .filter((x) => x.brand && x.active);
+
+/** مستوى تطابق منتج متجر مع صفحة في الدليل: 2 = نفس المادة والتركيز والهيئة، 1 = نفس المادة فقط، 0 = لا */
+function productMatch(x: { active: string; form: string; pct: string }, e: GuideEntry) {
+  const aSk = x.active.split(/\+|،|,|\sو(?=\S)| و /).map((a) => skel(a.replace(/[\d.]+\s*%.*$/, ""))).filter((k) => k.length >= 4);
+  const eSk = entrySkels(e);
+  if (!aSk.length || aSk.length !== eSk.length) return 0;
+  if (!aSk.every((a) => eSk.some((k) => k === a || k.includes(a) || a.includes(k)))) return 0;
+  const formOk = !!x.form && e.ai_en.toUpperCase().replace(/\s+/g, "").includes(x.form);
+  const ePcts = [...e.ai_en.matchAll(/(\d+(?:\.\d+)?)\s*%/g)].map((m) => Number(m[1]));
+  const pv = Number(x.pct);
+  const pctOk = !!x.pct && (ePcts.some((v) => Math.abs(v - pv) < 0.05) || (ePcts.length > 1 && Math.abs(ePcts.reduce((a, b) => a + b, 0) - pv) < 0.2));
+  return formOk && pctOk ? 2 : 1;
+}
+
+/** منتجات المتجر المذكورة في السؤال (بالاسم التجاري). */
+export function mentionedStoreProducts(text: string) {
+  const n = ` ${norm(text)} `;
+  const seen = new Set<string>();
+  return storeIndex.filter((x) => {
+    if (seen.has(x.brand)) return false;
+    const hit = n.includes(` ${x.brand} `) || n.includes(` ال${x.brand} `) || n.includes(` ${x.brand}`);
+    if (hit) seen.add(x.brand);
+    return hit;
+  }).slice(0, 2);
+}
+
+function entrySkels(e: GuideEntry) {
+  return e.ai_en.split(/\+|,/).map((part) => skel(part.replace(/[\d.]+\s*%.*$/, "").replace(/\(.*$/, ""))).filter((k) => k.length >= 4);
+}
+
 /** أفضل مواد فعالة من الدليل تطابق كلام العميل (محصول/آفة/اسم مادة). */
 const PEST_RE = /حشر|آف|افه|افات|مبيد|مرض|أمراض|فطر|عفن|بياض|تبقع|لفح|صراصير|نمل|بعوض|ذباب|بق|سوس|دود|حشرة المن|تربس|عنكب|اكاروس|أكاروس|فئران|قوارض|حشائش|أعشاب|نيماتود|قواقع|pest|insect|disease|fung|weed/i;
 
 export function searchGuide(text: string, limit = 6) {
-  if (FERT_RE.test(text) && !PEST_RE.test(text)) return [];
+  const prods = mentionedStoreProducts(text);
+  if (FERT_RE.test(text) && !PEST_RE.test(text) && !prods.length) return [];
   const toks = tokens(text);
-  if (!toks.length) return [];
+  if (!toks.length && !prods.length) return [];
+  // منتج متجر مذكور بالاسم: نطابق مادته الفعالة + التركيز + الهيئة مع صفحة الدليل
+  const prodBoost = (e: GuideEntry) => {
+    let b = 0;
+    for (const x of prods) {
+      const m = productMatch(x, e);
+      if (m) b = Math.max(b, m === 2 ? 32 : 20);
+    }
+    return b;
+  };
   const sk = textSkels(text);
   const nt = ` ${norm(text)} `;
   const shortPests = [
@@ -96,7 +177,8 @@ export function searchGuide(text: string, limit = 6) {
   ].filter(Boolean);
   return indexed
     .map((x) => {
-      let score = skelHit(sk, x.e.ai_en) ? 8 : 0;
+      const hitName = skelHit(sk, x.e.ai_en);
+      let score = (hitName ? 8 + (x.e.ai_en.includes("+") ? 0 : 2) : 0) + (prods.length ? prodBoost(x.e) : 0);
       for (const sp of shortPests) if (x.hayUses.includes(sp)) score += 5;
       for (const t of toks) {
         if (x.hayName.includes(t)) score += 6;
@@ -111,19 +193,33 @@ export function searchGuide(text: string, limit = 6) {
     .map((x) => x.e);
 }
 
-export function formatGuideEntries(entries: GuideEntry[]) {
+export function formatGuideEntries(entries: GuideEntry[], text = "") {
+  const qt = tokens(text);
+  const prods = mentionedStoreProducts(text);
   return entries
     .map((e) => {
-      const uses = e.uses
-        .slice(0, 4)
-        .map((u) => `  - ${u.crops} ← ${u.pests}`)
+      // نعرض أولاً الصفوف المطابقة لمحصول/آفة السؤال
+      const scored = e.uses.map((u) => {
+        const hay = norm(`${u.crops} ${u.pests}`);
+        return { u, s: qt.filter((t) => hay.includes(t)).length };
+      });
+      const best = scored.some((x) => x.s > 0) ? scored.filter((x) => x.s > 0).sort((a, b) => b.s - a.s) : scored;
+      const uses = best
+        .slice(0, 5)
+        .map(({ u }) => `  - ${u.crops} ← ${u.pests}${u.rate ? ` | المعدل: ${u.rate}` : ""}${u.phi ? ` | فترة التحريم (ما قبل الحصاد): ${u.phi}` : ""}`)
         .join("\n");
       return [
-        `• ${e.ai_ar || e.ai_en} (${e.ai_en}) — ${e.type}`,
-        `  المجموعة الكيميائية: ${e.chem_group} | مجموعة المقاومة: ${e.moa || "-"} | الهيئة: ${e.formulation}`,
-        `  فترة عودة الدخول: ${e.rei || "-"} | استخدام مقيد: ${e.restricted}`,
+        `• ${e.ai_en}${e.type ? ` — ${e.type}` : ""}`,
+        e.moa && !/%/.test(e.chem_group || "") ? `  المجموعة الكيميائية: ${e.chem_group || "-"} | مجموعة المقاومة: ${e.moa}` : "",
+        e.rei || e.restricted ? `  فترة عودة الدخول: ${e.rei || "-"} | استخدام مقيد: ${e.restricted || "-"}` : "",
         e.props ? `  خواص: ${e.props}` : "",
-        uses ? `  الاستخدامات المسجلة (المحصول ← الآفة):\n${uses}` : "",
+        ...prods.map((x) => {
+          const m = productMatch(x, e);
+          if (m === 2) return `  ✅ هذه الصفحة مطابقة لمنتج المتجر «${x.p.name}» (نفس المادة الفعالة والتركيز والهيئة) — استخدم معدلاتها لهذا المنتج.`;
+          if (m === 1) return `  ⚠️ نفس المادة الفعالة لمنتج «${x.p.name}» لكن بتركيز أو هيئة مختلفة — لا تعطِ هذه المعدلات لذلك المنتج.`;
+          return "";
+        }),
+        uses ? `  الاستخدامات المسجلة في الدليل (المحصول ← الآفة | المعدل | فترة التحريم):\n${uses}` : "",
       ]
         .filter(Boolean)
         .join("\n");
