@@ -195,6 +195,9 @@ export function searchGuide(text: string, limit = 6) {
     .map((x) => x.e);
 }
 
+/** خانة "فترة التحريم" في الدليل أحياناً تحمل تعليمات تطبيق لا مدة قبل الحصاد (تغطيس الفسائل، التهوية بعد التبخير...). */
+const PHI_NOTE_RE = /تغرس|التهوي|يستخدم|آمن عند|لا تستعمل|قبل البذر|حسب فترة|تجنب الرعي/;
+
 export function formatGuideEntries(entries: GuideEntry[], text = "") {
   const qt = tokens(text);
   const prods = mentionedStoreProducts(text);
@@ -208,7 +211,7 @@ export function formatGuideEntries(entries: GuideEntry[], text = "") {
       const best = scored.some((x) => x.s > 0) ? scored.filter((x) => x.s > 0).sort((a, b) => b.s - a.s) : scored;
       const uses = best
         .slice(0, 5)
-        .map(({ u }) => `  - ${u.crops} ← ${u.pests}${u.rate ? ` | المعدل: ${u.rate}` : ""}${u.phi ? ` | فترة التحريم (ما قبل الحصاد): ${u.phi}` : ""}`)
+        .map(({ u }) => `  - ${u.crops} ← ${u.pests}${u.rate ? ` | المعدل: ${u.rate}` : ""}${u.phi ? (PHI_NOTE_RE.test(u.phi) ? ` | ملاحظة تطبيق (ليست فترة تحريم — انقلها كما هي): ${u.phi}` : ` | فترة التحريم (ما قبل الحصاد): ${u.phi}`) : ""}`)
         .join("\n");
       return [
         `• ${e.ai_en}${e.type ? ` — ${e.type}` : ""}`,
