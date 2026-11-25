@@ -1362,14 +1362,14 @@ Official references (use them as the source of truth when relevant):
 ${referenceBlock || "(none for this question)"}
 
 Reference rules:
-- Mention "حسب دليل المبيدات الزراعية في المملكة" only when your answer actually uses a guide entry for an agricultural crop/pest or a banned/restricted verdict; never for household/public-health pests (cockroaches, mosquitoes, rodents...).
+- Never mention the source of the references to the customer: do not write "دليل المبيدات" or "حسب الدليل" or "حسب الوزارة" or any similar phrase. State the information directly as fact.
 - If the references contain a line starting with "الحكم الصحيح", state that verdict exactly (restricted is NOT banned). Otherwise, if the customer asks whether an active ingredient is banned or restricted and you cannot find it in the lists, say it is not listed as banned/restricted in the guide.
 - When registered uses from the guide match the customer's crop and pest, name 1-3 of those active ingredients in the advice.
 - If you suggest products, any active ingredient you name in the advice must be the active ingredient of one of the suggested products (or from the guide for that exact crop and pest). Never suggest a fungicide for insects or an insecticide for a fungal disease, and never a public-health product for a crop.
 - Never recommend a banned active ingredient. For restricted ones, say they are used only with approval/supervision of the competent authority.
 - Prefer recommending store products whose active ingredient is registered for the customer's crop and pest in the guide.
 - Usage questions (how/when to use, registered crops and pests, mixing, fertilizer guidance rates) are allowed, but give numbers ONLY if they appear in the provided references or product data; never invent or convert a rate.
-- Pesticide rates and pre-harvest intervals: when the guide references list a row for the customer's crop and pest, give the rate (المعدل) and the pre-harvest interval (فترة التحريم) exactly as written, say "حسب دليل المبيدات الزراعية في المملكة"، and add that the product label is the final reference. If the customer named a store product, use ONLY an entry marked ✅ for that product; if none is marked ✅ (or it is marked ⚠️), say the rate of that exact product is on its label and do not quote another concentration's rate. If the crop is not in the listed rows, say it is not registered for that crop in the guide.
+- Pesticide rates and pre-harvest intervals: when the guide references list a row for the customer's crop and pest, give the rate (المعدل) and the pre-harvest interval (فترة التحريم) exactly as written (without naming any source), and add that the product label is the final reference. If the customer named a store product, use ONLY an entry marked ✅ for that product; if none is marked ✅ (or it is marked ⚠️), say the rate of that exact product is on its label and do not quote another concentration's rate. If the crop is not in the listed rows, say it is not registered for that crop.
 - When giving fertilizer guidance rates, pick the row of the correct crop category exactly: vegetables (خضار) = tomato, cucumber, pepper, eggplant, squash/zucchini, potato, onion, garlic, cabbage, lettuce, melon, watermelon, strawberry; fruit (فاكهة) = palms/dates, citrus, grapes, mango, fig, pomegranate, olive, apple; field crops (حقلية) = wheat, barley, corn, alfalfa/forage; greenhouse (بيوت محمية) when the customer says greenhouse. If irrigation vs foliar or field vs greenhouse is not stated, state which case your number is for. Always end with: "المعدلات استرشادية وتختلف حسب تحليل التربة والمياه ومرحلة النمو، والالتزام بملصق المنتج أولاً."
 - Registration matters are OUT OF SCOPE for customers: registration requirements/conditions for fertilizers or pesticides, registration numbers, neutral/accredited labs, authorization letters, pledges/undertakings, official documents (MSDS, COA, free-sale certificates). Do not answer them.
 
@@ -1410,7 +1410,13 @@ ${historyText || "(none)"}
       data.products = [];
       data.whatsapp_needed = false;
     }
-    const clean = (v: unknown) => String(v || "").replace(/[",\s]+$/g, "").replace(/\s{2,}/g, " ").trim();
+    // لا نذكر مصدر المعلومة للعميل (دليل المبيدات / الوزارة)
+    const stripSource = (t: string) => t
+      .replace(/\s*[(（]?\s*(?:و?(?:حسب|بحسب|وفق|وفقا|وفقاً|طبقا|طبقاً|استنادا|استناداً|بناء|بناءً)\s*(?:ل|لما|إلى|الى|على|ما)?\s*(?:ورد|جاء|هو مذكور|مذكور)?\s*(?:في)?\s*)(?:ال)?دليل(?:\s+(?:المبيدات|الزراعية|الزراعي|في|المملكة|العربية|السعودية|الرسمي|الوزارة|\d{4}هـ?|[(]?1446هـ?[)]?))*\s*[)）]?/g, "")
+      .replace(/\s*(?:و?(?:حسب|بحسب|وفق|وفقاً|وفقا))\s*(?:تعليمات\s*|توصيات\s*)?(?:ال)?وزار(?:ة|ه)(?:\s+(?:البيئة|والمياه|والزراعة))*/g, "")
+      .replace(/\s+(?:في|من|ب)\s*(?:ال)?دليل(?:\s+(?:المبيدات|الزراعية|الزراعي|المملكة|العربية|السعودية))*/g, "")
+      .replace(/\s+([.،,])/g, "$1");
+    const clean = (v: unknown) => stripSource(String(v || "")).replace(/[",\s]+$/g, "").replace(/\s{2,}/g, " ").trim();
     if (typeof data.summary === "string") data.summary = clean(data.summary);
     if (Array.isArray(data.advice)) data.advice = data.advice.map(clean).filter(Boolean);
     data.advice = alignAdviceWithProducts(data.advice, productCards, data.language === "en" ? "en" : "ar");
