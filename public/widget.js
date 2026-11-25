@@ -461,6 +461,8 @@
     var m = mode();
     if (!S.conv || m === "closed") return;
     var hidden = document.hidden;
+    // الصفحة بالخلفية والنافذة مقفلة: لا نستهلك الجهاز، نزامن أول ما يرجع العميل للصفحة
+    if (hidden && !S.open && m !== "human") return;
     var delay = m === "human" ? (hidden ? 5000 : 1500) : S.open ? 6000 : 12000;
     S.pollTimer = setTimeout(function () {
       sync(false)
