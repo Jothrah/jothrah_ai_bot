@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { BOOKING_STATUSES, STATUS_LABELS, type BookingStatus } from "@/lib/bookings";
 
 type Booking = {
@@ -273,8 +274,8 @@ export default function BookingsClient({
       <style>{CSS}</style>
       <header className="bk-top">
         <nav className="bk-tabs-top" aria-label="أقسام لوحة الإدارة">
-          <a href="/admin/conversations">💬 المحادثات</a>
-          <a href="/admin/bookings" aria-current="page">📅 حجوزات الرش</a>
+          <Link href="/admin/conversations" prefetch>💬 المحادثات</Link>
+          <Link href="/admin/bookings" aria-current="page">📅 حجوزات الرش</Link>
         </nav>
         <div className="bk-top-in">
           <div className="bk-brand">
