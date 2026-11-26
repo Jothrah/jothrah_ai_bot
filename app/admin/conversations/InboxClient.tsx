@@ -1299,6 +1299,7 @@ html,body{margin:0;padding:0;height:100%;overflow:hidden;max-width:100%;overscro
 }
 
 /* ===== ثيم موحّد مع لوحة حجوزات الرش (ألوان المتجر) ===== */
+html,body{background:#0b2e1f}
 .inbox:not(.dark){--bg:#f5f8f6;--panel2:#f2f6f3;--ink:#0b2e1f;--mut:#5f7a6c;--line:#e3ece6;--brand:#0b2e1f;--brand2:#173f2e;--brandsoft:#e6f0ea;--gold:#a8781c;--goldsoft:#fff7e3;--out:#0b2e1f}
 .adm-tabs{background:#0b2e1f;padding:calc(12px + env(safe-area-inset-top)) 16px 0}
 .adm-tabs a{background:#173f2e;color:#d5e4dc;border-color:transparent}
