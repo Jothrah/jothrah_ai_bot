@@ -400,6 +400,7 @@
     if (knownConv && (!full || !S.conv)) q += "&conversation_id=" + encodeURIComponent(knownConv);
     if (!full && S.cursor) q += "&since=" + encodeURIComponent(S.cursor);
     if (id.user && id.user.name) q += "&customer_name=" + encodeURIComponent(id.user.name);
+    q += "&seen=1" + (S.open && !document.hidden ? "&read=1" : "");
     return api(q, { timeout: 15000 }).then(function (data) {
       var conv = data.conversation;
       if (!conv) return;
@@ -633,7 +634,7 @@
     ".who{font-size:11.5px;font-weight:800;color:var(--g);margin-bottom:3px;display:flex;align-items:center;gap:5px}" +
     ".human .who{color:#8a6415}" +
     ".meta{font-size:11px;opacity:.75;margin-top:4px;display:flex;gap:6px;align-items:center}" +
-    ".me .meta{justify-content:flex-end}.tick{font-weight:700}.tick.seen{color:#9ff0c6}" +
+    ".me .meta{justify-content:flex-end}.tick{font-weight:800;letter-spacing:-1px}.tick.seen{color:#7fd6ff;letter-spacing:0}" +
     ".bub a{color:inherit;font-weight:700;text-decoration:underline}" +
     ".bub img.att{display:block;max-width:220px;max-height:220px;border-radius:12px;margin-bottom:6px;cursor:zoom-in}" +
     ".sys{text-align:center;margin:10px 0}.sys span{display:inline-block;background:#e3ece9;color:#33514a;font-size:12px;font-weight:700;padding:4px 12px;border-radius:999px}" +
@@ -811,7 +812,7 @@
       var seen = S.adminSeenAt && ts(S.adminSeenAt) >= ts(m.created_at) && mode() !== "ai";
       var text = m.message && !(m.image_url && /^(صورة مرفقة|Attached image)$/.test(m.message)) ? linkify(m.message) : "";
       return '<div class="row me"><div class="bub">' + img + text +
-        '<div class="meta">' + esc(fmtTime(m.created_at)) + (mode() !== "ai" || seen ? ' <span class="tick' + (seen ? " seen" : "") + '" title="' + esc(seen ? T.seen : T.sent) + '">' + (seen ? "✓✓" : "✓") + "</span>" : "") + "</div></div></div>";
+        '<div class="meta">' + esc(fmtTime(m.created_at)) + (mode() !== "ai" || seen ? ' <span class="tick' + (seen ? " seen" : "") + '" title="' + esc(seen ? T.seen : T.sent) + '">' + (seen ? "✓✓" + (m.id === S.lastCustId ? " " + esc(T.seen) : "") : "✓") + "</span>" : "") + "</div></div></div>";
     }
     // human
     return '<div class="row them human"><div class="bub"><div class="who">👨‍🌾 ' + esc(T.specialist) + "</div>" + img + linkify(m.message || "") +
@@ -914,6 +915,7 @@
       html = handoffForm();
     } else {
       if (!S.msgs.length && !S.pending.length && !S.local.length) html += welcome();
+      S.lastCustId = (S.msgs.filter(function (x) { return x.sender_type === "customer"; }).pop() || {}).id;
       S.msgs.forEach(function (msg) { html += renderMsg(msg); });
       S.pending.forEach(function (p) { html += renderPending(p); });
       S.local.forEach(function (x) { html += x.html; });
