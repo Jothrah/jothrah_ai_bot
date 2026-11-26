@@ -7,6 +7,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 
 type Conversation = Record<string, any>;
 type ChatMessage = Record<string, any>;
@@ -723,8 +724,8 @@ export default function InboxClient({ initialData }: { initialData: InitialData 
       {/* ============ القائمة ============ */}
       <aside className="side">
         <nav className="adm-tabs" aria-label="أقسام لوحة الإدارة">
-          <a href="/admin/conversations" aria-current="page">💬 المحادثات</a>
-          <a href="/admin/bookings">📅 حجوزات الرش</a>
+          <Link href="/admin/conversations" aria-current="page">💬 المحادثات</Link>
+          <Link href="/admin/bookings" prefetch>📅 حجوزات الرش</Link>
         </nav>
         <header className="brand">
           <div className="logo">ج</div>
