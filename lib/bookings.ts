@@ -99,4 +99,6 @@ export const ADMIN_PATCH_SCHEMA = z.object({
   confirmedDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).or(z.literal("")).optional(),
   confirmedTime: clean(40).optional(),
   price: z.number().min(0).max(1000000).nullable().optional(),
+  paymentStatus: z.enum(["unpaid", "paid"]).optional(),
+  paymentMethod: z.enum(["cash", "transfer", "card"]).or(z.literal("")).optional(),
 });
