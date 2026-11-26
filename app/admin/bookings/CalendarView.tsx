@@ -22,7 +22,7 @@ export type CalBooking = {
   lng: number | null;
 };
 
-const WEEK = ["السبت", "الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة"];
+const WEEK = ["سبت", "أحد", "اثنين", "ثلاثاء", "أربعاء", "خميس", "جمعة"];
 const MONTHS = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
 
 function ymd(d: Date) {
@@ -131,7 +131,7 @@ export default function CalendarView({
 
       <div className="cal-grid" role="grid">
         {WEEK.map((w) => (
-          <div key={w} className="cal-wd" role="columnheader">{w.replace("ال", "").slice(0, 3)}</div>
+          <div key={w} className="cal-wd" role="columnheader">{w}</div>
         ))}
         {cells.map((d) => {
           const k = ymd(d);
