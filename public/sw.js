@@ -1,4 +1,4 @@
-const CACHE_NAME = "jothrah-admin-pwa-v1";
+const CACHE_NAME = "jothrah-admin-pwa-v2";
 
 self.addEventListener("install", (event) => {
   self.skipWaiting();
@@ -44,8 +44,12 @@ self.addEventListener("notificationclick", (event) => {
 
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
+      const section = targetUrl.includes("/admin/bookings") ? "/admin/bookings" : "/admin/conversations";
       for (const client of clients) {
-        if (client.url.includes("/admin/conversations") && "focus" in client) {
+        if (client.url.includes(section) && "focus" in client) {
+          if (targetUrl.includes("?") && "navigate" in client) {
+            return client.navigate(targetUrl).then((c) => (c || client).focus());
+          }
           return client.focus();
         }
       }
