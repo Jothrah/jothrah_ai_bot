@@ -14,23 +14,23 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "جذرة المحادثات",
-  description: "لوحة محادثات جذرة",
-  applicationName: "جذرة المحادثات",
+  title: "إدارة جذرة",
+  description: "لوحة إدارة جذرة: المحادثات وحجوزات الرش",
+  applicationName: "إدارة جذرة",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
-    title: "جذرة المحادثات",
+    title: "إدارة جذرة",
     statusBarStyle: "default",
   },
   icons: {
-    icon: "/icons/admin-192.png",
-    apple: "/icons/admin-192.png",
+    icon: "/icons/app-192.png",
+    apple: "/icons/apple-touch-180.png",
   },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#00656f",
+  themeColor: "#0b2e1f",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
