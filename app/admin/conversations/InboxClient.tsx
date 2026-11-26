@@ -710,7 +710,20 @@ export default function InboxClient({ initialData }: { initialData: InitialData 
             {kind === "ai" && m.ai_detected_problem ? <small className="diag">التشخيص: {m.ai_detected_problem}</small> : null}
             <time>
               {timeOf(m.created_at)}
-              {m.metadata?.pending ? " · يرسل…" : kind === "out" ? " · ✓" : ""}
+              {m.metadata?.pending ? " · يرسل…" : null}
+              {!m.metadata?.pending && kind === "out" ? (() => {
+                const meta = (selected?.metadata || {}) as Record<string, unknown>;
+                const at = Date.parse(m.created_at);
+                const readAt = Date.parse(String(meta.customer_read_at || ""));
+                const seenAt = Date.parse(String(meta.customer_seen_at || ""));
+                const read = Number.isFinite(readAt) && readAt >= at;
+                const seen = read || (Number.isFinite(seenAt) && seenAt >= at);
+                return (
+                  <span className={`tk ${read ? "read" : seen ? "dlv" : ""}`} title={read ? "قرأها العميل" : seen ? "وصلت للعميل" : "تم الإرسال"}>
+                    {" "}{seen ? "✓✓" : "✓"}{read ? " قرأها" : ""}
+                  </span>
+                );
+              })() : null}
             </time>
           </div>
         </div>
@@ -1187,7 +1200,7 @@ html,body{margin:0;padding:0;height:100%;overflow:hidden;max-width:100%;overscro
 .who{font-size:12px;font-weight:700;opacity:.8;margin-bottom:2px}
 .bubble p{margin:2px 0;white-space:pre-line;line-height:1.75}
 .bubble ul{margin:6px 0 2px;padding-right:18px}.bubble li{margin:2px 0}
-.bubble time{display:block;font-size:11px;opacity:.65;margin-top:4px;text-align:left}
+.bubble time{display:block;font-size:11px;opacity:.65;margin-top:4px;text-align:left}.bubble .tk{font-weight:800;letter-spacing:-1px}.bubble .tk.read{color:#53bdeb;opacity:1;letter-spacing:0}.msg.out .bubble time:has(.tk.read){opacity:1}
 .bubble .img{border:0;padding:0;background:none;display:block;margin:4px 0}.bubble .img img{max-width:260px;max-height:260px;border-radius:12px;display:block;cursor:zoom-in}
 .lnk{color:inherit;font-weight:700;text-decoration:underline;word-break:break-all}
 .diag{display:block;color:var(--mut);font-size:12px;margin-top:4px}
