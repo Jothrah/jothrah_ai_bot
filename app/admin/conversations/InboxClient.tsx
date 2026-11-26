@@ -26,6 +26,7 @@ const QR_KEY = "jth_admin_quick_replies_v2";
 const THEME_KEY = "jth_admin_theme_v2";
 const SOUND_KEY = "jth_admin_sound_v2";
 const PUSH_OFF_KEY = "jothrah_admin_push_disabled_v1";
+const PUSH_SYNC_KEY = "jothrah_admin_push_sync_at";
 
 const DEFAULT_QUICK_REPLIES: QuickReply[] = [
   { id: "hi", label: "👋 ترحيب", text: "حيّاك الله، معك مهندس جذرة الزراعي 🌿 كيف أقدر أخدمك؟" },
@@ -182,7 +183,7 @@ export default function InboxClient({ initialData }: { initialData: InitialData 
   const [toast, setToast] = useState("");
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [sound, setSound] = useState(true);
-  const [push, setPush] = useState<"on" | "off" | "denied" | "unsupported" | "busy">("off");
+  const [push, setPush] = useState<"on" | "off" | "denied" | "unsupported" | "busy" | "unknown">("unknown");
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [tool, setTool] = useState<"" | "emoji" | "product" | "qr">("");
   const [quickReplies, setQuickReplies] = useState<QuickReply[]>(DEFAULT_QUICK_REPLIES);
@@ -512,17 +513,26 @@ export default function InboxClient({ initialData }: { initialData: InitialData 
       localStorage.removeItem(PUSH_OFF_KEY);
       setPush("on");
       if (interactive) flash("إشعارات المحادثات مفعّلة ✅");
+      try { localStorage.setItem(PUSH_SYNC_KEY, String(Date.now())); } catch {}
     } catch {
-      setPush("off");
-      if (interactive) flash("تعذر تفعيل الإشعارات");
+      // المزامنة الصامتة لو فشلت (نت ضعيف) ما نغيّر الحالة الظاهرة
+      if (interactive) {
+        setPush("off");
+        flash("تعذر تفعيل الإشعارات");
+      }
     }
   }, [flash]);
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (!("Notification" in window)) return setPush("unsupported");
     if (localStorage.getItem(PUSH_OFF_KEY) === "1") return setPush("off");
-    if (Notification.permission === "granted") enablePush(false);
-    else if (Notification.permission === "denied") setPush("denied");
+    if (Notification.permission === "granted") {
+      // مفعّلة: نعرضها مفعّلة فوراً، ونجدد الاشتراك بالخلفية مرة كل 12 ساعة بس
+      setPush("on");
+      const last = Number(localStorage.getItem(PUSH_SYNC_KEY) || 0);
+      if (Date.now() - last > 12 * 3600 * 1000) enablePush(false);
+    } else if (Notification.permission === "denied") setPush("denied");
+    else setPush("off");
   }, [enablePush]);
 
   /* ---- تحديد متعدد: إنهاء / حذف دفعة وحدة ---- */
@@ -758,7 +768,7 @@ export default function InboxClient({ initialData }: { initialData: InitialData 
           <div className="kpi plain"><b>{stats.rated}</b><span>التقييم ★</span></div>
         </div>
 
-        {push !== "on" && push !== "unsupported" ? (
+        {push !== "on" && push !== "unsupported" && push !== "unknown" ? (
           <button type="button" className="push-cta" onClick={() => enablePush(true)} disabled={push === "busy"}>
             {push === "denied" ? "⚠️ الإشعارات مرفوضة من إعدادات المتصفح" : push === "busy" ? "جاري التفعيل…" : "🔔 فعّل إشعارات الجوال عشان ما تفوتك رسالة"}
           </button>
