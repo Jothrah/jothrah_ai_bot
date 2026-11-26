@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import CalendarView, { CAL_CSS, fmtTime } from "./CalendarView";
 import { BOOKING_STATUSES, STATUS_LABELS, type BookingStatus } from "@/lib/bookings";
 
 type Booking = {
@@ -75,7 +76,7 @@ function confirmText(b: Booking) {
   const parts = [`حياك الله ${b.customer_name}، معك جذرة بخصوص طلب رش المنازل رقم ${b.ref}.`];
   if (b.confirmed_date) {
     parts.push(
-      `نأكد لك الموعد يوم ${fmtDate(b.confirmed_date)}${b.confirmed_time ? ` الساعة ${b.confirmed_time}` : ""} في حي ${b.district}.`,
+      `نأكد لك الموعد يوم ${fmtDate(b.confirmed_date)}${b.confirmed_time ? ` الساعة ${fmtTime(b.confirmed_time)}` : ""} في حي ${b.district}.`,
     );
   }
   if (b.price !== null && b.price !== "" && b.price !== undefined) parts.push(`المبلغ: ${b.price} ريال.`);
@@ -102,6 +103,14 @@ export default function BookingsClient({
   const [bookings, setBookings] = useState<Booking[]>(initialBookings);
   const [filter, setFilter] = useState<"all" | "open" | BookingStatus>("open");
   const [selectedId, setSelectedId] = useState(initialSelectedId);
+  const [view, setView] = useState<"list" | "calendar">("list");
+  useEffect(() => {
+    try { if (localStorage.getItem("jothrah_bk_view") === "calendar" && !initialSelectedId) setView("calendar"); } catch {}
+  }, [initialSelectedId]);
+  const switchView = (v: "list" | "calendar") => {
+    setView(v);
+    try { localStorage.setItem("jothrah_bk_view", v); } catch {}
+  };
   const [toast, setToast] = useState(loadError);
   const [push, setPush] = useState<"on" | "off" | "busy" | "denied" | "unsupported" | "unknown">("unknown");
   const [search, setSearch] = useState("");
@@ -282,30 +291,48 @@ export default function BookingsClient({
 
   return (
     <div className="bk">
-      <style>{CSS}</style>
+      <style>{CSS + CAL_CSS}</style>
       <header className="bk-top">
         <nav className="bk-tabs-top" aria-label="أقسام لوحة الإدارة">
           <Link href="/admin/conversations" prefetch>💬 المحادثات</Link>
           <Link href="/admin/bookings" aria-current="page">📅 حجوزات الرش</Link>
         </nav>
         <div className="bk-top-in">
+          <div className="bk-logo" aria-hidden="true">ج</div>
           <div className="bk-brand">
             <b>حجوزات رش المنازل</b>
-            <small>الرياض فقط · {counts.pending || 0} حجز جديد بانتظار التواصل</small>
+            <small>{counts.pending ? `${counts.pending} حجز جديد بانتظار التواصل` : "الرياض فقط · كل الحجوزات تم التواصل معها 🌿"}</small>
           </div>
-          <nav className="bk-nav">
-            {push === "unknown" ? null : <button
-              type="button"
-              className={`bk-push ${push === "on" ? "on" : ""}`}
-              onClick={() => enablePush(true)}
-              disabled={push === "busy" || push === "unsupported"}
-            >
-              {push === "on" ? "التنبيهات مفعّلة ✓" : push === "denied" ? "التنبيهات مرفوضة" : push === "unsupported" ? "التنبيهات غير مدعومة" : push === "busy" ? "جاري التفعيل…" : "فعّل التنبيهات"}
-            </button>}
-          </nav>
+          <div className="bk-icons">
+            <button type="button" className={`bk-ic ${view === "list" ? "on" : ""}`} onClick={() => switchView("list")} aria-pressed={view === "list"} title="قائمة الحجوزات" aria-label="قائمة الحجوزات">📋</button>
+            <button type="button" className={`bk-ic ${view === "calendar" ? "on" : ""}`} onClick={() => switchView("calendar")} aria-pressed={view === "calendar"} title="تقويم المواعيد المؤكدة" aria-label="تقويم المواعيد المؤكدة">🗓️</button>
+            {push === "unknown" ? null : (
+              <button
+                type="button"
+                className={`bk-ic ${push === "on" ? "" : "warn"}`}
+                onClick={() => enablePush(true)}
+                disabled={push === "busy" || push === "unsupported"}
+                title={push === "on" ? "التنبيهات مفعّلة" : push === "denied" ? "التنبيهات مرفوضة من الإعدادات" : push === "unsupported" ? "التنبيهات غير مدعومة" : "فعّل التنبيهات"}
+                aria-label={push === "on" ? "التنبيهات مفعّلة" : "فعّل التنبيهات"}
+              >
+                {push === "on" ? "🔔" : "🔕"}
+              </button>
+            )}
+            <button type="button" className="bk-ic" onClick={refresh} title="تحديث" aria-label="تحديث">⟳</button>
+          </div>
         </div>
       </header>
 
+      {view === "calendar" ? (
+        <CalendarView
+          bookings={bookings}
+          onOpen={(id) => {
+            switchView("list");
+            setFilter("all");
+            select(id);
+          }}
+        />
+      ) : (
       <main className={`bk-main ${selected ? "has-sel" : ""}`}>
         <section className="bk-list" aria-label="قائمة الحجوزات">
           <div className="bk-tools">
@@ -350,7 +377,7 @@ export default function BookingsClient({
                       حي {b.district} · {(b.pests || []).join("، ")}
                     </span>
                     <span className="bk-item-bot">
-                      <span>{b.status === "confirmed" && b.confirmed_date ? `الموعد: ${fmtDate(b.confirmed_date)} ${b.confirmed_time || ""}` : `يفضّل: ${fmtDate(b.preferred_date)} · ${b.preferred_period || ""}`}</span>
+                      <span>{b.status === "confirmed" && b.confirmed_date ? `الموعد: ${fmtDate(b.confirmed_date)} ${fmtTime(b.confirmed_time)}` : `يفضّل: ${fmtDate(b.preferred_date)} · ${b.preferred_period || ""}`}</span>
                       <span>{ago(b.created_at)}</span>
                     </span>
                   </button>
@@ -368,6 +395,7 @@ export default function BookingsClient({
           )}
         </section>
       </main>
+      )}
 
       {toast ? <div className="bk-toast" role="status">{toast}</div> : null}
     </div>
@@ -442,7 +470,7 @@ function Detail({
       <h2>تأكيد الموعد والمبلغ</h2>
       <div className="bk-form">
         <label>التاريخ<input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></label>
-        <label>الوقت<input type="text" placeholder="مثال: 4:30 عصراً" value={time} onChange={(e) => setTime(e.target.value)} /></label>
+        <label>الوقت<input type="time" value={/^\d{1,2}:\d{2}$/.test(time) ? time : ""} onChange={(e) => setTime(e.target.value)} /></label>
         <label>المبلغ (ريال)<input type="text" inputMode="decimal" placeholder="مثال: 350" value={price} onChange={(e) => setPrice(e.target.value)} /></label>
         <label className="wide">ملاحظة داخلية<textarea rows={3} value={note} onChange={(e) => setNote(e.target.value)} placeholder="تظهر لك فقط" /></label>
       </div>
@@ -475,12 +503,22 @@ function Detail({
 }
 
 const CSS = `
+html,body{background:#0b2e1f}
+
 .bk{min-height:100vh;background:#f5f8f6;color:#0b2e1f;font-family:"IBM Plex Sans Arabic",system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif;direction:rtl}
 .bk *{box-sizing:border-box}
 .bk-top{background:#0b2e1f;color:#fff;position:sticky;top:0;z-index:20;padding-top:env(safe-area-inset-top)}
-.bk-tabs-top{max-width:1280px;margin:0 auto;padding:10px 18px 0;display:flex;gap:6px}.bk-tabs-top a{text-decoration:none;font-weight:700;font-size:14px;padding:9px 16px;border-radius:12px;color:#d5e4dc;background:#173f2e}.bk-tabs-top a[aria-current=page]{background:#e2b64c;color:#0b2e1f}.bk-tabs-top a:focus-visible{outline:3px solid #e2b64c;outline-offset:2px}
-.bk-top-in{max-width:1280px;margin:0 auto;padding:12px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
-.bk-brand b{display:block;font-size:18px}.bk-brand small{color:#b9cfc3;font-size:13px}
+.bk-tabs-top{max-width:1280px;margin:0 auto;padding:12px 16px 0;display:flex;gap:6px}.bk-tabs-top a{flex:1;text-align:center;text-decoration:none;font-weight:700;font-size:14px;padding:10px 8px;border-radius:12px;color:#d5e4dc;background:#173f2e}.bk-tabs-top a[aria-current=page]{background:#e2b64c;color:#0b2e1f}.bk-tabs-top a:focus-visible{outline:3px solid #e2b64c;outline-offset:2px}
+.bk-top-in{max-width:1280px;margin:0 auto;padding:14px 16px 16px;display:flex;align-items:center;gap:11px}
+.bk-logo{width:42px;height:42px;border-radius:14px;background:#e2b64c;color:#0b2e1f;display:grid;place-items:center;font-weight:800;font-size:20px;flex:none}
+.bk-brand{flex:1;min-width:0}
+.bk-icons{display:flex;gap:6px}
+.bk-ic{width:38px;height:38px;border-radius:12px;border:1px solid #2a5a44;background:#173f2e;color:#fff;display:grid;place-items:center;font-size:16px;cursor:pointer;padding:0}
+.bk-ic.on{border-color:#e2b64c;background:#24503b}
+.bk-ic.warn{background:#e2b64c;border-color:#e2b64c}
+.bk-ic:disabled{opacity:.6;cursor:default}
+.bk-ic:focus-visible{outline:3px solid #fff;outline-offset:2px}
+.bk-brand b{display:block;font-size:17px}.bk-brand small{color:#b9cfc3;font-size:13px}
 .bk-nav{display:flex;gap:8px;align-items:center}
 .bk-nav a{color:#fff;text-decoration:none;font-weight:700;font-size:14px;padding:10px 14px;border-radius:10px;background:#173f2e}
 .bk-push{font:inherit;font-weight:700;font-size:14px;border:0;border-radius:10px;padding:10px 14px;background:#e2b64c;color:#0b2e1f;cursor:pointer}
