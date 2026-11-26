@@ -721,6 +721,10 @@ export default function InboxClient({ initialData }: { initialData: InitialData 
 
       {/* ============ القائمة ============ */}
       <aside className="side">
+        <nav className="adm-tabs" aria-label="أقسام لوحة الإدارة">
+          <a href="/admin/conversations" aria-current="page">💬 المحادثات</a>
+          <a href="/admin/bookings">📅 حجوزات الرش</a>
+        </nav>
         <header className="brand">
           <div className="logo">ج</div>
           <div className="bt">
@@ -736,7 +740,6 @@ export default function InboxClient({ initialData }: { initialData: InitialData 
             </button>
             <button type="button" className={`ic ${selectMode ? "on" : ""}`} title="تحديد عدة محادثات" onClick={() => { setSelectMode((v) => !v); setPicked(new Set()); }}>☑️</button>
             <button type="button" className="ic" title="تحديث" onClick={() => { refresh(); flash("تم التحديث"); }}>⟳</button>
-            <a className="ic" href="/admin/bookings" title="حجوزات رش المنازل" aria-label="حجوزات رش المنازل" style={{ textDecoration: "none", display: "inline-grid", placeItems: "center" }}>📅</a>
           </div>
         </header>
 
@@ -1105,7 +1108,7 @@ html,body{margin:0;padding:0;height:100%;overflow:hidden;max-width:100%;overscro
 
 /* القائمة */
 .side{background:var(--panel);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0;min-width:0;overflow:hidden}
-.brand{display:flex;align-items:center;gap:11px;padding:16px 16px 12px}
+.adm-tabs{display:flex;gap:6px;padding:12px 16px 0}.adm-tabs a{flex:1;text-align:center;text-decoration:none;font-weight:700;font-size:14px;padding:10px 8px;border-radius:12px;color:var(--ink);background:var(--panel2);border:1px solid var(--line)}.adm-tabs a[aria-current=page]{background:var(--brand);color:#fff;border-color:var(--brand)}.adm-tabs a:focus-visible{outline:3px solid var(--gold);outline-offset:2px}.brand{display:flex;align-items:center;gap:11px;padding:16px 16px 12px}
 .brand .bt{flex:1;min-width:0}.brand b{display:block;font-size:17px}.brand small{color:var(--mut);font-size:12.5px}
 .brand .tools{display:flex;gap:6px}
 .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:0 16px 12px}
