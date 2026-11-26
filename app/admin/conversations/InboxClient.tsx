@@ -750,7 +750,8 @@ export default function InboxClient({ initialData }: { initialData: InitialData 
       <aside className="side">
         <nav className="adm-tabs" aria-label="أقسام لوحة الإدارة">
           <Link href="/admin/conversations" aria-current="page">💬 المحادثات</Link>
-          <Link href="/admin/bookings" prefetch>📅 حجوزات الرش</Link>
+          <Link href="/admin/bookings" prefetch>📅 الحجوزات</Link>
+          <Link href="/admin/finance" prefetch>💰 المالية</Link>
         </nav>
         <header className="brand">
           <div className="logo">ج</div>
@@ -1302,7 +1303,7 @@ html,body{margin:0;padding:0;height:100%;overflow:hidden;max-width:100%;overscro
 html,body{background:#0b2e1f}
 .inbox:not(.dark){--bg:#f5f8f6;--panel2:#f2f6f3;--ink:#0b2e1f;--mut:#5f7a6c;--line:#e3ece6;--brand:#0b2e1f;--brand2:#173f2e;--brandsoft:#e6f0ea;--gold:#a8781c;--goldsoft:#fff7e3;--out:#0b2e1f}
 .adm-tabs{background:#0b2e1f;padding:calc(12px + env(safe-area-inset-top)) 16px 0}
-.adm-tabs a{background:#173f2e;color:#d5e4dc;border-color:transparent}
+.adm-tabs a{background:#173f2e;color:#d5e4dc;border-color:transparent;white-space:nowrap;padding-inline:4px}
 .adm-tabs a[aria-current=page]{background:#e2b64c;color:#0b2e1f;border-color:#e2b64c}
 .adm-tabs a:focus-visible{outline-color:#fff}
 .brand{background:#0b2e1f;color:#fff;padding:14px 16px 16px;margin-bottom:12px}
