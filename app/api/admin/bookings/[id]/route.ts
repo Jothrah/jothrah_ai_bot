@@ -20,6 +20,8 @@ export async function PATCH(req: NextRequest, props: Params) {
     if (p.adminNote !== undefined) update.admin_note = p.adminNote || null;
     if (p.confirmedDate !== undefined) update.confirmed_date = p.confirmedDate || null;
     if (p.confirmedTime !== undefined) update.confirmed_time = p.confirmedTime || null;
+    // تغيير الموعد يعيد تفعيل تذكير «قبل الموعد بساعة»
+    if (p.confirmedDate !== undefined || p.confirmedTime !== undefined) update.reminder_sent_at = null;
     if (p.price !== undefined) update.price = p.price;
     const { data, error } = await supabaseAdmin
       .from("spray_bookings")
