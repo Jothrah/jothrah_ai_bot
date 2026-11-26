@@ -1190,7 +1190,7 @@ export async function POST(req: NextRequest) {
     const namedProducts = namedNos.map((n) => getProductById(String(n))).filter(Boolean) as NonNullable<ReturnType<typeof getProductById>>[];
     const namedHint = namedProducts.length
       ? language === "ar"
-        ? `\n\nمهم جداً: العميل ذكر منتجاً موجوداً فعلاً في متجر جذرة (حتى لو كتب اسمه بإملاء مختلف أو بدون همزة): ${namedNos.map((n, i) => `رقم ${n} = ${namedProducts[i]?.name}`).join("، ")}. هذا المنتج متوفر في المتجر؛ لا تقل أبداً إنه غير موجود أو غير متوفر. أجب عن سؤاله عنه مباشرة وضعه أول product_suggestions برقمه.`
+        ? `\n\nمهم جداً: العميل ذكر منتجاً موجوداً فعلاً في متجر جذرة (حتى لو كتب اسمه بإملاء مختلف أو بدون همزة): ${namedNos.map((n, i) => `رقم ${n} = ${namedProducts[i]?.name}`).join("، ")}. الكلمة اللي كتبها العميل تقصد هذا المنتج نفسه (وليست اسم آفة)، فاكتب اسم المنتج بالإملاء الصحيح كما في المتجر. هذا المنتج متوفر في المتجر؛ لا تقل أبداً إنه غير موجود أو غير متوفر. أجب عن سؤاله عنه مباشرة (استخدامه والآفات اللي يكافحها) وضعه أول product_suggestions برقمه.`
         : `\n\nIMPORTANT: the customer named a product that IS in the Jothrah store (spelling may differ): ${namedNos.map((n, i) => `#${n} = ${namedProducts[i]?.name}`).join(", ")}. It is available; never say it is not available. Answer about it directly and put it first in product_suggestions.`
       : "";
 
