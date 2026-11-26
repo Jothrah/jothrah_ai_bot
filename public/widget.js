@@ -37,6 +37,8 @@
     conv: "jth2_conv_id",
     notif: "jth2_notif_asked",
     nudge: "jth2_nudge_seen",
+    pushOk: "jth2_push_ok",
+    pushLater: "jth2_push_later",
   };
 
   /* ------------------------------------------------------------------ */
@@ -535,6 +537,43 @@
       n.onclick = function () { window.focus(); setOpen(true); n.close(); };
     } catch (e) {}
   }
+  /* ---- إشعارات فورية حقيقية (تشتغل حتى لو الصفحة مقفلة) عبر نافذة صغيرة من خادم جذرة ---- */
+  function pushCapable() {
+    return "serviceWorker" in navigator && "PushManager" in window && "Notification" in window && window.isSecureContext;
+  }
+  function pushPromptVisible() {
+    if (!pushCapable() || store(LS.pushOk) === "1") return false;
+    var later = Number(store(LS.pushLater) || 0);
+    if (later && Date.now() - later < 3 * 24 * 3600 * 1000) return false;
+    if (!S.conv || !S.conv.id) return false;
+    return S.msgs.some(function (m) { return m.sender_type === "customer"; });
+  }
+  function pushCard() {
+    return '<div class="pushc" role="region" aria-label="' + esc(isAr ? "الإشعارات" : "Notifications") + '"><b>🔔 ' +
+      esc(isAr ? "اسمح بالإشعارات حتى يوصلك تنبيه فور الرد عليك" : "Allow notifications so you're alerted the moment we reply") +
+      "</b><small>" + esc(isAr ? "حتى لو قفلت الصفحة أو كنت في تطبيق ثاني." : "Even if you close this page.") +
+      '</small><div class="pushb"><button type="button" class="hb push-ok">' + esc(isAr ? "اسمح بالإشعارات" : "Allow notifications") +
+      '</button><button type="button" class="push-later">' + esc(isAr ? "لاحقاً" : "Later") + "</button></div></div>";
+  }
+  var pushWin = null;
+  function openPushWindow() {
+    var u = API + "/notify.html?v=" + encodeURIComponent(identity().key) + "&l=" + (isAr ? "ar" : "en") + "&o=" + encodeURIComponent(location.origin);
+    var w = 440, h = 600;
+    var left = Math.max(0, (window.screenX || 0) + ((window.outerWidth || w) - w) / 2);
+    var top = Math.max(0, (window.screenY || 0) + 60);
+    pushWin = window.open(u, "jth_push", "width=" + w + ",height=" + h + ",left=" + left + ",top=" + top);
+    if (!pushWin) location.href = u + "&back=" + encodeURIComponent(location.href);
+  }
+  window.addEventListener("message", function (e) {
+    if (e.origin !== API || !e.data || e.data.jthPush !== "ok") return;
+    store(LS.pushOk, "1");
+    lastHtml = "";
+    render();
+  });
+  try {
+    if (/[?&]jth_push=ok/.test(location.search)) store(LS.pushOk, "1");
+  } catch (e) {}
+
   function onHumanReply(n) {
     var last = S.msgs.filter(function (m) { return m.sender_type === "human"; }).pop();
     systemNotify(last && last.message);
@@ -623,6 +662,7 @@
     ".typing{display:inline-flex;gap:4px;align-items:center}.typing i{width:7px;height:7px;border-radius:50%;background:var(--g);opacity:.4;animation:blink 1.2s infinite}.typing i:nth-child(2){animation-delay:.2s}.typing i:nth-child(3){animation-delay:.4s}" +
     "@keyframes blink{0%,80%,100%{opacity:.25;transform:translateY(0)}40%{opacity:1;transform:translateY(-3px)}}" +
     ".wait{background:#fff;border:2px solid var(--gold);border-radius:18px;padding:14px;margin:10px 0;text-align:center}" +
+    ".pushc{background:#fff8e6;border:2px solid var(--gold);border-radius:16px;padding:12px 14px;margin:10px 0;text-align:center}.pushc b{display:block;font-size:14.5px;line-height:1.6}.pushc small{display:block;color:#6b5a2a;margin-top:2px}.pushb{display:flex;gap:8px;justify-content:center;margin-top:10px;flex-wrap:wrap}.pushb .hb{margin:0}.push-later{border:0;background:transparent;color:#55645f;font:inherit;font-weight:700;cursor:pointer;padding:8px 12px}" +
     ".wait b{display:block;color:var(--g);font-size:15.5px;margin-bottom:4px}.wait p{margin:4px 0;color:#2b3a36;font-weight:600}.wait small{color:var(--mut)}" +
     ".clock{display:inline-flex;align-items:center;gap:8px;margin:8px 0 2px;background:var(--g3);color:var(--g);font-weight:800;border-radius:999px;padding:5px 14px;font-size:14px;font-variant-numeric:tabular-nums}" +
     ".dots{display:flex;justify-content:center;gap:6px;margin:6px 0}.dots i{width:9px;height:9px;border-radius:50%;background:var(--gold);animation:blink 1.4s infinite}.dots i:nth-child(2){animation-delay:.25s}.dots i:nth-child(3){animation-delay:.5s}" +
@@ -797,7 +837,9 @@
     var long = el2 > 4 * 60 * 1000;
     return '<div class="wait"><b>' + esc(T.waitTitle) + '</b><div class="dots"><i></i><i></i><i></i></div><p>' + esc(long ? T.waitLong : T.waitText) +
       '</p><div class="clock">⏱ ' + esc(T.elapsed) + ' <span class="elapsed">' + mmss(el2) + "</span></div><br>" +
-      (canNotify() && Notification.permission === "default"
+      (pushCapable()
+        ? (store(LS.pushOk) === "1" ? "<small>🔔 " + esc(T.notifOn) + "</small>" : "<small>🔔 " + esc(T.waitSound) + "</small>")
+        : canNotify() && Notification.permission === "default"
         ? '<button type="button" class="hb notif-on" style="margin:8px auto 0">🔔 ' + esc(T.notifBtn) + "</button>"
         : canNotify() && Notification.permission === "granted"
           ? "<small>🔔 " + esc(T.notifOn) + "</small>"
@@ -870,6 +912,7 @@
       S.msgs.forEach(function (msg) { html += renderMsg(msg); });
       S.pending.forEach(function (p) { html += renderPending(p); });
       S.local.forEach(function (x) { html += x.html; });
+      if (pushPromptVisible()) html += pushCard();
       if (waiting) html += waitCard();
       if (S.botTyping && m === "ai" && Date.now() - S.botTyping < 65000) {
         if (S.streamText) html += '<div class="row them"><div class="bub">' + esc(S.streamText) + ' <span class="typing"><i></i><i></i><i></i></span></div></div>';
@@ -1257,6 +1300,8 @@
     }
     if (t.closest(".human2")) { S.view = "handoff"; return render(); }
     if (t.closest(".notif-on")) { askNotifications(); return; }
+    if (t.closest(".push-ok")) { openPushWindow(); return; }
+    if (t.closest(".push-later")) { store(LS.pushLater, String(Date.now())); lastHtml = ""; render(); return; }
     var oa = t.closest(".ord-ask");
     if (oa) {
       S.view = "handoff";
@@ -1353,7 +1398,7 @@
     if (!phone && !email) return fail(T.contactReq);
     if (phone && !/^\+?\d{9,15}$/.test(phone)) return fail(T.phoneBad);
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return fail(T.emailBad);
-    askNotifications();
+    if (!pushCapable()) askNotifications();
     var wantLoc = (root.querySelector(".f-loc") || {}).checked;
     var btn = root.querySelector(".f-go");
     if (btn) { btn.disabled = true; btn.textContent = wantLoc ? T.locWait : "…"; }
@@ -1405,7 +1450,7 @@
       .then(function () {
         S.lastHumanCount = S.msgs.filter(function (m) { return m.sender_type === "human"; }).length;
         render();
-        if (store(LS.open) === "1") setOpen(true);
+        if (store(LS.open) === "1" || /[?&]jth_chat=1/.test(location.search)) setOpen(true);
         schedulePoll();
       })
       .catch(function () {});

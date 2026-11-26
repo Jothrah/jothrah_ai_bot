@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#0b2e1f">
+<title>تفعيل إشعارات جذرة</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0b2e1f;font-family:"IBM Plex Sans Arabic",system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif;color:#0b2e1f;padding:18px}
+.card{background:#fff;border-radius:24px;max-width:380px;width:100%;padding:26px 22px;text-align:center;box-shadow:0 20px 50px rgba(0,0,0,.3)}
+.ic{width:84px;height:84px;margin:0 auto 14px;border-radius:24px;background:#0b2e1f;display:grid;place-items:center}
+.ic img{width:70px;height:70px;border-radius:18px}
+h1{font-size:21px;line-height:1.45;margin:0 0 8px}
+p{margin:0 0 18px;color:#3d5a4b;font-size:15.5px;line-height:1.7}
+button{font:inherit;font-weight:800;font-size:17px;width:100%;min-height:54px;border:0;border-radius:14px;background:#e2b64c;color:#0b2e1f;cursor:pointer}
+button:disabled{opacity:.6}
+button:focus-visible{outline:3px solid #0b2e1f;outline-offset:3px}
+.msg{margin-top:14px;font-weight:700;font-size:15px;min-height:22px}
+.ok{color:#2f7d4e}.err{color:#b23b1e}
+.close{display:none;margin-top:10px;background:transparent;border:1.5px solid #0b2e1f;min-height:46px;font-size:15px}
+</style>
+</head>
+<body>
+<main class="card">
+<div class="ic"><img src="/icons/app-192.png" alt=""></div>
+<h1 id="h">اسمح بالإشعارات حتى يوصلك تنبيه فور الرد عليك</h1>
+<p id="p">اضغط الزر ثم اختر «سماح». يوصلك التنبيه حتى لو قفلت صفحة المتجر.</p>
+<button type="button" id="go">اسمح بالإشعارات</button>
+<div class="msg" id="msg" role="status" aria-live="polite"></div>
+<button type="button" class="close" id="cl">رجوع للمتجر</button>
+</main>
+<script>
+(function () {
+  var q = new URLSearchParams(location.search);
+  var visitor = (q.get("v") || "").slice(0, 120);
+  var en = q.get("l") === "en";
+  var opener = q.get("o") || "";
+  var back = q.get("back") || "";
+  var okOrigin = /^https:\/\/([a-z0-9-]+\.)?jothrah\.com$/i.test(opener) ? opener : "https://jothrah.com";
+  var $ = function (id) { return document.getElementById(id); };
+  var T = en
+    ? { h: "Allow notifications so you're alerted the moment we reply", p: "Tap the button, then choose “Allow”. You'll be alerted even if you close the store page.", go: "Allow notifications", wait: "Setting up…", ok: "Done ✅ You'll get a notification as soon as we reply.", denied: "Notifications are blocked in your browser settings. Allow them for this site, then try again.", unsup: "This browser doesn't support notifications. Keep the store page open and you'll hear a sound when we reply.", fail: "Couldn't enable notifications, please try again.", close: "Back to the store" }
+    : { h: "اسمح بالإشعارات حتى يوصلك تنبيه فور الرد عليك", p: "اضغط الزر ثم اختر «سماح». يوصلك التنبيه حتى لو قفلت صفحة المتجر.", go: "اسمح بالإشعارات", wait: "جاري التفعيل…", ok: "تم ✅ بيوصلك تنبيه أول ما نرد عليك.", denied: "الإشعارات محظورة من إعدادات المتصفح. اسمح بها لهذا الموقع وجرّب مرة ثانية.", unsup: "متصفحك ما يدعم الإشعارات. خل صفحة المتجر مفتوحة وبننبهك بصوت أول ما نرد.", fail: "تعذر التفعيل، جرّب مرة ثانية.", close: "رجوع للمتجر" };
+  if (en) { document.documentElement.lang = "en"; document.documentElement.dir = "ltr"; }
+  $("h").textContent = T.h; $("p").textContent = T.p; $("go").textContent = T.go; $("cl").textContent = T.close;
+
+  function say(t, cls) { var m = $("msg"); m.textContent = t; m.className = "msg " + (cls || ""); }
+  function finish() {
+    try { if (window.opener) window.opener.postMessage({ jthPush: "ok" }, okOrigin); } catch (e) {}
+    $("go").style.display = "none";
+    $("cl").style.display = "block";
+    setTimeout(function () {
+      if (window.opener) { try { window.close(); } catch (e) {} }
+      else if (back) location.href = back + (back.indexOf("?") > -1 ? "&" : "?") + "jth_push=ok";
+    }, 1600);
+  }
+  $("cl").addEventListener("click", function () {
+    if (window.opener) { try { window.close(); return; } catch (e) {} }
+    location.href = back || "https://jothrah.com/" + (en ? "en" : "ar");
+  });
+
+  function b64(base64) {
+    var pad = "=".repeat((4 - (base64.length % 4)) % 4);
+    var raw = atob((base64 + pad).replace(/-/g, "+").replace(/_/g, "/"));
+    var out = new Uint8Array(raw.length);
+    for (var i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+    return out;
+  }
+
+  var supported = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+  if (!supported || !visitor) { say(T.unsup, "err"); $("go").style.display = "none"; $("cl").style.display = "block"; return; }
+  if (Notification.permission === "denied") say(T.denied, "err");
+
+  $("go").addEventListener("click", function () {
+    var btn = $("go");
+    btn.disabled = true; btn.textContent = T.wait; say("");
+    Promise.resolve(Notification.requestPermission())
+      .then(function (perm) {
+        if (perm !== "granted") throw new Error(perm === "denied" ? "denied" : "dismissed");
+        return Promise.all([
+          fetch("/api/push/customer", { cache: "no-store" }).then(function (r) { return r.json(); }),
+          navigator.serviceWorker.register("/sw.js").then(function () { return navigator.serviceWorker.ready; }),
+        ]);
+      })
+      .then(function (res) {
+        var key = res[0] && res[0].publicKey;
+        var reg = res[1];
+        if (!key) throw new Error("nokey");
+        return reg.pushManager.getSubscription().then(function (sub) {
+          return sub || reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64(key) });
+        });
+      })
+      .then(function (sub) {
+        return fetch("/api/push/customer", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ visitor_id: visitor, lang: en ? "en" : "ar", subscription: sub.toJSON() }),
+        }).then(function (r) { if (!r.ok) throw new Error("save"); });
+      })
+      .then(function () { say(T.ok, "ok"); finish(); })
+      .catch(function (e) {
+        btn.disabled = false; btn.textContent = T.go;
+        say(e && e.message === "denied" ? T.denied : T.fail, "err");
+      });
+  });
+})();
+</script>
+</body>
+</html>

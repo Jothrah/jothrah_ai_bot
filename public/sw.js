@@ -28,8 +28,8 @@ self.addEventListener("push", (event) => {
   event.waitUntil(
     self.registration.showNotification(data.title, {
       body: data.body,
-      icon: "/icons/admin-192.png",
-      badge: "/icons/admin-192.png",
+      icon: "/icons/app-192.png",
+      badge: "/icons/app-192.png",
       data: {
         url: data.url || "/admin/conversations"
       }
