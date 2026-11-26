@@ -106,6 +106,10 @@ export default function BookingsClient({
   const knownIds = useRef(new Set(initialBookings.map((b) => b.id)));
   const [fresh, setFresh] = useState<Set<string>>(new Set());
 
+  useEffect(() => {
+    document.cookie = "jothrah_admin_last=bookings; path=/; max-age=31536000; samesite=lax";
+  }, []);
+
   const flash = useCallback((m: string) => {
     setToast(m);
     window.setTimeout(() => setToast(""), 3200);
