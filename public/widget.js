@@ -680,6 +680,7 @@
     ".comp textarea{flex:1;resize:none;border:1.5px solid #cfdad6;border-radius:16px;padding:10px 12px;font-size:16px;max-height:120px;min-height:44px;line-height:1.45;outline:none;color:var(--ink);background:#fff}.comp textarea:focus{border-color:var(--g)}" +
     ".send{width:44px;height:44px;border-radius:50%;border:0;background:var(--g);color:#fff;cursor:pointer;display:grid;place-items:center;flex:none}.send:disabled{opacity:.45;cursor:default}" +
     ".att{width:40px;height:44px;border:0;background:none;color:var(--g);cursor:pointer;display:grid;place-items:center;flex:none}" +
+    ".comp{position:relative}.attm{position:absolute;bottom:calc(100% + 8px);inset-inline-start:0;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 12px 30px rgba(0,0,0,.18);padding:6px;display:flex;flex-direction:column;gap:2px;z-index:5;min-width:200px}.attm[hidden]{display:none}.attm button{font:inherit;font-weight:700;font-size:15px;text-align:start;border:0;background:#fff;color:#0b2e1f;border-radius:10px;padding:12px 14px;cursor:pointer}.attm button:hover,.attm button:focus-visible{background:#eef5f0;outline:none}" +
     ".pv{display:flex;gap:10px;align-items:center;background:var(--g3);border-radius:14px;padding:8px;margin-bottom:8px}.pv img{width:58px;height:58px;object-fit:cover;border-radius:10px}.pv span{flex:1;font-size:12.5px;font-weight:700;color:var(--g)}.pv button{border:0;background:#fff;border-radius:50%;width:28px;height:28px;cursor:pointer}" +
     ".pend{opacity:.7}.errb{background:#fdecea!important;color:#8e2a20!important;border:1px solid #f2b8b0!important}.errb button{margin-top:6px;border:0;background:#8e2a20;color:#fff;border-radius:8px;padding:4px 10px;cursor:pointer;font-weight:700}" +
     ".pw{font-size:10.5px;text-align:center;color:#8a9894;margin-top:5px}" +
@@ -719,7 +720,9 @@
     '<div class="body" aria-live="polite"></div>' +
     '<footer class="ft"><div class="pvw"></div><div class="comp">' +
     '<button class="att" type="button" aria-label="' + esc(T.attach) + '">' + ICON_CAM + "</button>" +
-    '<input type="file" accept="image/*" hidden>' +
+    '<input type="file" accept="image/*" hidden class="gal-in">' +
+    '<input type="file" accept="image/*" capture="environment" hidden class="cam-in">' +
+    '<div class="attm" role="menu" hidden><button type="button" class="attm-cam" role="menuitem">📷 ' + (isAr ? "صوّر الآن بالكاميرا" : "Take a photo") + '</button><button type="button" class="attm-gal" role="menuitem">🖼️ ' + (isAr ? "اختر من الصور" : "Choose from photos") + "</button></div>" +
     '<textarea rows="1" placeholder="' + esc(T.placeholder) + '" aria-label="' + esc(T.placeholder) + '"></textarea>' +
     '<button class="send" type="button" aria-label="' + esc(T.send) + '" disabled>' + ICON_SEND + "</button>" +
     '</div><div class="pw">جذرة · ' + (isAr ? "مساعد ذكي + مختصين زراعيين" : "AI assistant + agricultural specialists") + "</div></footer>" +
@@ -739,7 +742,9 @@
     ta: $("textarea"),
     send: $(".send"),
     att: $(".att"),
-    file: $("input[type=file]"),
+    file: $(".gal-in"),
+    cam: $(".cam-in"),
+    attm: $(".attm"),
     pvw: $(".pvw"),
     ft: $(".ft"),
   };
@@ -1263,10 +1268,26 @@
     send(text, img && img.file, img && img.preview);
   }
   el.send.addEventListener("click", doSend);
-  el.att.addEventListener("click", function () { el.file.click(); });
-  el.file.addEventListener("change", function () {
-    var f = el.file.files && el.file.files[0];
-    el.file.value = "";
+  var touch = (function () { try { return window.matchMedia("(pointer: coarse)").matches; } catch (e) { return false; } })();
+  function closeAttm() { el.attm.hidden = true; el.att.setAttribute("aria-expanded", "false"); }
+  el.att.setAttribute("aria-haspopup", "menu");
+  el.att.addEventListener("click", function (e) {
+    e.stopPropagation();
+    // الجوال: نخيّر العميل بين الكاميرا والمعرض. الكمبيوتر: يفتح اختيار الملف مباشرة
+    if (!touch) return el.file.click();
+    var open = el.attm.hidden;
+    el.attm.hidden = !open;
+    el.att.setAttribute("aria-expanded", open ? "true" : "false");
+  });
+  el.attm.addEventListener("click", function (e) {
+    e.stopPropagation();
+    if (e.target.closest(".attm-cam")) { closeAttm(); el.cam.click(); }
+    else if (e.target.closest(".attm-gal")) { closeAttm(); el.file.click(); }
+  });
+  root.addEventListener("click", function (e) { if (!el.attm.hidden && !e.target.closest(".att,.attm")) closeAttm(); });
+  function onPicked(input) {
+    var f = input.files && input.files[0];
+    input.value = "";
     if (!f) return;
     compressImage(f).then(function (file) {
       if (!file) return;
@@ -1279,7 +1300,9 @@
       };
       r.readAsDataURL(file);
     });
-  });
+  }
+  el.file.addEventListener("change", function () { onPicked(el.file); });
+  el.cam.addEventListener("change", function () { onPicked(el.cam); });
   el.pvw.addEventListener("click", function (e) {
     if (e.target.closest(".pvx")) {
       S.image = null;
