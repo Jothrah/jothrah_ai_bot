@@ -716,7 +716,9 @@ export default function InboxClient({ initialData }: { initialData: InitialData 
                 const at = Date.parse(m.created_at);
                 const readAt = Date.parse(String(meta.customer_read_at || ""));
                 const seenAt = Date.parse(String(meta.customer_seen_at || ""));
-                const read = Number.isFinite(readAt) && readAt >= at;
+                // لو العميل كتب بعد ردك فأكيد قرأه (مثل الواتساب)
+                const repliedAfter = messages.some((x) => x.sender_type === "customer" && Date.parse(x.created_at) > at);
+                const read = repliedAfter || (Number.isFinite(readAt) && readAt >= at);
                 const seen = read || (Number.isFinite(seenAt) && seenAt >= at);
                 return (
                   <span className={`tk ${read ? "read" : seen ? "dlv" : ""}`} title={read ? "قرأها العميل" : seen ? "وصلت للعميل" : "تم الإرسال"}>
