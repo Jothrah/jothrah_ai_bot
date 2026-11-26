@@ -1217,9 +1217,15 @@
         toBottom();
         if (window.innerWidth > 520) el.ta.focus();
       }, 60);
-      if (window.innerWidth <= 520) document.documentElement.style.overflow = "hidden";
+      if (window.innerWidth <= 520) {
+        document.documentElement.style.overflow = "hidden";
+        lockPage(true);
+      }
+      fitViewport();
     } else {
       document.documentElement.style.overflow = "";
+      lockPage(false);
+      fitViewport();
     }
     if (v) syncNow();
     else schedulePoll();
@@ -1447,12 +1453,53 @@
   }, 1000);
 
   // لوحة المفاتيح في الجوال
+  // نثبت الدردشة على الجزء الظاهر من الشاشة فوق الكيبورد (آيفون يحرّك الصفحة لما يفتح الكيبورد)
+  function fitViewport() {
+    var vv = window.visualViewport;
+    if (!S.open || window.innerWidth > 520 || !vv) {
+      el.panel.style.top = "";
+      el.panel.style.height = "";
+      el.panel.style.bottom = "";
+      return;
+    }
+    el.panel.style.top = Math.max(0, vv.offsetTop) + "px";
+    el.panel.style.height = Math.round(vv.height) + "px";
+    el.panel.style.bottom = "auto";
+  }
+  var vvTimer = 0;
+  function onViewport() {
+    fitViewport();
+    clearTimeout(vvTimer);
+    vvTimer = setTimeout(function () { fitViewport(); if (S.open) toBottom(); }, 120);
+  }
   if (window.visualViewport) {
-    window.visualViewport.addEventListener("resize", function () {
-      if (!S.open || window.innerWidth > 520) return;
-      el.panel.style.height = window.visualViewport.height + "px";
-      toBottom();
-    });
+    window.visualViewport.addEventListener("resize", onViewport);
+    window.visualViewport.addEventListener("scroll", onViewport);
+  }
+  el.ta.addEventListener("focus", function () { setTimeout(onViewport, 50); setTimeout(onViewport, 350); });
+  el.ta.addEventListener("blur", function () { setTimeout(onViewport, 50); setTimeout(onViewport, 350); });
+
+  // قفل تمرير صفحة المتجر خلف الدردشة في الجوال
+  var lockY = 0;
+  function lockPage(on) {
+    var b = document.body;
+    if (!b) return;
+    if (on) {
+      if (b.style.position === "fixed") return;
+      lockY = window.scrollY || window.pageYOffset || 0;
+      b.style.position = "fixed";
+      b.style.top = -lockY + "px";
+      b.style.left = "0";
+      b.style.right = "0";
+      b.style.width = "100%";
+    } else if (b.style.position === "fixed") {
+      b.style.position = "";
+      b.style.top = "";
+      b.style.left = "";
+      b.style.right = "";
+      b.style.width = "";
+      window.scrollTo(0, lockY);
+    }
   }
 
   /* ------------------------------------------------------------------ */

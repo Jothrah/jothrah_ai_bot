@@ -32,4 +32,26 @@
     var typing = el && (el.tagName === "TEXTAREA" || (el.tagName === "INPUT" && el.type !== "button"));
     if (away > 10 * 60 * 1000 && !typing) window.location.reload();
   });
+
+  // تحديث تلقائي فور نشر نسخة جديدة من اللوحة (بدون حذف التطبيق وإعادته)
+  var current = "";
+  function isTyping() {
+    var el = document.activeElement;
+    return !!(el && (el.tagName === "TEXTAREA" || (el.tagName === "INPUT" && el.type !== "button" && el.type !== "checkbox")) && el.value);
+  }
+  function checkVersion() {
+    if (!/^\/admin/.test(location.pathname)) return;
+    fetch("/api/version", { cache: "no-store" })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        var v = j && j.version;
+        if (!v) return;
+        if (!current) { current = v; return; }
+        if (v !== current && !isTyping()) window.location.reload();
+      })
+      .catch(function () {});
+  }
+  checkVersion();
+  setInterval(function () { if (document.visibilityState === "visible") checkVersion(); }, 2 * 60 * 1000);
+  document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible") checkVersion(); });
 })();
