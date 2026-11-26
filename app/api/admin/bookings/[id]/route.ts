@@ -23,6 +23,11 @@ export async function PATCH(req: NextRequest, props: Params) {
     // تغيير الموعد يعيد تفعيل تذكير «قبل الموعد بساعة»
     if (p.confirmedDate !== undefined || p.confirmedTime !== undefined) update.reminder_sent_at = null;
     if (p.price !== undefined) update.price = p.price;
+    if (p.paymentStatus !== undefined) {
+      update.payment_status = p.paymentStatus;
+      update.paid_at = p.paymentStatus === "paid" ? new Date().toISOString() : null;
+    }
+    if (p.paymentMethod !== undefined) update.payment_method = p.paymentMethod || null;
     const { data, error } = await supabaseAdmin
       .from("spray_bookings")
       .update(update)
