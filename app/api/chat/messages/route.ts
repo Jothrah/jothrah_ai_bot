@@ -110,6 +110,28 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    // مؤشرات القراءة: «وصلت» لما تكون صفحة العميل مفتوحة، و«قرأها» لما تكون الدردشة مفتوحة قدامه
+    const seenFlag = url.searchParams.get("seen") === "1";
+    const readFlag = url.searchParams.get("read") === "1";
+    const lastHuman = Date.parse(String(conversation.last_human_reply_at || ""));
+    if ((seenFlag || readFlag) && Number.isFinite(lastHuman)) {
+      const meta = (conversation.metadata || {}) as Record<string, unknown>;
+      const readAt = Date.parse(String(meta.customer_read_at || ""));
+      const seenAt = Date.parse(String(meta.customer_seen_at || ""));
+      const now = new Date().toISOString();
+      let patch: Record<string, unknown> | null = null;
+      if (readFlag && !(readAt >= lastHuman)) patch = { customer_read_at: now, customer_seen_at: now };
+      else if (!(seenAt >= lastHuman)) patch = { customer_seen_at: now };
+      if (patch) {
+        const nextMeta = { ...meta, ...patch };
+        const { error: seenError } = await supabaseAdmin
+          .from("chat_conversations")
+          .update({ metadata: nextMeta })
+          .eq("id", conversation.id);
+        if (!seenError) conversation.metadata = nextMeta;
+      }
+    }
+
     let messagesQuery = supabaseAdmin
       .from("chat_messages")
       .select("id, conversation_id, sender_type, message, image_url, created_at, metadata, visible_to_customer")
