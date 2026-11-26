@@ -213,6 +213,15 @@ export default function InboxClient({ initialData }: { initialData: InitialData 
   const typingPingRef = useRef(0);
   const soundRef = useRef(true);
 
+  /* ---- قائمة المحادثات على الجوال تتمرر مع الصفحة نفسها مثل الحجوزات والمالية،
+         وتبقى الصفحة مثبتة فقط وقت فتح محادثة (عشان الكيبورد) ---- */
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.toggle("cv-doc", !selectedId);
+    if (selectedId) window.scrollTo(0, 0);
+    return () => root.classList.remove("cv-doc");
+  }, [selectedId]);
+
   /* ---- إعدادات محفوظة ---- */
   useEffect(() => {
     setMounted(true);
@@ -1319,4 +1328,12 @@ html,body{background:#0b2e1f}
 .chat-hd .btn.ghost{background:#173f2e;border-color:#2a5a44;color:#fff}
 .chat-hd .typing-txt{color:#f3d68a}
 @media (max-width:900px){.chat-hd{padding-top:calc(10px + env(safe-area-inset-top))}}
+@media (max-width:900px){
+  .side{border-left:0}
+  html.cv-doc,html.cv-doc body{height:auto;overflow-x:hidden;overflow-y:visible}
+  html.cv-doc .inbox{height:auto;min-height:100dvh;overflow:visible}
+  html.cv-doc .side{overflow:visible;min-height:100dvh}
+  html.cv-doc .list{flex:none;overflow:visible}
+  html.cv-doc .adm-tabs{position:sticky;top:0;z-index:30}
+}
 `;
