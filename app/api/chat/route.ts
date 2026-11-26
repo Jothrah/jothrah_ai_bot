@@ -9,8 +9,8 @@ import { supabaseAdmin } from "@/lib/supabase-admin";
 import { detectLanguage, matchCategories } from "@/lib/matcher";
 import { needsWhatsapp } from "@/lib/safety";
 import { sendAdminPushNotification } from "@/lib/admin-push";
-import { ensureCatalog } from "@/lib/catalog";
-import { buildCatalogIndex, hydrateProductSuggestions, alignAdviceWithProducts, getProductById, productType } from "@/lib/products";
+import { ensureCatalog, catalogNumber } from "@/lib/catalog";
+import { buildCatalogIndex, hydrateProductSuggestions, alignAdviceWithProducts, getProductById, productType, findMentionedProducts } from "@/lib/products";
 import { recommendFromGuide, namedProductRate, mentionedCatalogNos, searchGuide, formatGuideEntries, listsContext, fertilizerKnowledgeContext, fertilizerRateHint } from "@/lib/guide";
 import {
   saveChatAttachment,
@@ -1183,6 +1183,17 @@ export async function POST(req: NextRequest) {
       : null;
     await catalogReady;
 
+    // منتجات المتجر المذكورة بالاسم حتى لو بإملاء مختلف (اكوكيم/أكوكيم، حرف ناقص أو زائد)
+    const namedNos = Array.from(
+      new Set([...mentionedCatalogNos(message), ...findMentionedProducts(message).map((p) => catalogNumber(p.id))]),
+    ).filter(Boolean).slice(0, 3);
+    const namedProducts = namedNos.map((n) => getProductById(String(n))).filter(Boolean) as NonNullable<ReturnType<typeof getProductById>>[];
+    const namedHint = namedProducts.length
+      ? language === "ar"
+        ? `\n\nمهم جداً: العميل ذكر منتجاً موجوداً فعلاً في متجر جذرة (حتى لو كتب اسمه بإملاء مختلف أو بدون همزة): ${namedNos.map((n, i) => `رقم ${n} = ${namedProducts[i]?.name}`).join("، ")}. هذا المنتج متوفر في المتجر؛ لا تقل أبداً إنه غير موجود أو غير متوفر. أجب عن سؤاله عنه مباشرة وضعه أول product_suggestions برقمه.`
+        : `\n\nIMPORTANT: the customer named a product that IS in the Jothrah store (spelling may differ): ${namedNos.map((n, i) => `#${n} = ${namedProducts[i]?.name}`).join(", ")}. It is available; never say it is not available. Answer about it directly and put it first in product_suggestions.`
+      : "";
+
     const matchingText = [
       message,
       visionAnalysis?.detected_problem || "",
@@ -1401,7 +1412,7 @@ ${historyText || "(none)"}
         },
         {
           role: "user",
-          content: userPrompt,
+          content: userPrompt + namedHint,
         },
       ],
       response_format: {
@@ -1479,7 +1490,7 @@ ${historyText || "(none)"}
     }
     // منتج مذكور بالاسم (بوستاك...): بطاقته أولاً، والبقية من نفس نوعه فقط (لا مبيد صحة عامة مع مبيد فطري)
     if (!reco) {
-      const named = mentionedCatalogNos(message);
+      const named = namedNos;
       if (named.length) {
         const namedCards = hydrateProductSuggestions(named.map((n) => ({ id: String(n), reason: "" })), named.length, "", "");
         const types = new Set(namedCards.map((c) => { const p = getProductById(c.id); return p ? productType(p) : ""; }));
@@ -1501,6 +1512,16 @@ ${historyText || "(none)"}
       data.questions = (reco as { questions?: string[] }).questions || [];
       data.product_suggestions = productCards.map((card) => ({ id: card.id, name: card.name, url: card.url, reason: card.reason }));
       data.products = productCards;
+    }
+    // شبكة أمان: لو النموذج قال «غير موجود» لمنتج متوفر فعلاً في المتجر
+    if (namedProducts.length && !reco) {
+      const NOT_AVAIL = /لا يوجد|لا تتوفر|لا يتوفر|غير متوفر|غير موجود|ليس لدينا|ما عندنا|not available|don't have|do not have/i;
+      if (NOT_AVAIL.test(String(data.summary || ""))) {
+        data.summary = language === "ar"
+          ? `${namedProducts[0].name} متوفر في متجر جذرة، تقدر تطلبه من البطاقة تحت.`
+          : `${namedProducts[0].name} is available in the Jothrah store — you can order it from the card below.`;
+      }
+      if (Array.isArray(data.advice)) data.advice = data.advice.filter((a: unknown) => !NOT_AVAIL.test(String(a || "")));
     }
     // لا نذكر مصدر المعلومة للعميل (دليل المبيدات / الوزارة)
     const stripSource = (t: string) => t
