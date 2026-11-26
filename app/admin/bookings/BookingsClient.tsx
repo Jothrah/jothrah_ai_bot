@@ -31,7 +31,8 @@ type Booking = {
   source: string | null;
 };
 
-const PUSH_OFF_KEY = "jothrah_admin_push_off";
+const PUSH_OFF_KEY = "jothrah_admin_push_disabled_v1";
+const PUSH_SYNC_KEY = "jothrah_admin_push_sync_at";
 
 function b64ToBytes(base64: string) {
   const padding = "=".repeat((4 - (base64.length % 4)) % 4);
@@ -102,7 +103,7 @@ export default function BookingsClient({
   const [filter, setFilter] = useState<"all" | "open" | BookingStatus>("open");
   const [selectedId, setSelectedId] = useState(initialSelectedId);
   const [toast, setToast] = useState(loadError);
-  const [push, setPush] = useState<"on" | "off" | "busy" | "denied" | "unsupported">("off");
+  const [push, setPush] = useState<"on" | "off" | "busy" | "denied" | "unsupported" | "unknown">("unknown");
   const [search, setSearch] = useState("");
   const knownIds = useRef(new Set(initialBookings.map((b) => b.id)));
   const [fresh, setFresh] = useState<Set<string>>(new Set());
@@ -181,9 +182,12 @@ export default function BookingsClient({
         localStorage.removeItem(PUSH_OFF_KEY);
         setPush("on");
         if (interactive) flash("تنبيهات الحجوزات والمحادثات مفعّلة ✅");
+        try { localStorage.setItem(PUSH_SYNC_KEY, String(Date.now())); } catch {}
       } catch {
-        setPush("off");
-        if (interactive) flash("تعذر تفعيل التنبيهات");
+        if (interactive) {
+          setPush("off");
+          flash("تعذر تفعيل التنبيهات");
+        }
       }
     },
     [flash],
@@ -194,10 +198,17 @@ export default function BookingsClient({
       setPush("unsupported");
       return;
     }
-    if (localStorage.getItem(PUSH_OFF_KEY) === "1") return;
-    if (Notification.permission === "granted") enablePush(false);
-    else if (Notification.permission === "denied") setPush("denied");
+    if (localStorage.getItem(PUSH_OFF_KEY) === "1") return setPush("off");
+    if (Notification.permission === "granted") {
+      setPush("on");
+      const last = Number(localStorage.getItem(PUSH_SYNC_KEY) || 0);
+      if (Date.now() - last > 12 * 3600 * 1000) enablePush(false);
+    } else if (Notification.permission === "denied") setPush("denied");
+    else setPush("off");
   }, [enablePush]);
+  useEffect(() => {
+    refresh(); // بيانات طازجة فور فتح الصفحة
+  }, [refresh]);
 
   const counts = useMemo(() => {
     const c: Record<string, number> = { all: bookings.length, open: 0 };
@@ -283,14 +294,14 @@ export default function BookingsClient({
             <small>الرياض فقط · {counts.pending || 0} حجز جديد بانتظار التواصل</small>
           </div>
           <nav className="bk-nav">
-            <button
+            {push === "unknown" ? null : <button
               type="button"
               className={`bk-push ${push === "on" ? "on" : ""}`}
               onClick={() => enablePush(true)}
               disabled={push === "busy" || push === "unsupported"}
             >
-              {push === "on" ? "التنبيهات مفعّلة ✓" : push === "denied" ? "التنبيهات مرفوضة" : push === "unsupported" ? "التنبيهات غير مدعومة" : "فعّل التنبيهات"}
-            </button>
+              {push === "on" ? "التنبيهات مفعّلة ✓" : push === "denied" ? "التنبيهات مرفوضة" : push === "unsupported" ? "التنبيهات غير مدعومة" : push === "busy" ? "جاري التفعيل…" : "فعّل التنبيهات"}
+            </button>}
           </nav>
         </div>
       </header>
