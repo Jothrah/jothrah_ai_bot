@@ -267,3 +267,76 @@ export function alignAdviceWithProducts(advice: unknown, cards: ProductCard[], l
   }
   return out;
 }
+
+
+/* ---------- التعرف على اسم المنتج رغم اختلاف الكتابة (همزات، تاء مربوطة، حرف ناقص) ---------- */
+function looseAr(v: string) {
+  return normalize(v)
+    .replace(/[ؤ]/g, "و")
+    .replace(/[ئ]/g, "ي")
+    .replace(/ء/g, "")
+    .replace(/(.)\1+/g, "$1")
+    .replace(/[^ء-يa-z0-9 ]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+const GENERIC_WORDS = new Set(
+  "مبيد مبيدات حشري فطري عشبي سماد اسمده بذور بذره جل طعم طعوم سائل بوده بودره محبب حبيبات مركز معلق قابل للبلل للذوبان صحه عامه زراعي لمكافحه مكافحه الصراصير صراصير النمل نمل البعوض الذباب بق الفراش الفيران فيران قوارض لتر مل جم جرام كيلو كجم عبوه حجم ضد علي من مع في او و دبليو بي اس سي اي سي جي ار ام ال للاستخدام المنزلي منزلي ابيض الابيض الاوراق التربه النبات عضوي متوازن مركب عناصر صغري كبري".split(" "),
+);
+
+function lev(a: string, b: string, max: number) {
+  if (Math.abs(a.length - b.length) > max) return max + 1;
+  const prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    let cur = [i];
+    let best = i;
+    for (let j = 1; j <= b.length; j++) {
+      const v = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      cur.push(v);
+      if (v < best) best = v;
+    }
+    if (best > max) return max + 1;
+    for (let j = 0; j <= b.length; j++) prev[j] = cur[j];
+  }
+  return prev[b.length];
+}
+
+/** الكلمات المميزة لاسم المنتج (الاسم التجاري غالباً) */
+function brandTokens(p: StoreProduct) {
+  const ok = (w: string) => w.length >= 4 && !/^\d/.test(w) && !GENERIC_WORDS.has(w) && !GENERIC_WORDS.has("ال" + w);
+  // الاسم التجاري = أول كلمة مميزة في اسم المنتج (أكوكيم، لورد…) + حقل العلامة إن وجد
+  const first = looseAr(p.name).split(" ").map((w) => w.replace(/^ال/, "")).find(ok);
+  const brand = looseAr(p.brand || "").split(" ").map((w) => w.replace(/^ال/, "")).filter(ok);
+  return Array.from(new Set([first, ...brand].filter(Boolean) as string[])).slice(0, 3);
+}
+
+/**
+ * يرجع منتجات المتجر اللي ذكرها العميل بالاسم، حتى لو كتبها بدون همزة
+ * أو بحرف ناقص/زائد (مثل «اكوكيم» = «أكوكيم»، «فيبرونيل» = «فبرونيل»).
+ */
+export function findMentionedProducts(text: string, limit = 3): StoreProduct[] {
+  const msgWords = looseAr(text)
+    .split(" ")
+    .map((w) => w.replace(/^(وال|بال|لل|ال|و|ب)(?=.{4,})/, ""))
+    .filter((w) => w.length >= 4 && !GENERIC_WORDS.has(w));
+  if (!msgWords.length) return [];
+  const hits: Array<{ p: StoreProduct; score: number }> = [];
+  for (const p of products) {
+    let score = 0;
+    for (const t of brandTokens(p)) {
+      for (const w of msgWords) {
+        if (w === t) score += 10;
+        else {
+          const max = t.length >= 7 ? 2 : 1;
+          if (lev(w, t, max) <= max) score += 6;
+        }
+      }
+    }
+    if (score > 0) hits.push({ p, score });
+  }
+  return hits
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit)
+    .map((h) => h.p);
+}
