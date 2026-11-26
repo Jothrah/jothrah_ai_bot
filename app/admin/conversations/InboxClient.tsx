@@ -747,7 +747,28 @@ export default function InboxClient({ initialData }: { initialData: InitialData 
   const email = String(selected?.customer_email || "");
 
   /* ------------------------------------------------------------------ */
-  if (!mounted) return <main className="inbox light" dir="rtl" style={{ background: "#f5f8f6" }} />;
+  /* قبل التحميل الكامل: نفس الشريط العلوي بالضبط (بدون وميض عند الانتقال من الحجوزات أو المالية) */
+  if (!mounted)
+    return (
+      <main className="inbox light no-chat" dir="rtl">
+        <style dangerouslySetInnerHTML={{ __html: CSS }} />
+        <aside className="side">
+          <nav className="adm-tabs" aria-label="أقسام لوحة الإدارة">
+            <Link href="/admin/conversations" aria-current="page">💬 المحادثات</Link>
+            <Link href="/admin/bookings" prefetch>📅 الحجوزات</Link>
+            <Link href="/admin/finance" prefetch>💰 المالية</Link>
+          </nav>
+          <header className="brand">
+            <div className="logo">ج</div>
+            <div className="bt">
+              <b>محادثات جذرة</b>
+              <small>جاري التحميل…</small>
+            </div>
+          </header>
+        </aside>
+        <section className="chat" />
+      </main>
+    );
 
   return (
     <main className={`inbox ${theme} ${selectedId ? "has-chat" : "no-chat"} ${detailsOpen ? "details-on" : ""}`} dir="rtl">
