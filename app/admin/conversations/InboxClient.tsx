@@ -214,6 +214,7 @@ export default function InboxClient({ initialData }: { initialData: InitialData 
   /* ---- إعدادات محفوظة ---- */
   useEffect(() => {
     setMounted(true);
+    document.cookie = "jothrah_admin_last=conversations; path=/; max-age=31536000; samesite=lax";
     try {
       const t = localStorage.getItem(THEME_KEY);
       if (t === "dark" || t === "light") setTheme(t);
