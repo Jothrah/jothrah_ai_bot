@@ -268,13 +268,16 @@ export default function BookingsClient({
     <div className="bk">
       <style>{CSS}</style>
       <header className="bk-top">
+        <nav className="bk-tabs-top" aria-label="أقسام لوحة الإدارة">
+          <a href="/admin/conversations">💬 المحادثات</a>
+          <a href="/admin/bookings" aria-current="page">📅 حجوزات الرش</a>
+        </nav>
         <div className="bk-top-in">
           <div className="bk-brand">
             <b>حجوزات رش المنازل</b>
             <small>الرياض فقط · {counts.pending || 0} حجز جديد بانتظار التواصل</small>
           </div>
           <nav className="bk-nav">
-            <a href="/admin/conversations">المحادثات</a>
             <button
               type="button"
               className={`bk-push ${push === "on" ? "on" : ""}`}
@@ -459,6 +462,7 @@ const CSS = `
 .bk{min-height:100vh;background:#f5f8f6;color:#0b2e1f;font-family:"IBM Plex Sans Arabic",system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif;direction:rtl}
 .bk *{box-sizing:border-box}
 .bk-top{background:#0b2e1f;color:#fff;position:sticky;top:0;z-index:20;padding-top:env(safe-area-inset-top)}
+.bk-tabs-top{max-width:1280px;margin:0 auto;padding:10px 18px 0;display:flex;gap:6px}.bk-tabs-top a{text-decoration:none;font-weight:700;font-size:14px;padding:9px 16px;border-radius:12px;color:#d5e4dc;background:#173f2e}.bk-tabs-top a[aria-current=page]{background:#e2b64c;color:#0b2e1f}.bk-tabs-top a:focus-visible{outline:3px solid #e2b64c;outline-offset:2px}
 .bk-top-in{max-width:1280px;margin:0 auto;padding:12px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .bk-brand b{display:block;font-size:18px}.bk-brand small{color:#b9cfc3;font-size:13px}
 .bk-nav{display:flex;gap:8px;align-items:center}
@@ -482,7 +486,7 @@ const CSS = `
 .bk-item-bot{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;color:#5f7a6c}
 .bk-pill{font-style:normal;color:#fff;font-size:12px;font-weight:700;border-radius:999px;padding:3px 10px;white-space:nowrap}
 .bk-empty,.bk-placeholder{background:#fff;border:1px dashed #cfe0d6;border-radius:16px;padding:28px;text-align:center;color:#5f7a6c}
-.bk-detail{position:sticky;top:84px}
+.bk-detail{position:sticky;top:130px}
 .bk-card{background:#fff;border:1px solid #e3ece6;border-radius:20px;padding:20px}
 .bk-card-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
 .bk-back{display:none;font:inherit;font-weight:700;border:0;background:#eef5f0;color:#0b2e1f;border-radius:10px;padding:8px 12px;cursor:pointer}
