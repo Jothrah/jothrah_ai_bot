@@ -738,7 +738,7 @@ export default function InboxClient({ initialData }: { initialData: InitialData 
   const email = String(selected?.customer_email || "");
 
   /* ------------------------------------------------------------------ */
-  if (!mounted) return <main className="inbox light" dir="rtl" style={{ background: "#e9efec" }} />;
+  if (!mounted) return <main className="inbox light" dir="rtl" style={{ background: "#f5f8f6" }} />;
 
   return (
     <main className={`inbox ${theme} ${selectedId ? "has-chat" : "no-chat"} ${detailsOpen ? "details-on" : ""}`} dir="rtl">
@@ -1297,4 +1297,24 @@ html,body{margin:0;padding:0;height:100%;overflow:hidden;max-width:100%;overscro
   .list{padding:2px 6px 12px}.row{padding:10px 8px;gap:9px}.av{width:40px;height:40px;font-size:16px}
   .ct small{flex-wrap:nowrap;overflow:hidden}.ct small span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 }
+
+/* ===== ثيم موحّد مع لوحة حجوزات الرش (ألوان المتجر) ===== */
+.inbox:not(.dark){--bg:#f5f8f6;--panel2:#f2f6f3;--ink:#0b2e1f;--mut:#5f7a6c;--line:#e3ece6;--brand:#0b2e1f;--brand2:#173f2e;--brandsoft:#e6f0ea;--gold:#a8781c;--goldsoft:#fff7e3;--out:#0b2e1f}
+.adm-tabs{background:#0b2e1f;padding:calc(12px + env(safe-area-inset-top)) 16px 0}
+.adm-tabs a{background:#173f2e;color:#d5e4dc;border-color:transparent}
+.adm-tabs a[aria-current=page]{background:#e2b64c;color:#0b2e1f;border-color:#e2b64c}
+.adm-tabs a:focus-visible{outline-color:#fff}
+.brand{background:#0b2e1f;color:#fff;padding:14px 16px 16px;margin-bottom:12px}
+.brand small{color:#b9cfc3}
+.brand .ic{background:#173f2e;border-color:#2a5a44;color:#fff}
+.brand .ic:hover,.brand .ic.on{background:#24503b;border-color:#e2b64c}
+.logo{background:#e2b64c;color:#0b2e1f;box-shadow:none}
+.chat-hd{background:#0b2e1f;color:#fff;border-bottom:0;padding-top:calc(12px + env(safe-area-inset-top))}
+.chat-hd small{color:#b9cfc3}
+.chat-hd .ic{background:#173f2e;border-color:#2a5a44;color:#fff}
+.chat-hd .ic:hover,.chat-hd .ic.on{background:#24503b;border-color:#e2b64c}
+.chat-hd .btn.ok{background:#e2b64c;color:#0b2e1f}.chat-hd .btn.ok:hover{background:#ecc664}
+.chat-hd .btn.ghost{background:#173f2e;border-color:#2a5a44;color:#fff}
+.chat-hd .typing-txt{color:#f3d68a}
+@media (max-width:900px){.chat-hd{padding-top:calc(10px + env(safe-area-inset-top))}}
 `;
