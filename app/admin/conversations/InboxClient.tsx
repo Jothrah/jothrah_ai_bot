@@ -736,6 +736,7 @@ export default function InboxClient({ initialData }: { initialData: InitialData 
             </button>
             <button type="button" className={`ic ${selectMode ? "on" : ""}`} title="تحديد عدة محادثات" onClick={() => { setSelectMode((v) => !v); setPicked(new Set()); }}>☑️</button>
             <button type="button" className="ic" title="تحديث" onClick={() => { refresh(); flash("تم التحديث"); }}>⟳</button>
+            <a className="ic" href="/admin/bookings" title="حجوزات رش المنازل" aria-label="حجوزات رش المنازل" style={{ textDecoration: "none", display: "inline-grid", placeItems: "center" }}>📅</a>
           </div>
         </header>
 
