@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { saveChatEvent, saveChatMessage } from "@/lib/chat-store";
+import { notifyCustomerOfReply } from "@/lib/customer-push";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -49,6 +50,13 @@ export async function POST(req: NextRequest, props: Params) {
     ]);
 
     if (error) throw error;
+
+    // تنبيه العميل على جواله/متصفحه إذا سمح بالإشعارات
+    try {
+      await notifyCustomerOfReply(id, message);
+    } catch (e) {
+      console.error("notify customer failed:", e);
+    }
 
     return NextResponse.json({ ok: true, message: saved });
   } catch (error) {
