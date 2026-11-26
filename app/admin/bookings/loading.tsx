@@ -4,8 +4,9 @@ export default function Loading() {
     <div style={{ minHeight: "100vh", background: "#f5f8f6", fontFamily: "'IBM Plex Sans Arabic',system-ui,sans-serif", direction: "rtl" }}>
       <div style={{ background: "#0b2e1f", color: "#fff", padding: "14px 18px" }}>
         <div style={{ maxWidth: 1280, margin: "0 auto", display: "flex", gap: 6 }}>
-          <span style={{ padding: "9px 16px", borderRadius: 12, background: "#173f2e", color: "#d5e4dc", fontWeight: 700, fontSize: 14 }}>💬 المحادثات</span>
-          <span style={{ padding: "9px 16px", borderRadius: 12, background: "#e2b64c", color: "#0b2e1f", fontWeight: 700, fontSize: 14 }}>📅 حجوزات الرش</span>
+          <span style={{ flex: 1, textAlign: "center", padding: "10px 4px", borderRadius: 12, background: "#173f2e", color: "#d5e4dc", fontWeight: 700, fontSize: 14 }}>💬 المحادثات</span>
+          <span style={{ flex: 1, textAlign: "center", padding: "10px 4px", borderRadius: 12, background: "#e2b64c", color: "#0b2e1f", fontWeight: 700, fontSize: 14 }}>📅 الحجوزات</span>
+          <span style={{ flex: 1, textAlign: "center", padding: "10px 4px", borderRadius: 12, background: "#173f2e", color: "#d5e4dc", fontWeight: 700, fontSize: 14 }}>💰 المالية</span>
         </div>
         <div style={{ maxWidth: 1280, margin: "12px auto 0", fontWeight: 700, fontSize: 18 }}>حجوزات رش المنازل</div>
       </div>

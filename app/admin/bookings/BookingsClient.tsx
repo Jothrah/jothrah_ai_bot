@@ -295,7 +295,8 @@ export default function BookingsClient({
       <header className="bk-top">
         <nav className="bk-tabs-top" aria-label="أقسام لوحة الإدارة">
           <Link href="/admin/conversations" prefetch>💬 المحادثات</Link>
-          <Link href="/admin/bookings" aria-current="page">📅 حجوزات الرش</Link>
+          <Link href="/admin/bookings" aria-current="page">📅 الحجوزات</Link>
+          <Link href="/admin/finance" prefetch>💰 المالية</Link>
         </nav>
         <div className="bk-top-in">
           <div className="bk-logo" aria-hidden="true">ج</div>
@@ -508,7 +509,7 @@ html,body{background:#0b2e1f}
 .bk{min-height:100vh;background:#f5f8f6;color:#0b2e1f;font-family:"IBM Plex Sans Arabic",system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif;direction:rtl}
 .bk *{box-sizing:border-box}
 .bk-top{background:#0b2e1f;color:#fff;position:sticky;top:0;z-index:20;padding-top:env(safe-area-inset-top)}
-.bk-tabs-top{max-width:1280px;margin:0 auto;padding:12px 16px 0;display:flex;gap:6px}.bk-tabs-top a{flex:1;text-align:center;text-decoration:none;font-weight:700;font-size:14px;padding:10px 8px;border-radius:12px;color:#d5e4dc;background:#173f2e}.bk-tabs-top a[aria-current=page]{background:#e2b64c;color:#0b2e1f}.bk-tabs-top a:focus-visible{outline:3px solid #e2b64c;outline-offset:2px}
+.bk-tabs-top{max-width:1280px;margin:0 auto;padding:12px 16px 0;display:flex;gap:6px}.bk-tabs-top a{flex:1;text-align:center;text-decoration:none;font-weight:700;font-size:14px;padding:10px 4px;border-radius:12px;color:#d5e4dc;background:#173f2e;white-space:nowrap}.bk-tabs-top a[aria-current=page]{background:#e2b64c;color:#0b2e1f}.bk-tabs-top a:focus-visible{outline:3px solid #e2b64c;outline-offset:2px}
 .bk-top-in{max-width:1280px;margin:0 auto;padding:14px 16px 16px;display:flex;align-items:center;gap:11px}
 .bk-logo{width:42px;height:42px;border-radius:14px;background:#e2b64c;color:#0b2e1f;display:grid;place-items:center;font-weight:800;font-size:20px;flex:none}
 .bk-brand{flex:1;min-width:0}
