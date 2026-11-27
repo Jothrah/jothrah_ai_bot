@@ -754,9 +754,10 @@ export default function InboxClient({ initialData }: { initialData: InitialData 
         <style dangerouslySetInnerHTML={{ __html: CSS }} />
         <aside className="side">
           <nav className="adm-tabs" aria-label="أقسام لوحة الإدارة">
-            <Link href="/admin/conversations" aria-current="page">💬 المحادثات</Link>
-            <Link href="/admin/bookings" prefetch>📅 الحجوزات</Link>
+            <Link href="/admin/conversations" aria-current="page">💬 محادثات</Link>
+            <Link href="/admin/bookings" prefetch>📅 حجوزات</Link>
             <Link href="/admin/finance" prefetch>💰 المالية</Link>
+            <a href="/admin/watermark">🖼️ الصور</a>
           </nav>
           <header className="brand">
             <div className="logo">ج</div>
@@ -779,9 +780,10 @@ export default function InboxClient({ initialData }: { initialData: InitialData 
       {/* ============ القائمة ============ */}
       <aside className="side">
         <nav className="adm-tabs" aria-label="أقسام لوحة الإدارة">
-          <Link href="/admin/conversations" aria-current="page">💬 المحادثات</Link>
-          <Link href="/admin/bookings" prefetch>📅 الحجوزات</Link>
+          <Link href="/admin/conversations" aria-current="page">💬 محادثات</Link>
+          <Link href="/admin/bookings" prefetch>📅 حجوزات</Link>
           <Link href="/admin/finance" prefetch>💰 المالية</Link>
+            <a href="/admin/watermark">🖼️ الصور</a>
         </nav>
         <header className="brand">
           <div className="logo">ج</div>
@@ -1357,4 +1359,5 @@ html,body{background:#0b2e1f}
   html.cv-doc .list{flex:none;overflow:visible}
   html.cv-doc .adm-tabs{position:sticky;top:0;z-index:30}
 }
+@media (max-width:400px){.adm-tabs a{font-size:12.5px}}
 `;
