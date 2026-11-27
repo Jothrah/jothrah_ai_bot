@@ -302,9 +302,10 @@ export default function FinanceClient({
       <style>{CSS}</style>
       <header className="fn-top">
         <nav className="fn-tabs-top" aria-label="أقسام لوحة الإدارة">
-          <Link href="/admin/conversations" prefetch>💬 المحادثات</Link>
-          <Link href="/admin/bookings" prefetch>📅 الحجوزات</Link>
+          <Link href="/admin/conversations" prefetch>💬 محادثات</Link>
+          <Link href="/admin/bookings" prefetch>📅 حجوزات</Link>
           <Link href="/admin/finance" aria-current="page">💰 المالية</Link>
+          <a href="/admin/watermark">🖼️ الصور</a>
         </nav>
         <div className="fn-top-in">
           <div className="fn-logo" aria-hidden="true">ج</div>
@@ -602,4 +603,5 @@ html,body{background:#0b2e1f}
 .fn-pay{width:100%;justify-content:space-between}
 .fn-hbar{grid-template-columns:90px 1fr auto}
 }
+@media (max-width:400px){.fn-tabs-top a{font-size:12.5px}}
 `;
