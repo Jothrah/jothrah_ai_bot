@@ -294,9 +294,10 @@ export default function BookingsClient({
       <style>{CSS + CAL_CSS}</style>
       <header className="bk-top">
         <nav className="bk-tabs-top" aria-label="أقسام لوحة الإدارة">
-          <Link href="/admin/conversations" prefetch>💬 المحادثات</Link>
-          <Link href="/admin/bookings" aria-current="page">📅 الحجوزات</Link>
+          <Link href="/admin/conversations" prefetch>💬 محادثات</Link>
+          <Link href="/admin/bookings" aria-current="page">📅 حجوزات</Link>
           <Link href="/admin/finance" prefetch>💰 المالية</Link>
+          <a href="/admin/watermark">🖼️ الصور</a>
         </nav>
         <div className="bk-top-in">
           <div className="bk-logo" aria-hidden="true">ج</div>
@@ -579,4 +580,5 @@ html,body{background:#0b2e1f}
  .bk-dl{grid-template-columns:minmax(0,1fr)}
  .bk-act{flex:1 1 auto}
 }
+@media (max-width:400px){.bk-tabs-top a{font-size:12.5px}}
 `;
