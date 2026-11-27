@@ -1,16 +1,18 @@
 /** هيكل التحميل الموحّد لأقسام الإدارة: نفس الشريط العلوي بالضبط حتى ما يصير وميض عند التنقل */
-type Section = "conversations" | "bookings" | "finance";
+type Section = "conversations" | "bookings" | "finance" | "watermark";
 
 const TABS: { key: Section; label: string }[] = [
-  { key: "conversations", label: "💬 المحادثات" },
-  { key: "bookings", label: "📅 الحجوزات" },
+  { key: "conversations", label: "💬 محادثات" },
+  { key: "bookings", label: "📅 حجوزات" },
   { key: "finance", label: "💰 المالية" },
+  { key: "watermark", label: "🖼️ الصور" },
 ];
 
 const TITLES: Record<Section, string> = {
   conversations: "محادثات جذرة",
   bookings: "حجوزات رش المنازل",
   finance: "الإدارة المالية",
+  watermark: "الصور والعلامة المائية",
 };
 
 export default function AdminShellLoading({ active, text }: { active: Section; text: string }) {
@@ -31,7 +33,7 @@ export default function AdminShellLoading({ active, text }: { active: Section; t
                 background: t.key === active ? "#e2b64c" : "#173f2e",
                 color: t.key === active ? "#0b2e1f" : "#d5e4dc",
                 fontWeight: 700,
-                fontSize: 14,
+                fontSize: 13,
                 lineHeight: "normal",
               }}
             >
